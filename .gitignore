@@ -1,7 +1,11 @@
 # Prerequisites
 *.d
+*.ii
+*.s
+building
+deps
 
-# Compiled Object files
+#Compiled Object files
 *.slo
 *.lo
 *.o
