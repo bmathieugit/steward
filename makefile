@@ -7,18 +7,17 @@
 CC=g++
 FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps
 
-all: clean deps compile
+all: clean compile stats run
 
 clean: 
 	rm -rf building
 
-
-deps: deps/alt
-	cd deps/alt; git pull --rebase; cd ../..
-
-deps/alt:
-	git clone https://github.com/bmathieugit/alt deps/alt
-
 compile: src/main.cpp
 	mkdir -p building
 	${CC} -o building/steward.app $< ${FLAGS}
+
+stats:
+	wc -l building/*.s
+
+run: compile
+	./building/steward.app

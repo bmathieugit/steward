@@ -3,7 +3,8 @@
 *.ii
 *.s
 building
-deps
+dist
+.vscode
 
 #Compiled Object files
 *.slo
