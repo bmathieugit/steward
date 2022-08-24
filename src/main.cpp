@@ -1,6 +1,7 @@
 #include <logger.hpp>
 #include <csv.hpp>
 #include <string>
+#include <args.hpp>
 
 struct person
 {
@@ -18,8 +19,9 @@ auto to_csv_input(person & p)
   return stew::csv::make_csv_input(p.name, p.firstname);
 }
 
-int main()
+int main(int argc, char** argv)
 {
+  
   stew::logger::stew("Hello Sir !");
   stew::logger::stew("What can I do for you ?");
 
@@ -30,6 +32,10 @@ int main()
 
   std::cout << line << '\n';
   std::cout << p2.firstname << p2.name << '\n';
+
+  stew::args_handler argsh = stew::args_handler(argv, argc);
+  
+  stew::logger::stew("Found or not : ", argsh.contains("coucou"));
 
   return EXIT_SUCCESS;
 }

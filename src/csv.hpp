@@ -63,12 +63,14 @@ namespace stew::csv
         T &...t)
     {
       auto split =
-          line | std::views::split(del) | std::views::transform([](auto &&tk)
-                                                                {
+          line | std::views::split(del) 
+               | std::views::transform([](auto &&tk)
+                 {
                   std::string_view tmp(tk.begin(), tk.end());
                   tmp.remove_prefix(1);
                   tmp.remove_suffix(1);
-                  return tmp; });
+                  return tmp; 
+                 });
       auto b = split.begin();
       h = *b;
       ((t = *(++b)), ...);

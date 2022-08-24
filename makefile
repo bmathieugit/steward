@@ -20,4 +20,4 @@ stats:
 	wc -l building/*.s
 
 run: compile
-	./building/steward.app
+	./building/steward.app flag 
