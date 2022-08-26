@@ -9,41 +9,77 @@
 
 namespace stew::csv
 {
-  namespace impl
-  {
-    template <typename H, typename... T>
-    void to_csv(
-        std::ostringstream &ss,
-        char del,
-        char l,
-        char r,
-        const H &h,
-        const T &...t)
-    {
-      ss << l << h << r;
+  template <typename T>
+  struct csv_entry;
 
-      if constexpr (sizeof...(t) > 0)
+  struct csv_marshaller
+  {
+    char del = ';';
+    char left = '"';
+    char right = '"';
+
+  public:
+    template <typename T>
+    std::string marshall(const T &t) const
+    {
+      return std::apply(
+          [this](const auto &...attrs)
+          { return this->marshall_entry(attrs...); },
+          csv_entry<T>().from(t));
+    }
+
+  private:
+    template <typename... I>
+    std::string marshall_entry(const I &...attrs) const
+    {
+      std::stringstream ss;
+      marshall_entry_stream(ss, attrs...);
+      return ss.str();
+    }
+
+    template <typename H, typename... R>
+    void marshall_entry_stream(
+        std::stringstream &ss,
+        const H &h, const R &...r) const
+    {
+      ss << left << h << right;
+
+      if constexpr (sizeof...(R) > 0)
       {
         ss << del;
-        stew::csv::impl::to_csv(ss, del, l, r, t...);
-      };
+        marshall_entry_stream(ss, r...);
+      }
     }
-  }
 
-  template <typename T>
-  std::string to_csv(
-      const T &t,
-      char del = ';',
-      char l = '"',
-      char r = '"')
-  {
-    std::ostringstream ss;
-    std::apply(
-        [del, l, r, &ss](auto &&...i)
-        { impl::to_csv(ss, del, l, r, i...); },
-        to_csv_output(t));
-    return std::move(ss).str();
-  }
+  public:
+    template <typename T>
+    T unmarshall(std::string_view s) const
+    {
+      T t;
+      std::apply(
+          [this, s](auto &...i)
+          { this->unmarshall_entry(s, i...); },
+          csv_entry<T>().to(t));
+      return t;
+    }
+
+  private:
+    template <typename H, typename... R>
+    void unmarshall_entry(
+      std::string_view s, H &h, R &...r) const
+    {
+      auto spl =
+          s | std::views::split(del) 
+            | std::views::transform([this](auto &&tk) {
+                std::string_view tmp(tk.begin() + 1, tk.end() - 1);
+                return tmp; 
+              });
+
+      auto b = spl.begin();
+      h = *b;
+      ((r = *(++b)), ...);
+    }
+  };
 
   template <typename... T>
   std::tuple<const T &...> make_csv_output(const T &...t)
@@ -51,49 +87,8 @@ namespace stew::csv
     return std::tuple<const T &...>{t...};
   }
 
-  namespace impl
-  {
-    template <typename H, typename... T>
-    void from_csv(
-        std::string_view line,
-        char del,
-        char l,
-        char r,
-        H &h,
-        T &...t)
-    {
-      auto split =
-          line | std::views::split(del) 
-               | std::views::transform([](auto &&tk)
-                 {
-                  std::string_view tmp(tk.begin(), tk.end());
-                  tmp.remove_prefix(1);
-                  tmp.remove_suffix(1);
-                  return tmp; 
-                 });
-      auto b = split.begin();
-      h = *b;
-      ((t = *(++b)), ...);
-    }
-  }
-
-  template <typename T>
-  T from_csv(
-      std::string_view line,
-      char del = ';',
-      char l = '"',
-      char r = '"')
-  {
-    T t;
-    std::apply(
-        [del, l, r, &line](auto &&...t)
-        { impl::from_csv(line, del, l, r, t...); },
-        to_csv_input(t));
-    return t;
-  }
-
   template <typename... T>
-  std::tuple<T &...> make_csv_input( T &...t)
+  std::tuple<T &...> make_csv_input(T &...t)
   {
     return std::tie(t...);
   }

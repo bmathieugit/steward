@@ -14,10 +14,10 @@ clean:
 
 compile: src/main.cpp
 	mkdir -p building
-	${CC} -o building/steward.app $< ${FLAGS}
+	${CC} -o building/steward.app $^ ${FLAGS}
 
 stats:
 	wc -l building/*.s
 
 run: compile
-	./building/steward.app flag 
+	./building/steward.app flag file=toto/test.txt 

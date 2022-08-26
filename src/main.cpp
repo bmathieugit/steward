@@ -1,7 +1,6 @@
 #include <logger.hpp>
 #include <csv.hpp>
 #include <string>
-#include <args.hpp>
 
 struct person
 {
@@ -9,10 +8,20 @@ struct person
   std::string firstname;
 };
 
-auto to_csv_output(const person &p)
+template<>
+struct stew::csv::csv_entry<person>
 {
-  return stew::csv::make_csv_output(p.name, p.firstname);
-}
+  auto from(const person& p)
+  {
+    return stew::csv::make_csv_output(p.name, p.firstname);
+  }
+
+  auto to (person& p)
+  {
+    return stew::csv::make_csv_input(p.name, p.firstname);
+  }
+};
+
 
 auto to_csv_input(person & p)
 {
@@ -27,15 +36,13 @@ int main(int argc, char** argv)
 
   person p{"MATHIEU", "Benajmin"};
 
-  std::string line = stew::csv::to_csv(p, ';', '"', '"');
-  person p2 = stew::csv::from_csv<person>((std::string_view) line, ';', '"', '"');
+  stew::csv::csv_marshaller csv;
+
+  std::string line = csv.marshall(p);
+  person p2 = csv.unmarshall<person>(line);
 
   std::cout << line << '\n';
   std::cout << p2.firstname << p2.name << '\n';
-
-  stew::args_handler argsh = stew::args_handler(argv, argc);
-  
-  stew::logger::stew("Found or not : ", argsh.contains("coucou"));
 
   return EXIT_SUCCESS;
 }
