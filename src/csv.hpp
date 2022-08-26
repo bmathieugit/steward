@@ -9,10 +9,19 @@
 
 namespace stew::csv
 {
+
   template <typename T>
   struct csv_entry;
 
-  struct csv_marshaller
+ 
+ /*  template<typename T, >
+  concept csv_convertible = 
+    requires(const T& t, T& t2, std::stringstream& ss) 
+  {
+    csv_entry<T>().from(t, ss, )
+  }; */
+  
+   struct csv_marshaller
   {
     char del = ';';
     char left = '"';
@@ -22,23 +31,13 @@ namespace stew::csv
     template <typename T>
     std::string marshall(const T &t) const
     {
-      return std::apply(
-          [this](const auto &...attrs)
-          { return this->marshall_entry(attrs...); },
-          csv_entry<T>().from(t));
-    }
-
-  private:
-    template <typename... I>
-    std::string marshall_entry(const I &...attrs) const
-    {
       std::stringstream ss;
-      marshall_entry_stream(ss, attrs...);
+      csv_entry<T>().from(t, ss, *this);
       return ss.str();
     }
-
+  
     template <typename H, typename... R>
-    void marshall_entry_stream(
+    void marshall_entry(
         std::stringstream &ss,
         const H &h, const R &...r) const
     {
@@ -47,7 +46,7 @@ namespace stew::csv
       if constexpr (sizeof...(R) > 0)
       {
         ss << del;
-        marshall_entry_stream(ss, r...);
+        marshall_entry(ss, r...);
       }
     }
 
@@ -56,14 +55,10 @@ namespace stew::csv
     T unmarshall(std::string_view s) const
     {
       T t;
-      std::apply(
-          [this, s](auto &...i)
-          { this->unmarshall_entry(s, i...); },
-          csv_entry<T>().to(t));
+      csv_entry<T>().to(t, s, *this);
       return t;
     }
 
-  private:
     template <typename H, typename... R>
     void unmarshall_entry(
       std::string_view s, H &h, R &...r) const
@@ -80,18 +75,6 @@ namespace stew::csv
       ((r = *(++b)), ...);
     }
   };
-
-  template <typename... T>
-  std::tuple<const T &...> make_csv_output(const T &...t)
-  {
-    return std::tuple<const T &...>{t...};
-  }
-
-  template <typename... T>
-  std::tuple<T &...> make_csv_input(T &...t)
-  {
-    return std::tie(t...);
-  }
 }
 
 #endif

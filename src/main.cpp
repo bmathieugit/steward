@@ -11,22 +11,17 @@ struct person
 template<>
 struct stew::csv::csv_entry<person>
 {
-  auto from(const person& p)
+  void from(const person& p, std::stringstream& ss, const auto& marsh)
   {
-    return stew::csv::make_csv_output(p.name, p.firstname);
+    marsh.marshall_entry(ss, p.name, p.firstname);
   }
 
-  auto to (person& p)
+  void to (person& p, std::string_view s, const auto& marsh)
   {
-    return stew::csv::make_csv_input(p.name, p.firstname);
+    marsh.unmarshall_entry(s, p.name, p.firstname);
   }
 };
 
-
-auto to_csv_input(person & p)
-{
-  return stew::csv::make_csv_input(p.name, p.firstname);
-}
 
 int main(int argc, char** argv)
 {
