@@ -13,15 +13,7 @@ namespace stew::csv
   template <typename T>
   struct csv_entry;
 
- 
- /*  template<typename T, >
-  concept csv_convertible = 
-    requires(const T& t, T& t2, std::stringstream& ss) 
-  {
-    csv_entry<T>().from(t, ss, )
-  }; */
-  
-   struct csv_marshaller
+  struct csv_marshaller
   {
     char del = ';';
     char left = '"';
@@ -32,10 +24,13 @@ namespace stew::csv
     std::string marshall(const T &t) const
     {
       std::stringstream ss;
-      csv_entry<T>().from(t, ss, *this);
+      csv_entry<T>().from(
+          t,
+          [this, &ss](const auto &...i)
+          { this->marshall_entry(ss, i...); });
       return ss.str();
     }
-  
+
     template <typename H, typename... R>
     void marshall_entry(
         std::stringstream &ss,
@@ -55,22 +50,22 @@ namespace stew::csv
     T unmarshall(std::string_view s) const
     {
       T t;
-      csv_entry<T>().to(t, s, *this);
+      csv_entry<T>().to(t, [this, s](auto & ... i) {
+        this->unmarshall_entry(s, i...);
+      });
       return t;
     }
 
     template <typename H, typename... R>
     void unmarshall_entry(
-      std::string_view s, H &h, R &...r) const
+        std::string_view s, H &h, R &...r) const
     {
-      auto spl =
-          s | std::views::split(del) 
-            | std::views::transform([this](auto &&tk) {
-                std::string_view tmp(tk.begin() + 1, tk.end() - 1);
-                return tmp; 
-              });
-
-      auto b = spl.begin();
+      auto b =
+          (s | std::views::split(del) 
+             | std::views::transform([this](auto &&tk)
+               {
+                 return std::string_view(tk.begin() + 1, tk.end() - 1);
+               })).begin();
       h = *b;
       ((r = *(++b)), ...);
     }
