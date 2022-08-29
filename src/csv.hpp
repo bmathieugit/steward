@@ -3,9 +3,9 @@
 
 #include <string>
 #include <string_view>
+
 #include <sstream>
-#include <tuple>
-#include <ranges>
+#include <fstream>
 
 namespace stew::csv
 {
@@ -15,10 +15,6 @@ namespace stew::csv
 
   struct csv_marshaller
   {
-    char del = ';';
-    char left = '"';
-    char right = '"';
-
   public:
     template <typename T>
     std::string marshall(const T &t) const
@@ -36,11 +32,11 @@ namespace stew::csv
         std::stringstream &ss,
         const H &h, const R &...r) const
     {
-      ss << left << h << right;
+      ss << '"' << h << '"';
 
       if constexpr (sizeof...(R) > 0)
       {
-        ss << del;
+        ss << ';';
         marshall_entry(ss, r...);
       }
     }
@@ -50,26 +46,73 @@ namespace stew::csv
     T unmarshall(std::string_view s) const
     {
       T t;
-      csv_entry<T>().to(t, [this, s](auto & ... i) {
-        this->unmarshall_entry(s, i...);
-      });
+      csv_entry<T>().to(t, [this, s](auto &...i)
+                        { this->unmarshall_entry(s, i...); });
       return t;
     }
 
     template <typename H, typename... R>
     void unmarshall_entry(
-        std::string_view s, H &h, R &...r) const
+        std::string_view line, H &h, R &...r) const
     {
-      auto b =
-          (s | std::views::split(del) 
-             | std::views::transform([this](auto &&tk)
-               {
-                 return std::string_view(tk.begin() + 1, tk.end() - 1);
-               })).begin();
-      h = *b;
-      ((r = *(++b)), ...);
+      std::string_view item = line.substr(0, line.find(';'));
+
+      if (item.size() > 2)
+      {
+        item.remove_prefix(1);
+        item.remove_suffix(1);
+
+        h = item;
+
+        if constexpr (sizeof...(R))
+        {
+          line.remove_prefix(
+              std::min(item.size() + 1,
+                       line.size()));
+          unmarshall_entry(line, r...);
+        }
+      }
     }
   };
+
+  template <typename R>
+  concept CRange = requires(const R &r)
+  {
+    std::begin(r);
+    std::end(r);
+  };
+
+  template <typename STREAM>
+  struct csv_stream
+  {
+    STREAM stream;
+
+    template <typename T>
+    void write_one(const T &t)
+    {
+      csv_marshaller csvm;
+      stream << csvm.marshall(t);
+    }
+
+    template <CRange R>
+    void write_all(const R &r)
+    {
+      for (const auto &item : r)
+        write(item);
+    }
+
+    template <typename T>
+    T read_one();
+    {
+    }
+
+    template <typename T>
+    std::vector<T> read_all()
+    {
+    }
+  };
+
+  using csv_fstream = csv_stream<std::fstream>;
 }
 
 #endif

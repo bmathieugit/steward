@@ -1,6 +1,7 @@
 #include <logger.hpp>
 #include <csv.hpp>
 #include <string>
+#include <vault.hpp>
 
 struct person
 {
@@ -11,12 +12,12 @@ struct person
 template <>
 struct stew::csv::csv_entry<person>
 {
-  void from(const person &p, auto op)
+  void from(const person &p, auto op) const
   {
     op(p.name, p.firstname);
   }
 
-  void to(person &p, auto op)
+  void to(person &p, auto op) const
   {
     op(p.name, p.firstname);
   }
@@ -36,6 +37,10 @@ int main(int argc, char **argv)
 
   std::cout << line << '\n';
   std::cout << p2.firstname << p2.name << '\n';
+
+  stew::csv::csv_fstream csvfs;
+  csvfs.write_one(p);
+  csvfs.read_one(p2);
 
   return EXIT_SUCCESS;
 }
