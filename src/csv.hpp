@@ -7,6 +7,8 @@
 #include <sstream>
 #include <fstream>
 
+#include <iostream>
+
 namespace stew::csv
 {
 
@@ -55,7 +57,8 @@ namespace stew::csv
     void unmarshall_entry(
         std::string_view line, H &h, R &...r) const
     {
-      std::string_view item = line.substr(0, line.find(';'));
+      std::size_t i = line.find(';');
+      std::string_view item = i == std::string_view::npos ? line : line.substr(0, i);
 
       if (item.size() > 2)
       {
@@ -67,52 +70,13 @@ namespace stew::csv
         if constexpr (sizeof...(R))
         {
           line.remove_prefix(
-              std::min(item.size() + 1,
+              std::min(item.size() + 3,
                        line.size()));
           unmarshall_entry(line, r...);
         }
       }
     }
   };
-
-  template <typename R>
-  concept CRange = requires(const R &r)
-  {
-    std::begin(r);
-    std::end(r);
-  };
-
-  template <typename STREAM>
-  struct csv_stream
-  {
-    STREAM stream;
-
-    template <typename T>
-    void write_one(const T &t)
-    {
-      csv_marshaller csvm;
-      stream << csvm.marshall(t);
-    }
-
-    template <CRange R>
-    void write_all(const R &r)
-    {
-      for (const auto &item : r)
-        write(item);
-    }
-
-    template <typename T>
-    T read_one();
-    {
-    }
-
-    template <typename T>
-    std::vector<T> read_all()
-    {
-    }
-  };
-
-  using csv_fstream = csv_stream<std::fstream>;
 }
 
 #endif

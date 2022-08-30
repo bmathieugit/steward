@@ -38,9 +38,8 @@ int main(int argc, char **argv)
   std::cout << line << '\n';
   std::cout << p2.firstname << p2.name << '\n';
 
-  stew::csv::csv_fstream csvfs;
-  csvfs.write_one(p);
-  csvfs.read_one(p2);
-
+  stew::vault_service vault;
+  vault.save(stew::vault_entry{"bmathieu.github.com", "aBigPassWORD!!!"});
+  vault.save()
   return EXIT_SUCCESS;
 }
