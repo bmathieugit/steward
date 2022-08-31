@@ -20,4 +20,4 @@ stats:
 	wc -l building/*.s
 
 run: compile
-	./building/steward.app flag file=toto/test.txt 
+	./building/steward.app vault read github.com/bmathieugit

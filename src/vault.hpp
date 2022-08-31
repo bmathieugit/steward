@@ -2,82 +2,213 @@
 #define __stew_vault_hpp__
 
 #include <csv.hpp>
-#include <repository.hpp>
+//#include <repository.hpp>
 #include <string>
 #include <string_view>
-#include <chrono>
+#include <vector>
+#include <optional>
+#include <algorithm>
+#include <fstream>
 
 namespace stew
 {
-  using timestamp = std::chrono::time_point<std::chrono::system_clock>;
-  /**
-   * @brief La lib vault va permettre de mettre en place un moyen de stocker et lire
-   * des entrés secret dans un storage type csv.
-   * Il faut donc d'abord mettre en place la structure de données qui va permettre de
-   * porter les informations d'un secret
-   */
   struct vault_entry
   {
-
     std::string key;
     std::string secret;
-    timestamp create_tp;
-    timestamp update_tp;
-    bool saved = false;
   };
 
-  /**
-   * @brief J'ai maintenant une structure de base. il faut donc un mecanisme pour
-   * enregistrer cette structure dans un csv. Il faut donc que je mettre en place
-   * une implementattion de csv_entry pour cette structure.
-   */
   template <>
   struct csv::csv_entry<vault_entry>
   {
     void from(const vault_entry &v, auto op) const
     {
-      return op(v.key, v.secret, v.create_tp, v.update_tp);
+      return op(v.key, v.secret);
     }
 
     void to(vault_entry &v, auto op) const
     {
-      return op(v.key, v.secret, v.create_tp, v.update_tp);
+      return op(v.key, v.secret);
     }
   };
 
-  /**
-   * @brief Je peux maintenant sérialiser ma structure sous la forme d'un csv.
-   * Du moins en théorie. Il va falloir voir pour convertir les time_point en
-   * string via la surcharge de l'operateur << de std::ostream.
-   * Mais pour l'instant passons plutôt au service qui effectuer ces sérialisations
-   * et deserialisation. Il va également proposer un moyen de retourner le secret en
-   * fonction de la clé qu'on lui aura proposer. Dans un premier temps les secrets
-   * ne seront pas chiffrés. Mais je vais quand meme mettre la possibilité de le
-   * faire dans l'entête de la classe.
-   */
-
-  class vault_service
+  template <typename CA>
+  concept crypto_algorithm = requires
   {
-    using vault_repository = repository<std::string, vault_entry>;
-    vault_repository repo;
-
-  public:
-    void save(const vault_entry &v)
     {
-      if (!v.saved)
-        v.create_tp = std::chrono::system_clock::now();
-      v.update_tp = std::chrono::system_clock::now();
-      repo.push(v.key, v);
+      CA::encrypt(vault_entry{})
+      } -> std::same_as<vault_entry>;
+    {
+      CA::decrypt(vault_entry{})
+      } -> std::same_as<vault_entry>;
+  };
+
+  struct identity_crypto_algorithm
+  {
+    static vault_entry encrypt(const vault_entry &ve)
+    {
+      return vault_entry{ve.key, ve.secret};
     }
 
-    vault_entry read(std::string_view key)
+    static vault_entry decrypt(const vault_entry &ve)
     {
-      return repo.get(std::string(key));
+      return vault_entry{ve.key, ve.secret};
+    }
+  };
+
+  struct cesar_crypto_algorithm
+  {
+    static vault_entry encrypt(const vault_entry &ve)
+    {
+      std::string encrypted = ve.secret;
+      for (char &c : encrypted)
+        c = c + 1;
+      return vault_entry{ve.key, encrypted};
+    }
+
+    static vault_entry decrypt(const vault_entry &ve)
+    {
+      std::string decrypted = ve.secret;
+      for (char &c : decrypted)
+        c = c - 1;
+      return vault_entry{ve.key, decrypted};
+    }
+  };
+
+  template <crypto_algorithm CA>
+  class vault_service
+  {
+    std::vector<vault_entry> repo;
+    std::string fpath;
+
+  public:
+    std::size_t load(std::string_view path)
+    {
+      fpath = std::string(path);
+      std::ifstream ifs(fpath);
+      std::string line;
+      csv::csv_marshaller csvm;
+
+      if (ifs.is_open())
+        while (std::getline(ifs, line))
+          repo.push_back(csvm.unmarshall<vault_entry>(line));
+
+      return repo.size();
+    }
+
+    std::size_t flush()
+    {
+      std::size_t s = repo.size();
+      std::ofstream ofs(fpath + "2");
+      csv::csv_marshaller csvm;
+
+      if (ofs.is_open())
+        for (auto &&ve : repo)
+          ofs << csvm.marshall(ve) << "\n";
+
+      repo.clear();
+      return s;
+    }
+
+    void save(const vault_entry &v)
+    {
+      auto found = find(v.key);
+      auto vencrypted = CA::encrypt(v);
+
+      if (found == repo.end())
+        repo.push_back(std::move(vencrypted));
+      else
+        *found = std::move(vencrypted);
+    }
+
+    std::optional<vault_entry> read(
+        std::string_view key)
+    {
+      auto found = find(key);
+
+      if (found == repo.end())
+        return std::nullopt;
+
+      return std::optional<vault_entry>(CA::decrypt(*found));
     }
 
     void remove(std::string_view key)
     {
-      repo.erase(std::string(key));
+      auto found = find(key);
+
+      if (found != repo.end())
+        repo.erase(found);
+    }
+
+    bool contains(std::string_view key)
+    {
+      return find(key) != repo.end();
+    }
+
+    void foreach (auto cb)
+    {
+      for (const vault_entry &ve : repo)
+        cb(CA::decrypt(ve));
+    }
+
+  private:
+    std::vector<vault_entry>::iterator find(std::string_view key)
+    {
+      return std::find_if(
+          repo.begin(), repo.end(),
+          [key](const vault_entry &v)
+          { return v.key == key; });
+    }
+  };
+
+  struct vault_agent
+  {
+    void process(const std::vector<std::string> &args)
+    {
+      if (!args.empty())
+      {
+        if (args[0] == "read")
+        {
+          read(args[1]);
+        }
+        else if (args[0] == "add")
+        {
+          add(args[1], args[2]);
+        }
+        else if (args[0] == "update")
+        {
+          update(args[1], args[2]);
+        }
+        else if (args[0] == "remove")
+        {
+          remove(args[1]);
+        }
+        else if (args[0] == "list")
+        {
+          list();
+        }
+      }
+    }
+
+  private:
+    void read(const std::string &key)
+    {
+    }
+
+    void add(const std::string &key, const std::string &secret)
+    {
+    }
+
+    void update(const std::string &key, const std::string &secret)
+    {
+    }
+
+    void remove(const std::string &key)
+    {
+    }
+
+    void list()
+    {
     }
   };
 }
