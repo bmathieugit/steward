@@ -2,13 +2,15 @@
 #define __stew_vault_hpp__
 
 #include <csv.hpp>
-//#include <repository.hpp>
+#include <logger.hpp>
+
 #include <string>
 #include <string_view>
 #include <vector>
 #include <optional>
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 
 namespace stew
 {
@@ -88,18 +90,17 @@ namespace stew
       std::ifstream ifs(fpath);
       std::string line;
       csv::csv_marshaller csvm;
-
       if (ifs.is_open())
         while (std::getline(ifs, line))
           repo.push_back(csvm.unmarshall<vault_entry>(line));
-
+      ifs.close();
       return repo.size();
     }
 
     std::size_t flush()
     {
       std::size_t s = repo.size();
-      std::ofstream ofs(fpath + "2");
+      std::ofstream ofs(fpath);
       csv::csv_marshaller csvm;
 
       if (ofs.is_open())
@@ -107,6 +108,7 @@ namespace stew
           ofs << csvm.marshall(ve) << "\n";
 
       repo.clear();
+      ofs.close();
       return s;
     }
 
@@ -161,54 +163,62 @@ namespace stew
     }
   };
 
-  struct vault_agent
+  template <crypto_algorithm CA>
+  class vault_agent
   {
+    vault_service<CA> vaults;
+
+  public:
     void process(const std::vector<std::string> &args)
     {
       if (!args.empty())
       {
-        if (args[0] == "read")
+        if (args[1] == "read")
         {
-          read(args[1]);
+          read(args[2], args[3]);
         }
-        else if (args[0] == "add")
+        else if (args[1] == "save")
         {
-          add(args[1], args[2]);
+          save(args[2], args[3], args[4]);
         }
-        else if (args[0] == "update")
+        else if (args[1] == "remove" or args[1] == "rm")
         {
-          update(args[1], args[2]);
+          remove(args[2], args[3]);
         }
-        else if (args[0] == "remove")
+        else if (args[1] == "list")
         {
-          remove(args[1]);
-        }
-        else if (args[0] == "list")
-        {
-          list();
+          list(args[2]);
         }
       }
     }
 
   private:
-    void read(const std::string &key)
+    void read(const std::string &key, const std::string &path)
     {
+      vaults.load(path);
+      logger::flog(std::cout, vaults.read(key).value_or(stew::vault_entry()).secret);
     }
 
-    void add(const std::string &key, const std::string &secret)
+    void save(const std::string &key, const std::string &secret, const std::string &path)
     {
+      vaults.load(path); 
+      vaults.save(vault_entry{key, secret});
+      vaults.flush();
     }
 
-    void update(const std::string &key, const std::string &secret)
+    void remove(const std::string &key, const std::string &path)
     {
+      vaults.load(path); 
+      vaults.remove(key);
+      vaults.flush();
     }
 
-    void remove(const std::string &key)
+    void list(const std::string &path)
     {
-    }
-
-    void list()
-    {
+      vaults.load(path); 
+      vaults.foreach([](const vault_entry& ve) {
+        logger::flog(std::cout, '"', ve.key, "\":", ve.secret);
+      });
     }
   };
 }

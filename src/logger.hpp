@@ -7,6 +7,11 @@
 
 namespace stew::logger
 {
+  void flog(std::ostream& o, const auto&... args)
+  {
+    ((o << ... << args) << '\n');
+  }
+
   enum class level : int
   {
     trace = 0,
@@ -24,7 +29,7 @@ namespace stew::logger
 
   void flog(std::ostream &o, level l, const auto &...args)
   {
-    constexpr level_table<7> ltable = {
+    constexpr level_table<8> ltable = {
         "trace", "debug", "info",
         "warn", "error", "fatal",
         "steward"};
