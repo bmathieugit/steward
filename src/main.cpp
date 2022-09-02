@@ -1,17 +1,36 @@
 #include <logger.hpp>
 #include <csv.hpp>
 #include <vault.hpp>
+#include <ui.hpp>
 
 #include <string>
 #include <vector>
 
-#include <unistd.h>
 
-//  vault read github.com/bmathieugit
-//  1     2    3
 int main(int argc, char **argv)
-try {
-  if (argc > 2)
+{
+  stew::ui::text_input ti_login("login");
+  stew::ui::text_input ti_passw("password");
+
+  std::string login;
+  std::string password;
+
+  ti_login.render();
+  ti_login.capture(login);
+  ti_passw.render();
+  ti_passw.capture(password);
+  
+  std::cout << "login : " << login << "; password : " << password << "\n";
+
+  stew::ui::table table({"login", "password"});
+  
+  table.push_row({"bmathieugit", "PassWORD!!!"});
+  table.push_row({"bmathieugit52", "AzertyUi"});
+  table.push_row({"bmathieugit_alter", "PassWORD!!!-6q5s4d65q4sd54M*qsdd"});
+
+  table.render();
+
+  /* if (argc > 2)
   {
     std::vector<std::string> args(argv + 1, argv + argc);
 
@@ -23,10 +42,7 @@ try {
         vaulta.process(args);
       }
     }
-  }
+  } */
 
   return EXIT_SUCCESS;
-} catch (std::exception& ex)
-{
-  std::cout << ex.what() << std::endl;
 }

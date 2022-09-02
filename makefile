@@ -20,10 +20,10 @@ stats:
 	wc -l building/*.s
 
 run: compile
-#	./building/steward.app vault list vault-test-repo.csv	
-	./building/steward.app vault save github.com/bmathieugit password vault-test-repo.csv
-	./building/steward.app vault save github.com/bmathieugit2 password2 vault-test-repo.csv
-	./building/steward.app vault save github.com/bmathieugit3 password3 vault-test-repo.csv
-	./building/steward.app vault save github.com/bmathieugit password4 vault-test-repo.csv
-	./building/steward.app vault remove github.com/bmathieugit vault-test-repo.csv
 	./building/steward.app vault list vault-test-repo.csv	
+#	./building/steward.app vault save github.com/bmathieugit password vault-test-repo.csv
+#	./building/steward.app vault save github.com/bmathieugit2 password2 vault-test-repo.csv
+#	./building/steward.app vault save github.com/bmathieugit3 password3 vault-test-repo.csv
+#	./building/steward.app vault save github.com/bmathieugit password4 vault-test-repo.csv
+#	./building/steward.app vault remove github.com/bmathieugit vault-test-repo.csv
+#	./building/steward.app vault list vault-test-repo.csv	

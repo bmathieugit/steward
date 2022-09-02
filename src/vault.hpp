@@ -84,32 +84,35 @@ namespace stew
     std::string fpath;
 
   public:
-    std::size_t load(std::string_view path)
+    void load(std::string_view path)
     {
-      fpath = std::string(path);
-      std::ifstream ifs(fpath);
-      std::string line;
-      csv::csv_marshaller csvm;
-      if (ifs.is_open())
-        while (std::getline(ifs, line))
-          repo.push_back(csvm.unmarshall<vault_entry>(line));
-      ifs.close();
-      return repo.size();
+      if (!path.empty())
+      {
+        fpath = std::string(path);
+        std::ifstream ifs(fpath);
+        std::string line;
+        csv::csv_marshaller csvm;
+        if (ifs.is_open())
+          while (std::getline(ifs, line))
+            repo.push_back(csvm.unmarshall<vault_entry>(line));
+        ifs.close();
+      }
     }
 
-    std::size_t flush()
+    void flush()
     {
-      std::size_t s = repo.size();
-      std::ofstream ofs(fpath);
-      csv::csv_marshaller csvm;
+      if (!fpath.empty())
+      {
+        std::ofstream ofs(fpath);
+        csv::csv_marshaller csvm;
 
-      if (ofs.is_open())
-        for (auto &&ve : repo)
-          ofs << csvm.marshall(ve) << "\n";
+        if (ofs.is_open())
+          for (auto &&ve : repo)
+            ofs << csvm.marshall(ve) << "\n";
 
-      repo.clear();
-      ofs.close();
-      return s;
+        repo.clear();
+        ofs.close();
+      }
     }
 
     void save(const vault_entry &v)
@@ -171,25 +174,14 @@ namespace stew
   public:
     void process(const std::vector<std::string> &args)
     {
-      if (!args.empty())
-      {
-        if (args[1] == "read")
-        {
-          read(args[2], args[3]);
-        }
-        else if (args[1] == "save")
-        {
-          save(args[2], args[3], args[4]);
-        }
-        else if (args[1] == "remove" or args[1] == "rm")
-        {
-          remove(args[2], args[3]);
-        }
-        else if (args[1] == "list")
-        {
-          list(args[2]);
-        }
-      }
+      if (args.size() >= 4 && args[1] == "read")
+        read(args[2], args[3]);
+      else if (args.size() >= 5 && args[1] == "save")
+        save(args[2], args[3], args[4]);
+      else if (args.size() >= 4 && args[1] == "remove" or args[1] == "rm")
+        remove(args[2], args[3]);
+      else if (args.size() >= 2 && args[1] == "list")
+        list(args[2]);
     }
 
   private:
@@ -201,24 +193,23 @@ namespace stew
 
     void save(const std::string &key, const std::string &secret, const std::string &path)
     {
-      vaults.load(path); 
+      vaults.load(path);
       vaults.save(vault_entry{key, secret});
       vaults.flush();
     }
 
     void remove(const std::string &key, const std::string &path)
     {
-      vaults.load(path); 
+      vaults.load(path);
       vaults.remove(key);
       vaults.flush();
     }
 
     void list(const std::string &path)
     {
-      vaults.load(path); 
-      vaults.foreach([](const vault_entry& ve) {
-        logger::flog(std::cout, '"', ve.key, "\":", ve.secret);
-      });
+      vaults.load(path);
+      vaults.foreach ([](const vault_entry &ve)
+                      { logger::flog(std::cout, '"', ve.key, "\":", ve.secret); });
     }
   };
 }
