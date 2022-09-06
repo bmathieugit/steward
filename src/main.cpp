@@ -12,34 +12,22 @@
 
 int main(int argc, char **argv)
 {
-  /*
-  std::string s;
-  std::cout << "login : "<<'\n';
-  std::cout << "mdp   : "<<'\n';
-  std::cout << "\033[2A";
-  std::cout << "\033[8C";
-  std::cin >> s;
-  std::cout << "\033[8C";
-  std::cin >> s;
- */
-  std::array<std::array<char, 80>, 60> buffer;
+  stew::ui::screen<80, 60> scr;
+  scr.begin_write();
+  scr.write("coucou %\n");
+  scr.write("comment allez vous monsieur ? (bien, bof) %\n");
+  scr.end_write();
+  scr.at_origin();
+  scr.at_next_marker();
+  scr.display();
 
-  for (std::size_t i(0); i < buffer.size(); ++i)
-    for (std::size_t j(0); j < buffer[i].size(); ++j)
-      buffer[i][j] = ' ';
+  std::string name = scr.capture();
+  scr.at_next_marker();
+  scr.display();
+  std::string rep = scr.capture();
 
-  for (std::size_t k(0); k < 10; ++k)
-  {
-    std::string m;
-    buffer[59][79] = '0' + k;
-    for (std::size_t i(0); i < buffer.size(); ++i)
-      for (std::size_t j(0); j < buffer[i].size(); ++j)
-        std::cout << buffer[i][j];
-    
-    std::cin >> m;
-    std::cout << "\033[2J";
-    std::cout << "\033[H";
-  }
+  std::cout << "vous vous appelez " << name << " et vous allez " << rep << '\n';
+
   /* if (argc > 2)
  {
    std::vector<std::string> args(argv + 1, argv + argc);

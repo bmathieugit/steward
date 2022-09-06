@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <array>
 
 namespace stew::ui
 {
@@ -103,6 +104,223 @@ namespace stew::ui
       return sizes;
     }
   };
+
+  struct cursor_position
+  {
+    std::size_t x = 0;
+    std::size_t y = 0;
+  };
+
+  struct ansi_navigator
+  {
+    std::ostream &os;
+
+    void up(std::size_t n)
+    {
+      os << "\033[" << n << 'A';
+    }
+
+    void down(std::size_t n)
+    {
+      os << "\033[" << n << 'B';
+    }
+
+    void left(std::size_t n)
+    {
+      os << "\033[" << n << 'D';
+    }
+
+    void right(std::size_t n)
+    {
+      os << "\033[" << n << 'C';
+    }
+  };
+
+  template <std::size_t X,
+            std::size_t Y>
+  class screen
+  {
+    std::array<std::array<char, X>, Y> buff;
+    cursor_position cpos;
+
+  public:
+    ~screen() = default;
+    screen()
+    {
+      clear();
+    }
+
+    screen(const screen &) = default;
+    screen(screen &&) = default;
+    screen &operator=(const screen &) = default;
+    screen &operator=(screen &&) = default;
+
+  public: // wirting methods
+    void begin_write()
+    {
+      clear();
+    }
+
+    void end_write()
+    {
+    }
+
+    void write(std::string_view s)
+    {
+      for (char c : s)
+      {
+        if (cpos.y < Y && cpos.x < X)
+        {
+          buff[cpos.y][cpos.x] = c;
+        }
+        else
+        {
+          break;
+        }
+
+        if ((c == '\n' || cpos.x == X - 1) && cpos.y < Y)
+        {
+          cpos.x = 0;
+          cpos.y = cpos.y + 1;
+        }
+        else
+        {
+          cpos.x = cpos.x + 1;
+        }
+      }
+    }
+
+  private:
+    void clear()
+    {
+      for (std::size_t y(0); y < Y; ++y)
+        for (std::size_t x(0); x < X; ++x)
+          buff[y][x] = '\0';
+    }
+
+  public: // cursor move position method
+    cursor_position at_origin()
+    {
+      cpos.x = 0;
+      cpos.y = 0;
+      return cpos;
+    }
+
+    cursor_position at_next_marker()
+    {
+      while (cpos.x != X && cpos.y != Y)
+      {
+        if (cpos.x == X)
+        {
+          cpos.x = 0;
+          cpos.y = cpos.y + 1;
+        }
+        else
+        {
+          cpos.x = cpos.x + 1;
+        }
+
+        char at = buff[cpos.y][cpos.x];
+
+        if (at == '%')
+        {
+          break;
+        }
+      }
+
+      return cpos;
+    }
+
+  public:
+    void display()
+    {
+      std::cout << "\033[2J";
+      std::cout << "\033[H";
+
+      cursor_position pos;
+
+      for (std::size_t y(0); y < Y; ++y)
+      {
+        for (std::size_t x(0); x < X; ++x)
+        {
+          if (buff[y][x] == '\0')
+          {
+            continue;
+          }
+
+          if (char c = buff[y][x]; c != '\n')
+          {
+            std::cout << c;
+            pos.x = pos.x + 1;
+          }
+          else
+          {
+            std::cout << '\n';
+            pos.x = 0;
+            pos.y = pos.y + 1;
+            break;
+          }
+        }
+      }
+
+      ansi_navigator nav{std::cout};
+
+      if (pos.y != 0)
+        nav.up(pos.y);
+
+      if (pos.x != 0)
+        nav.left(pos.x);
+
+      if (cpos.x != 0)
+        nav.right(cpos.x);
+
+      if (cpos.y != 0)
+        nav.down(cpos.y);
+    }
+
+  public:
+    std::string capture()
+    {
+      std::string val;
+      std::getline(std::cin >> std::ws, val);
+
+      for (char c : val)
+      {
+        if (cpos.x < X - 1)
+        {
+          buff[cpos.y][cpos.x] = c;
+          cpos.x = cpos.x + 1;
+        }
+      }
+
+      buff[cpos.y][cpos.x] = '\n';
+
+      cpos.x = 0;
+      cpos.y = cpos.y + 1;
+      return val;
+    }
+  };
+
+  namespace form
+  {
+    struct input
+    {
+      std::string value;
+      std::string label;
+
+      template <
+          std::size_t X,
+          std::size_t Y>
+      void render(screen<X, Y> &scr)
+      {
+        scr.write("--------------\n");
+        scr.write("-- ");
+        scr.write(label);
+        scr.write(" : %\n");
+      }
+    };
+  }
+
 }
 
 #endif
