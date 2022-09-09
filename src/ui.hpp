@@ -5,322 +5,322 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include <array>
+#include <map>
 
 namespace stew::ui
 {
-  template <typename T>
-  concept ui_widget = requires(T &t)
-  {
-    t.render();
-  };
-
-  class text_input
-  {
-    std::string label;
-
-  public:
-    ~text_input() = default;
-    text_input(std::string_view _label)
-        : label(_label) {}
-    text_input(const text_input &) = default;
-    text_input(text_input &&) = default;
-    text_input &operator=(const text_input &) = default;
-    text_input &operator=(text_input &&) = default;
-
-  public:
-    void render()
-    {
-      std::cout << "|---------------------------\n";
-      std::cout << "| " << label << ": ";
-    }
-
-    void capture(std::string &v)
-    {
-      std::cin >> v;
-      std::cout << "|---------------------------\n";
-    }
-  };
-
-  class table
-  {
-    std::vector<std::string> headers;
-    std::vector<std::vector<std::string>> rows;
-
-  public:
-    ~table() = default;
-    explicit table(const std::vector<std::string> &_headers)
-        : headers(_headers) {}
-    table() = default;
-    table(const table &) = default;
-    table(table &&) = default;
-    table &operator=(const table &) = default;
-    table &operator=(table &&) = default;
-
-  public:
-    void push_row(const std::vector<std::string> &row)
-    {
-      if (!headers.empty() && row.size() == headers.size())
-        rows.push_back(row);
-    }
-
-    void render()
-    {
-      std::vector<std::size_t> sizes = columns_max_size();
-
-      for (std::size_t i(0); i < sizes.size(); ++i)
-        std::cout << '|' << std::string(sizes[i] + 2, '-') << '|';
-      std::cout << '\n';
-
-      for (std::size_t i(0); i < sizes.size(); ++i)
-        std::cout << '|' << ' ' << headers[i] << std::string(sizes[i] - headers[i].size() + 1, ' ') << '|';
-      std::cout << '\n';
-
-      for (std::size_t i(0); i < sizes.size(); ++i)
-        std::cout << '|' << std::string(sizes[i] + 2, '-') << '|';
-      std::cout << '\n';
-
-      for (std::size_t l(0); l < rows.size(); ++l)
-      {
-        for (std::size_t i(0); i < headers.size(); ++i)
-          std::cout << '|' << ' ' << rows[l][i] << std::string(sizes[i] - rows[l][i].size() + 1, ' ') << '|';
-        std::cout << '\n';
-      }
-    }
-
-  private:
-    std::vector<std::size_t> columns_max_size()
-    {
-      std::vector<size_t> sizes(headers.size());
-
-      for (std::size_t i(0); i < headers.size(); ++i)
-        sizes[i] = headers[i].size();
-
-      for (std::size_t l(0); l < rows.size(); ++l)
-        for (std::size_t i(0); i < headers.size(); ++i)
-          if (sizes[i] < rows[l][i].size())
-            sizes[i] = rows[l][i].size();
-
-      return sizes;
-    }
-  };
-
-  struct cursor_position
+  struct position
   {
     std::size_t x = 0;
     std::size_t y = 0;
   };
 
-  struct ansi_navigator
+  using marker_position = position;
+  using cursor_position = position;
+
+  struct cursor
   {
     std::ostream &os;
+    cursor_position pos;
+    std::map<std::string, marker_position> markers;
+
+    void erase()
+    {
+      std::cout << "\033[2J";
+    }
 
     void up(std::size_t n)
     {
       os << "\033[" << n << 'A';
+      pos.y = pos.y - n >= 0 ? pos.y - n : 0;
     }
 
     void down(std::size_t n)
     {
       os << "\033[" << n << 'B';
+      pos.y = pos.y + n;
     }
 
     void left(std::size_t n)
     {
       os << "\033[" << n << 'D';
+      pos.x = pos.x - n >= 0 ? pos.x - n : 0;
     }
 
     void right(std::size_t n)
     {
       os << "\033[" << n << 'C';
+      pos.x = pos.x + n;
+    }
+
+    void origin()
+    {
+      pos.x = 0;
+      pos.y = 0;
+      os << "\033[H";
+    }
+
+    void at_marker(const std::string &id)
+    {
+      if (markers.contains(id))
+      {
+        marker_position mpos = markers.at(id);
+
+        origin();
+
+        if (mpos.y != 0)
+        {
+          down(mpos.y);
+        }
+
+        if (mpos.x != 0)
+        {
+          right(mpos.x);
+        }
+      }
     }
   };
 
-  template <std::size_t X,
-            std::size_t Y>
   class screen
   {
-    std::array<std::array<char, X>, Y> buff;
-    cursor_position cpos;
+  public:
+    class screen_painter
+    {
+      screen *_scr;
+
+    public:
+      ~screen_painter() = default;
+      explicit screen_painter(screen &scr)
+          : _scr(&scr) {}
+
+      screen_painter(const screen_painter &) = default;
+      screen_painter(screen_painter &&) = default;
+      screen_painter &operator=(const screen_painter &) = default;
+      screen_painter &operator=(screen_painter &&) = default;
+
+    public:
+      void append(std::string_view s)
+      {
+        _scr->append(s);
+      }
+
+      void append_marker(const std::string &id)
+      {
+        _scr->append_marker(id);
+      }
+    };
+
+  private:
+    std::vector<std::string> data;
+    cursor curs{std::cout};
 
   public:
     ~screen() = default;
-    screen()
-    {
-      clear();
-    }
-
+    screen() { clear(); }
     screen(const screen &) = default;
     screen(screen &&) = default;
     screen &operator=(const screen &) = default;
     screen &operator=(screen &&) = default;
 
-  public: // wirting methods
-    void begin_write()
+  public:
+    void append_marker(const std::string &id)
     {
-      clear();
+      if (data.empty())
+      {
+        data.push_back("");
+      }
+
+      curs.markers[id] =
+          marker_position{
+              data.back().size(),
+              data.size() - 1};
+
+      data.back().push_back('%');
     }
 
-    void end_write()
+    void append(std::string_view s)
     {
-    }
+      if (data.empty())
+      {
+        data.push_back("");
+      }
 
-    void write(std::string_view s)
-    {
       for (char c : s)
       {
-        if (cpos.y < Y && cpos.x < X)
+        if (c == '\n')
         {
-          buff[cpos.y][cpos.x] = c;
+          data.push_back("");
         }
         else
         {
-          break;
-        }
-
-        if ((c == '\n' || cpos.x == X - 1) && cpos.y < Y)
-        {
-          cpos.x = 0;
-          cpos.y = cpos.y + 1;
-        }
-        else
-        {
-          cpos.x = cpos.x + 1;
+          data.back().push_back(c);
         }
       }
     }
 
-  private:
+    screen_painter painter()
+    {
+      return screen_painter(*this);
+    }
+
     void clear()
     {
-      for (std::size_t y(0); y < Y; ++y)
-        for (std::size_t x(0); x < X; ++x)
-          buff[y][x] = '\0';
-    }
-
-  public: // cursor move position method
-    cursor_position at_origin()
-    {
-      cpos.x = 0;
-      cpos.y = 0;
-      return cpos;
-    }
-
-    cursor_position at_next_marker()
-    {
-      while (cpos.x != X && cpos.y != Y)
-      {
-        if (cpos.x == X)
-        {
-          cpos.x = 0;
-          cpos.y = cpos.y + 1;
-        }
-        else
-        {
-          cpos.x = cpos.x + 1;
-        }
-
-        char at = buff[cpos.y][cpos.x];
-
-        if (at == '%')
-        {
-          break;
-        }
-      }
-
-      return cpos;
+      data.clear();
     }
 
   public:
-    void display()
+    void at_origin()
     {
-      std::cout << "\033[2J";
-      std::cout << "\033[H";
+      curs.origin();
+    }
 
-      cursor_position pos;
-
-      for (std::size_t y(0); y < Y; ++y)
-      {
-        for (std::size_t x(0); x < X; ++x)
-        {
-          if (buff[y][x] == '\0')
-          {
-            continue;
-          }
-
-          if (char c = buff[y][x]; c != '\n')
-          {
-            std::cout << c;
-            pos.x = pos.x + 1;
-          }
-          else
-          {
-            std::cout << '\n';
-            pos.x = 0;
-            pos.y = pos.y + 1;
-            break;
-          }
-        }
-      }
-
-      ansi_navigator nav{std::cout};
-
-      if (pos.y != 0)
-        nav.up(pos.y);
-
-      if (pos.x != 0)
-        nav.left(pos.x);
-
-      if (cpos.x != 0)
-        nav.right(cpos.x);
-
-      if (cpos.y != 0)
-        nav.down(cpos.y);
+    void at_marker(const std::string &id)
+    {
+      curs.at_marker(id);
     }
 
   public:
+    void refresh()
+    {
+      curs.origin();
+      curs.erase();
+
+      for (const std::string &row : data)
+      {
+        std::cout << row << '\n';
+      }
+    }
+
     std::string capture()
     {
-      std::string val;
-      std::getline(std::cin >> std::ws, val);
-
-      for (char c : val)
-      {
-        if (cpos.x < X - 1)
-        {
-          buff[cpos.y][cpos.x] = c;
-          cpos.x = cpos.x + 1;
-        }
-      }
-
-      buff[cpos.y][cpos.x] = '\n';
-
-      cpos.x = 0;
-      cpos.y = cpos.y + 1;
-      return val;
+      std::string resp;
+      std::cin >> resp;
+      return resp;
     }
   };
 
-  namespace form
+  namespace widget
   {
-    struct input
+    template <typename W>
+    concept widget = requires(const W &w, screen::screen_painter &sp)
     {
-      std::string value;
-      std::string label;
+      w.paint(sp);
+    };
 
-      template <
-          std::size_t X,
-          std::size_t Y>
-      void render(screen<X, Y> &scr)
+    class input
+    {
+      std::string _label;
+
+    public:
+      ~input() = default;
+      explicit input(std::string_view lbl)
+          : _label(lbl) {}
+      input(const input &) = default;
+      input(input &&) = default;
+      input &operator=(const input &) = default;
+      input &operator=(input &&) = default;
+
+    public:
+      const std::string &label() const
       {
-        scr.write("--------------\n");
-        scr.write("-- ");
-        scr.write(label);
-        scr.write(" : %\n");
+        return _label;
+      }
+
+    public:
+      void paint(screen::screen_painter &sp) const
+      {
+        sp.append("----------------\n");
+        sp.append(" + ");
+        sp.append(_label);
+        sp.append(" : ");
+        sp.append_marker(_label);
+        sp.append("\n");
+      }
+    };
+
+    class form
+    {
+      std::string _name;
+      std::vector<input> _inputs;
+
+    public:
+      ~form() = default;
+      explicit form(std::string_view name)
+          : _name(name) {}
+      form(const form &) = default;
+      form(form &&) = default;
+      form &operator=(const form &) = default;
+      form &operator=(form &&) = default;
+
+    public:
+      void push(const input &i)
+      {
+        _inputs.push_back(i);
+      }
+
+      std::vector<input> &inputs()
+      {
+        return _inputs;
+      }
+
+      void paint(screen::screen_painter &sp) const
+      {
+        sp.append("------------------------\n");
+        sp.append("--- ");
+        sp.append(_name);
+        sp.append(" ---\n");
+
+        for (const widget::input &i : _inputs)
+        {
+          i.paint(sp);
+        }
+      }
+
+      std::map<std::string, std::string> submit(screen &scr)
+      {
+        std::map<std::string, std::string> values;
+
+        for (const auto &i : _inputs)
+        {
+          scr.at_marker(i.label());
+          values[i.label()] = scr.capture();
+        }
+
+        return values;
+      }
+    };
+
+    class form_builder
+    {
+      std::string _name;
+      std::vector<std::string> _inputs_label;
+
+    public:
+      form_builder &name(std::string_view n)
+      {
+        _name = n;
+        return *this;
+      }
+
+      form_builder &input(std::string_view lbl)
+      {
+        _inputs_label.emplace_back(lbl);
+        return *this;
+      }
+
+      widget::form build() const
+      {
+        widget::form f(_name);
+
+        for (const std::string &lbl : _inputs_label)
+        {
+          f.push(widget::input(lbl));
+        }
+
+        return f;
       }
     };
   }
-
 }
 
 #endif
