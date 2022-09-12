@@ -39,12 +39,13 @@ public:
 public:
   stew::ui::draw::widget_drawing paint() const
   {
-    std::stringstream ss;
-    ss << "----------------\n";
-    ss << " + " << _label << " : % ";
-    ss << " + %\n";
-    return stew::ui::draw::widget_drawing{
-        ss.str(), {_label, _label + "2"}};
+    stew::ui::draw::widget_drawing wd;
+    wd.drawing.push_back("----------------");
+    wd.drawing.push_back(" + ");
+    wd.drawing.back() += _label + " : % ";
+    wd.markers.push_back(_label);
+    wd.markers.push_back(_label + "2");
+    return wd;
   }
 
   void notify_value(
@@ -70,16 +71,14 @@ int main(int argc, char **argv)
                .input("email")
 
                .build();
-   input i("test");
- 
+  input i("test");
+
   stew::ui::screen::screen scr;
   stew::ui::screen::screen_painter sp;
   stew::ui::screen::screen_user_input sui;
 
   sp.paint(scr, f, i);
   sui.notify_user_inputs(scr, f, i);
-
- 
 
   return EXIT_SUCCESS;
 }

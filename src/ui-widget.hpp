@@ -10,7 +10,7 @@ namespace stew::ui::draw
 {
   struct widget_drawing
   {
-    std::string drawing;
+    std::vector<std::string> drawing;
     std::vector<std::string> markers;
   };
 };
@@ -55,11 +55,12 @@ namespace stew::ui::widget
   public:
     draw::widget_drawing paint() const
     {
-      std::stringstream ss;
-      ss << "----------------\n";
-      ss << " + \033[1m" << _label << "\033[0m : %\n";
-      return draw::widget_drawing{
-          ss.str(), {_label}};
+      draw::widget_drawing wd;
+      wd.drawing.push_back("----------------");
+      wd.drawing.push_back(" + ");
+      wd.drawing.back() += _label + " : %";
+      wd.markers.push_back(_label);
+      return wd;
     }
 
     void notify_value(
@@ -100,26 +101,21 @@ namespace stew::ui::widget
 
     draw::widget_drawing paint() const
     {
-      draw::widget_drawing wdf;
+      draw::widget_drawing wd;
 
-      std::stringstream ss;
-      ss << "------------------------\n";
-      ss << "--- " << _name << " ---\n";
+      
+      wd.drawing.push_back("------------------------");
+      wd.drawing.push_back("--- ");
+      wd.drawing.back() += _name + " ---";
 
       for (const widget::input &i : _inputs)
       {
-        draw::widget_drawing wdi = i.paint();
-
-        ss << wdi.drawing;
-        wdf.markers.insert(
-            wdf.markers.end(),
-            wdi.markers.begin(),
-            wdi.markers.end());
+        auto&& wdi = i.paint();
+        wd.drawing.insert(wd.drawing.end(), wdi.drawing.begin(), wdi.drawing.end());
+        wd.markers.insert(wd.markers.end(), wdi.markers.begin(), wdi.markers.end());
       }
 
-      wdf.drawing = ss.str();
-
-      return wdf;
+      return wd;
     }
 
     void notify_value(

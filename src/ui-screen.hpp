@@ -151,7 +151,6 @@ namespace stew::ui::screen
       _markers.clear();
     }
 
-
   public:
     void refresh()
     {
@@ -192,30 +191,33 @@ namespace stew::ui::screen
         const widget::widget auto &w0) const
     {
       draw::widget_drawing wd(w0.paint());
+      std::size_t nbm = 0;
 
-      std::size_t nbm = std::count(
-          wd.drawing.begin(),
-          wd.drawing.end(), '%');
+      for (const std::string &r : wd.drawing)
+      {
+        nbm += std::count(r.begin(), r.end(), '%');
+      }
 
       if (nbm == wd.markers.size())
       {
         std::size_t midx = 0;
 
-        for (char c : wd.drawing)
+        for (const std::string &s : wd.drawing)
         {
-          if (c == '\n')
+          for (char c : s)
           {
-            scr.println();
+            if (c == '%')
+            {
+              scr.print_marker(wd.markers[midx]);
+              midx = midx + 1;
+            }
+            else
+            {
+              scr.print(c);
+            }
           }
-          else if (c == '%')
-          {
-            scr.print_marker(wd.markers[midx]);
-            midx = midx + 1;
-          }
-          else
-          {
-            scr.print(c);
-          }
+
+          scr.println();
         }
       }
     }
@@ -235,7 +237,7 @@ namespace stew::ui::screen
   {
     void notify_user_inputs(
         screen &scr,
-        widget::widget auto &... w)
+        widget::widget auto &...w)
     {
       for (const auto &[id, _] : scr.markers())
       {
