@@ -181,10 +181,7 @@ namespace stew::ui::screen
 
       return resp;
     }
-  };
 
-  struct screen_painter
-  {
   private:
     void paint_one(
         screen &scr,
@@ -231,10 +228,7 @@ namespace stew::ui::screen
       (paint_one(scr, wn), ...);
       scr.refresh();
     }
-  };
 
-  struct screen_user_input
-  {
     void notify_user_inputs(
         screen &scr,
         widget::widget auto &...w)

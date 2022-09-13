@@ -147,7 +147,7 @@ namespace stew::ui::widget
       return *this;
     }
 
-    widget::form build() const
+    widget::form build()
     {
       widget::form f(_name);
 
@@ -155,6 +155,9 @@ namespace stew::ui::widget
       {
         f.push(widget::input(lbl));
       }
+
+      _name.clear();
+      _inputs_label.clear();
 
       return f;
     }
