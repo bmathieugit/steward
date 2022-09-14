@@ -27,7 +27,7 @@ namespace stew::ui::screen
 
     void erase()
     {
-      std::cout << "\033[2J";
+      os << "\033[2J";
     }
 
     void up(std::size_t n)
@@ -74,6 +74,29 @@ namespace stew::ui::screen
       {
         right(mpos.x);
       }
+    }
+
+    void pushc(char c)
+    {
+      os << c;
+      pos.x = pos.x + 1;
+    }
+
+    void pushln()
+    {
+      os << '\n';
+      pos.x = 0;
+      pos.y = pos.y + 1;
+    }
+
+    void mode_bold()
+    {
+      os << "\033[2m";
+    }
+
+    void mode_reset()
+    {
+      os << "\033[0m";
     }
   };
 
@@ -159,7 +182,12 @@ namespace stew::ui::screen
 
       for (const std::string &row : _data)
       {
-        std::cout << row << '\n';
+        for (const char c : row)
+        {
+          curs.pushc(c);
+        }
+
+        curs.pushln();
       }
     }
 
@@ -176,7 +204,7 @@ namespace stew::ui::screen
       if (found != _markers.end())
       {
         curs.at((*found).pos);
-        std::cin >> resp;
+        std::getline(std::cin, resp);
       }
 
       return resp;
@@ -185,7 +213,7 @@ namespace stew::ui::screen
   private:
     void paint_one(
         screen &scr,
-        const widget::widget auto &w0) const
+        const ui::widget::widget &w0) const
     {
       draw::widget_drawing wd(w0.paint());
       std::size_t nbm = 0;
@@ -222,7 +250,7 @@ namespace stew::ui::screen
   public:
     void paint(
         screen &scr,
-        const widget::widget auto &...wn) const
+        const auto &...wn) const
     {
       scr.clear();
       (paint_one(scr, wn), ...);
@@ -231,12 +259,12 @@ namespace stew::ui::screen
 
     void notify_user_inputs(
         screen &scr,
-        widget::widget auto &...w)
+        auto&...w)
     {
       for (const auto &[id, _] : scr.markers())
       {
         std::string in = scr.get_input(id);
-        (w.notify_value(id, in), ...);
+        (w.notify(id, in), ...);
       }
     }
   };
