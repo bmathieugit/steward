@@ -12,7 +12,7 @@ all: clean compile stats run
 clean: 
 	rm -rf building
 
-compile: src/main.cpp
+compile: src/main.cpp src/ui-widget.cpp src/ui-screen.cpp
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS}
 

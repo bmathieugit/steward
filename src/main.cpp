@@ -9,20 +9,21 @@
 #include <array>
 #include <sstream>
 #include <iostream>
+namespace ui = stew::ui;
 
-std::unique_ptr<stew::ui::widget::form> make_form(const std::string& name)
+std::unique_ptr<ui::form> make_form(const std::string& name)
 {
-  return std::make_unique<stew::ui::widget::form>(name);
+  return std::make_unique<ui::form>(name);
 }
 
-std::unique_ptr<stew::ui::widget::input> make_input(const std::string& label)
+std::unique_ptr<ui::input> make_input(const std::string& label)
 {
-  return std::make_unique<stew::ui::widget::input>(label);
+  return std::make_unique<ui::input>(label);
 }
 
 int main(int argc, char **argv)
 {
-  namespace widget = stew::ui::widget;
+  namespace ui = stew::ui;
 
   auto f = make_form("login/password");
   auto l1 = make_input("login");
@@ -39,15 +40,15 @@ int main(int argc, char **argv)
   f2->push(std::move(l2));
   f2->push(std::move(p2));
 
-
-  stew::ui::widget::hlayout v;
+  ui::cursor curs(std::cout);
+  ui::hlayout v;
   v.push(std::move(f));
   v.push(std::move(f2));
 
-  stew::ui::screen::screen scr;
+  ui::screen scr;
 
-  scr.paint(scr, v);
-  scr.notify_user_inputs(scr, v);
+  scr.paint({&v});
+  scr.notify({&v});
 
   return EXIT_SUCCESS;
 }

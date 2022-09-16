@@ -9,7 +9,7 @@
 
 #include <ui-widget.hpp>
 
-namespace stew::ui::screen
+namespace stew::ui
 {
   struct position
   {
@@ -20,84 +20,31 @@ namespace stew::ui::screen
   using marker_position = position;
   using cursor_position = position;
 
-  struct cursor
+  class cursor
   {
-    std::ostream &os;
-    cursor_position pos;
+    std::ostream &_os;
+    cursor_position _pos;
 
-    void erase()
-    {
-      os << "\033[2J";
-    }
+  public:
+    ~cursor() = default;
+    cursor(std::ostream &os);
+    cursor(const cursor &) = default;
+    cursor(cursor &&) = default;
+    cursor &operator=(const cursor &) = default;
+    cursor &operator=(cursor &&) = default;
 
-    void up(std::size_t n)
-    {
-      os << "\033[" << n << 'A';
-      pos.y = pos.y - n >= 0 ? pos.y - n : 0;
-    }
+  public:
+    void erase();
+    void up(std::size_t n);
+    void down(std::size_t n);
+    void left(std::size_t n);
+    void right(std::size_t n);
+    void origin();
+    void at(marker_position mpos);
 
-    void down(std::size_t n)
-    {
-      os << "\033[" << n << 'B';
-      pos.y = pos.y + n;
-    }
-
-    void left(std::size_t n)
-    {
-      os << "\033[" << n << 'D';
-      pos.x = pos.x - n >= 0 ? pos.x - n : 0;
-    }
-
-    void right(std::size_t n)
-    {
-      os << "\033[" << n << 'C';
-      pos.x = pos.x + n;
-    }
-
-    void origin()
-    {
-      pos.x = 0;
-      pos.y = 0;
-      os << "\033[H";
-    }
-
-    void at(marker_position mpos)
-    {
-      origin();
-
-      if (mpos.y != 0)
-      {
-        down(mpos.y);
-      }
-
-      if (mpos.x != 0)
-      {
-        right(mpos.x);
-      }
-    }
-
-    void pushc(char c)
-    {
-      os << c;
-      pos.x = pos.x + 1;
-    }
-
-    void pushln()
-    {
-      os << '\n';
-      pos.x = 0;
-      pos.y = pos.y + 1;
-    }
-
-    void mode_bold()
-    {
-      os << "\033[2m";
-    }
-
-    void mode_reset()
-    {
-      os << "\033[0m";
-    }
+  public:
+    void pushc(char c);
+    void pushln();
   };
 
   struct screen_marker
@@ -116,155 +63,57 @@ namespace stew::ui::screen
 
   public:
     ~screen() = default;
-    screen() { clear(); }
+    screen() = default;
     screen(const screen &) = default;
     screen(screen &&) = default;
     screen &operator=(const screen &) = default;
     screen &operator=(screen &&) = default;
 
   public:
-    const std::vector<screen_marker> &markers() const
-    {
-      return _markers;
-    }
+    const std::vector<screen_marker> &markers() const;
 
   public:
-    void println()
-    {
-      _data.push_back("");
-    }
-
-    void print(char c)
-    {
-      if (_data.empty())
-        println();
-
-      _data.back().push_back(c);
-    }
-
-    void print_marker(const std::string &id)
-    {
-      auto found = std::find_if(
-          _markers.begin(), _markers.end(),
-          [&id](const screen_marker &m)
-          {
-            return m.id == id;
-          });
-
-      screen_marker m = {
-          id, marker_position{
-                  _data.back().size(),
-                  _data.size() - 1}};
-
-      if (found != _markers.end())
-      {
-        *found = std::move(m);
-      }
-      else
-      {
-        _markers.push_back(std::move(m));
-      }
-
-      print('%');
-    }
-
-    void clear()
-    {
-      _data.clear();
-      _markers.clear();
-    }
+    void println();
+    void print(char c);
+    void print_marker(const std::string &id);
+    void clear();
 
   public:
-    void refresh()
-    {
-      curs.origin();
-      curs.erase();
-
-      for (const std::string &row : _data)
-      {
-        for (const char c : row)
-        {
-          curs.pushc(c);
-        }
-
-        curs.pushln();
-      }
-    }
-
-    std::string get_input(const std::string &id)
-    {
-      std::string resp;
-      auto found = std::find_if(
-          _markers.begin(), _markers.end(),
-          [&id](const screen_marker &m)
-          {
-            return m.id == id;
-          });
-
-      if (found != _markers.end())
-      {
-        curs.at((*found).pos);
-        std::getline(std::cin, resp);
-      }
-
-      return resp;
-    }
+    void refresh();
+    std::string get_input(const std::string &id);
 
   private:
-    void paint_one(
-        screen &scr,
-        const ui::widget::widget &w0) const
-    {
-      draw::widget_drawing wd(w0.paint());
-      std::size_t nbm = 0;
-
-      for (const std::string &r : wd.drawing)
-      {
-        nbm += std::count(r.begin(), r.end(), '%');
-      }
-
-      if (nbm == wd.markers.size())
-      {
-        std::size_t midx = 0;
-
-        for (const std::string &s : wd.drawing)
-        {
-          for (char c : s)
-          {
-            if (c == '%')
-            {
-              scr.print_marker(wd.markers[midx]);
-              midx = midx + 1;
-            }
-            else
-            {
-              scr.print(c);
-            }
-          }
-
-          scr.println();
-        }
-      }
-    }
+    void paint_one(const ui::widget &w0);
 
   public:
-    void paint(
-        screen &scr,
-        const auto &...wn) const
+    void paint(std::vector<const widget *> ws)
     {
-      scr.clear();
-      (paint_one(scr, wn), ...);
-      scr.refresh();
+      clear();
+
+      for (const widget *w : ws)
+      {
+        if (w != nullptr)
+        {
+          paint_one(*w);
+        }
+      }
+
+      refresh();
     }
 
-    void notify_user_inputs(
-        screen &scr,
-        auto&...w)
+    void notify(std::vector<widget *> ws)
     {
-      for (const auto &[id, _] : scr.markers())
+      for (const auto &[id, _] : markers())
       {
-        std::string in = scr.get_input(id);
-        (w.notify(id, in), ...);
+        std::string in = get_input(id);
+        
+        for (widget *w : ws)
+        {
+          if (w != nullptr)
+          {
+            w->notify(id, in);
+          }
+        }
       }
     }
   };
