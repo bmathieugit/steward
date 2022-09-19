@@ -103,7 +103,29 @@ namespace stew::ui
     virtual widget_drawing paint() const override;
     virtual void notify(
         const std::string &id,
-        const std::string &value);
+        const std::string &value) override;
+  };
+
+  class menu : public stew::ui::widget
+  {
+    std::string _name;
+    std::vector<std::string> _items;
+    std::size_t _choice = 0;
+
+  public:
+    virtual ~menu() = default;
+    menu(const std::string &name,
+         const std::vector<std::string> &items);
+    menu(const menu &) = default;
+    menu(menu &&) = default;
+    menu &operator=(const menu &) = default;
+    menu &operator=(menu &&) = default;
+
+  public:
+    virtual widget_drawing paint() const override;
+    virtual void notify(
+        const std::string &id,
+        const std::string &value) override;
   };
 }
 

@@ -9,6 +9,7 @@
 #include <array>
 #include <sstream>
 #include <iostream>
+
 namespace ui = stew::ui;
 
 std::unique_ptr<ui::form> make_form(const std::string& name)
@@ -24,6 +25,9 @@ std::unique_ptr<ui::input> make_input(const std::string& label)
 int main(int argc, char **argv)
 {
   namespace ui = stew::ui;
+
+  ui::menu main_menu("steward main menu", 
+    {"vault", "agenda", "note", "wiki"});
 
   auto f = make_form("login/password");
   auto l1 = make_input("login");
@@ -47,8 +51,8 @@ int main(int argc, char **argv)
 
   ui::screen scr;
 
-  scr.paint({&v});
-  scr.notify({&v});
+  scr.paint({&v, &main_menu});
+  scr.notify({&v, &main_menu});
 
   return EXIT_SUCCESS;
 }

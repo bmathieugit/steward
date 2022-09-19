@@ -2,6 +2,7 @@
 *.d
 *.ii
 *.s
+*.bc
 building
 dist
 .vscode

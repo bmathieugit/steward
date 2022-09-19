@@ -1,4 +1,5 @@
 #include <ui-widget.hpp>
+#include <vector>
 
 namespace stew::ui
 {
@@ -194,6 +195,38 @@ namespace stew::ui
     for (auto &w : _widgets)
     {
       w->notify(id, value);
+    }
+  }
+
+  menu::menu(
+      const std::string &name,
+      const std::vector<std::string> &items)
+      : _name(name), _items(items) {}
+
+  widget_drawing menu::paint() const
+  {
+    widget_drawing wd;
+    wd.drawln("########################");
+    wd.drawln("# ", _name);
+
+    for (std::size_t i(0); i < _items.size(); ++i)
+    {
+      wd.drawln(i, ": -- ", _items[i]);
+    }
+
+    wd.drawln(" ---> ? %");
+    wd.mark(_name);
+
+    return wd;
+  }
+
+  void menu::notify(
+      const std::string &id,
+      const std::string &value)
+  {
+    if (id == _name)
+    {
+      std::stoull(value);
     }
   }
 }

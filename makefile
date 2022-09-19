@@ -4,7 +4,7 @@
 # $? : liste des dépendances plus récentes que la cible                         
 # $* : nom d’un fichier sans son suffixe  
 
-CC=g++
+CC=clang++
 FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps
 
 all: clean compile stats run
@@ -17,7 +17,7 @@ compile: src/main.cpp src/ui-widget.cpp src/ui-screen.cpp
 	${CC} -o building/steward.app $^ ${FLAGS}
 
 stats:
-	wc -l building/*.s
+	wc -l *.s
 
 run: compile
 	./building/steward.app vault list vault-test-repo.csv	

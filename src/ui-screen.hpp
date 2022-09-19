@@ -30,8 +30,6 @@ namespace stew::ui
     cursor(std::ostream &os);
     cursor(const cursor &) = default;
     cursor(cursor &&) = default;
-    cursor &operator=(const cursor &) = default;
-    cursor &operator=(cursor &&) = default;
 
   public:
     void erase();
@@ -66,8 +64,6 @@ namespace stew::ui
     screen() = default;
     screen(const screen &) = default;
     screen(screen &&) = default;
-    screen &operator=(const screen &) = default;
-    screen &operator=(screen &&) = default;
 
   public:
     const std::vector<screen_marker> &markers() const;
