@@ -5,10 +5,12 @@
 #include <sstream>
 #include <string_view>
 #include <vector>
+#include <list>
 #include <memory>
 
 namespace stew::ui
 {
+
   struct widget_drawing
   {
     std::vector<std::string> drawing;
@@ -16,27 +18,50 @@ namespace stew::ui
 
   public:
     template <typename... T>
-    void drawln(T &&...t)
-    {
-      std::stringstream ss;
-      (ss << ... << t);
-      drawing.push_back(ss.str());
-    }
+    void drawln(T &&...t);
 
-    void mark(const std::string &id)
+    void mark(const std::string &id);
+  };
+
+  template <typename... T>
+  void widget_drawing::drawln(T &&...t)
+  {
+    std::stringstream ss;
+    (ss << ... << std::forward<T>(t));
+    drawing.push_back(ss.str());
+  }
+
+  class widget;
+
+  class widget_factory
+  {
+    std::list<std::unique_ptr<widget>> ws;
+
+  public:
+    template <typename W, typename... ARGS>
+    W *build(ARGS &&...args) requires std::derived_from<W, widget>
     {
-      markers.push_back(id);
+      ws.push_back(std::make_unique<W>(std::forward<ARGS>(args)...));
+      return static_cast<W *>(ws.back().get());
     }
   };
 
   class widget
   {
+    widget *_parent = nullptr;
+
   public:
+    widget(widget *parent);
     virtual ~widget() = default;
+
+  public:
     virtual widget_drawing paint() const = 0;
+
     virtual void notify(
-        const std::string &id,
-        const std::string &value) = 0;
+        std::string_view id,
+        std::string_view value) = 0;
+
+    virtual void child(widget *ch) = 0;
   };
 
   class input : public widget
@@ -45,65 +70,80 @@ namespace stew::ui
     std::string _value;
 
   public:
+    input(widget *parent,
+          std::string_view label);
     virtual ~input() = default;
-    input(std::string_view lbl = "");
-    input(const input &) = default;
-    input(input &&) = default;
-    input &operator=(const input &) = default;
-    input &operator=(input &&) = default;
+
+  public:
     const std::string &label() const;
     const std::string &value() const;
+
+  public:
     virtual widget_drawing paint() const override;
+
     virtual void notify(
-        const std::string &id,
-        const std::string &value) override;
+        std::string_view id,
+        std::string_view value) override;
+
+    virtual void child(widget *ch) override;
   };
 
   class form : public widget
   {
     std::string _name;
-    std::vector<std::unique_ptr<widget>> _inputs;
+    std::vector<widget *> _inputs;
 
   public:
+    form(widget *parent, std::string_view name);
     virtual ~form() = default;
-    explicit form(std::string_view name);
-    form(const form &) = default;
-    form(form &&) = default;
-    form &operator=(const form &) = default;
-    form &operator=(form &&) = default;
-    void push(std::unique_ptr<widget> w);
-    std::vector<std::unique_ptr<widget>> &inputs();
+
+  public:
+    std::vector<widget *> &inputs();
+
+  public:
     virtual widget_drawing paint() const override;
+
     virtual void notify(
-        const std::string &id,
-        const std::string &value) override;
+        std::string_view id,
+        std::string_view value) override;
+
+    virtual void child(widget *ch) override;
   };
 
   class vlayout : public widget
   {
-    std::vector<std::unique_ptr<widget>> _widgets;
+    std::vector<widget *> _widgets;
 
   public:
+    vlayout(widget *parent);
     virtual ~vlayout() = default;
+
     void push(std::unique_ptr<widget> w);
+
     virtual widget_drawing paint() const override;
     virtual void notify(
-        const std::string &id,
-        const std::string &value) override;
+        std::string_view id,
+        std::string_view value) override;
+
+    virtual void child(widget *ch) override;
   };
 
   class hlayout : public widget
   {
-    std::vector<std::unique_ptr<widget>> _widgets;
+    std::vector<widget *> _widgets;
 
   public:
+    hlayout(widget *parent);
     virtual ~hlayout() = default;
 
-    void push(std::unique_ptr<widget> w);
+  public:
     virtual widget_drawing paint() const override;
+
     virtual void notify(
-        const std::string &id,
-        const std::string &value) override;
+        std::string_view id,
+        std::string_view value) override;
+
+    virtual void child(widget *ch) override;
   };
 
   class menu : public stew::ui::widget
@@ -113,19 +153,19 @@ namespace stew::ui
     std::size_t _choice = 0;
 
   public:
-    virtual ~menu() = default;
-    menu(const std::string &name,
+    menu(widget *parent,
+         std::string_view name,
          const std::vector<std::string> &items);
-    menu(const menu &) = default;
-    menu(menu &&) = default;
-    menu &operator=(const menu &) = default;
-    menu &operator=(menu &&) = default;
+    virtual ~menu() = default;
 
   public:
     virtual widget_drawing paint() const override;
+
     virtual void notify(
-        const std::string &id,
-        const std::string &value) override;
+        std::string_view id,
+        std::string_view value) override;
+
+    virtual void child(widget *ch) override;
   };
 }
 

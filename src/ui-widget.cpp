@@ -3,8 +3,26 @@
 
 namespace stew::ui
 {
-  input::input(std::string_view lbl)
-      : _label(lbl) {}
+
+  void widget_drawing::mark(const std::string &id)
+  {
+    markers.push_back(id);
+  }
+
+  widget::widget(widget *parent)
+      : _parent(parent)
+  {
+    if (parent != nullptr)
+    {
+      parent->child(parent);
+    }
+  }
+
+  void input::child(widget *ch) {}
+
+  input::input(widget *parent,
+               std::string_view lbl)
+      : widget(parent), _label(lbl) {}
 
   const std::string &input::label() const
   {
@@ -26,8 +44,8 @@ namespace stew::ui
   }
 
   void input::notify(
-      const std::string &id,
-      const std::string &value)
+      std::string_view id,
+      std::string_view value)
   {
     if (id == _label)
     {
@@ -35,15 +53,15 @@ namespace stew::ui
     }
   }
 
-  form::form(std::string_view name)
-      : _name(name) {}
+  form::form(widget *parent, std::string_view name)
+      : widget(parent), _name(name) {}
 
-  void form::push(std::unique_ptr<widget> w)
+  void form::child(widget *ch)
   {
-    _inputs.push_back(std::move(w));
+    _inputs.push_back(ch);
   }
 
-  std::vector<std::unique_ptr<widget>> &form::inputs()
+  std::vector<widget *> &form::inputs()
   {
     return _inputs;
   }
@@ -72,8 +90,8 @@ namespace stew::ui
   }
 
   void form::notify(
-      const std::string &id,
-      const std::string &value)
+      std::string_view id,
+      std::string_view value)
   {
     for (const auto &i : _inputs)
     {
@@ -81,9 +99,12 @@ namespace stew::ui
     }
   }
 
-  void vlayout::push(std::unique_ptr<widget> w)
+  vlayout::vlayout(widget *parent)
+      : widget(parent) {}
+
+  void vlayout::child(widget *ch)
   {
-    _widgets.push_back(std::move(w));
+    _widgets.push_back(ch);
   }
 
   widget_drawing vlayout::paint() const
@@ -109,8 +130,8 @@ namespace stew::ui
   }
 
   void vlayout::notify(
-      const std::string &id,
-      const std::string &value)
+      std::string_view id,
+      std::string_view value)
   {
     for (auto &w : _widgets)
     {
@@ -118,9 +139,12 @@ namespace stew::ui
     }
   }
 
-  void hlayout::push(std::unique_ptr<widget> w)
+  hlayout::hlayout(widget *parent)
+      : widget(parent) {}
+
+  void hlayout::child(widget *ch)
   {
-    _widgets.push_back(std::move(w));
+    _widgets.push_back(ch);
   }
 
   widget_drawing hlayout::paint() const
@@ -189,8 +213,8 @@ namespace stew::ui
   }
 
   void hlayout::notify(
-      const std::string &id,
-      const std::string &value)
+      std::string_view id,
+      std::string_view value)
   {
     for (auto &w : _widgets)
     {
@@ -199,9 +223,12 @@ namespace stew::ui
   }
 
   menu::menu(
-      const std::string &name,
+      widget *parent,
+      std::string_view name,
       const std::vector<std::string> &items)
-      : _name(name), _items(items) {}
+      : widget(parent), _name(name), _items(items) {}
+
+  void menu::child(widget *ch) {}
 
   widget_drawing menu::paint() const
   {
@@ -209,9 +236,9 @@ namespace stew::ui
     wd.drawln("########################");
     wd.drawln("# ", _name);
 
-    for (std::size_t i(0); i < _items.size(); ++i)
+    for (std::size_t i(1); i <= _items.size(); ++i)
     {
-      wd.drawln(i, ": -- ", _items[i]);
+      wd.drawln(i, ": -- ", _items[i - 1]);
     }
 
     wd.drawln(" ---> ? %");
@@ -221,12 +248,12 @@ namespace stew::ui
   }
 
   void menu::notify(
-      const std::string &id,
-      const std::string &value)
+      std::string_view id,
+      std::string_view value)
   {
     if (id == _name)
     {
-      std::stoull(value);
+      _choice = std::stoull(std::string(value));
     }
   }
 }
