@@ -1,9 +1,7 @@
 #include <ui-widget.hpp>
-#include <vector>
 
 namespace stew::ui
 {
-
   void widget_drawing::mark(const std::string &id)
   {
     markers.push_back(id);
@@ -14,11 +12,24 @@ namespace stew::ui
   {
     if (parent != nullptr)
     {
-      parent->child(parent);
+      parent->child(this);
     }
   }
 
-  void input::child(widget *ch) {}
+  std::list<widget *> &widget::childs()
+  {
+    return _childs;
+  }
+
+  const std::list<widget *> &widget::childs() const
+  {
+    return _childs;
+  }
+
+  void widget::child(widget *ch)
+  {
+    _childs.push_back(ch);
+  }
 
   input::input(widget *parent,
                std::string_view lbl)
@@ -56,16 +67,6 @@ namespace stew::ui
   form::form(widget *parent, std::string_view name)
       : widget(parent), _name(name) {}
 
-  void form::child(widget *ch)
-  {
-    _inputs.push_back(ch);
-  }
-
-  std::vector<widget *> &form::inputs()
-  {
-    return _inputs;
-  }
-
   widget_drawing form::paint() const
   {
     widget_drawing wd;
@@ -73,7 +74,7 @@ namespace stew::ui
     wd.drawln("------------------------");
     wd.drawln("--- ", _name);
 
-    for (const auto &w : _inputs)
+    for (const auto &w : childs())
     {
       auto &&wdi = w->paint();
       wd.drawing.insert(
@@ -93,7 +94,7 @@ namespace stew::ui
       std::string_view id,
       std::string_view value)
   {
-    for (const auto &i : _inputs)
+    for (const auto &i : childs())
     {
       i->notify(id, value);
     }
@@ -102,16 +103,11 @@ namespace stew::ui
   vlayout::vlayout(widget *parent)
       : widget(parent) {}
 
-  void vlayout::child(widget *ch)
-  {
-    _widgets.push_back(ch);
-  }
-
   widget_drawing vlayout::paint() const
   {
     widget_drawing wd;
 
-    for (const auto &w : _widgets)
+    for (const auto &w : childs())
     {
       auto &&wdw = w->paint();
 
@@ -133,7 +129,7 @@ namespace stew::ui
       std::string_view id,
       std::string_view value)
   {
-    for (auto &w : _widgets)
+    for (auto &w : childs())
     {
       w->notify(id, value);
     }
@@ -142,16 +138,11 @@ namespace stew::ui
   hlayout::hlayout(widget *parent)
       : widget(parent) {}
 
-  void hlayout::child(widget *ch)
-  {
-    _widgets.push_back(ch);
-  }
-
   widget_drawing hlayout::paint() const
   {
     std::vector<widget_drawing> wds;
 
-    for (auto &w : _widgets)
+    for (auto &w : childs())
     {
       wds.push_back(std::move(w->paint()));
     }
@@ -216,7 +207,7 @@ namespace stew::ui
       std::string_view id,
       std::string_view value)
   {
-    for (auto &w : _widgets)
+    for (auto &w : childs())
     {
       w->notify(id, value);
     }
@@ -227,8 +218,6 @@ namespace stew::ui
       std::string_view name,
       const std::vector<std::string> &items)
       : widget(parent), _name(name), _items(items) {}
-
-  void menu::child(widget *ch) {}
 
   widget_drawing menu::paint() const
   {

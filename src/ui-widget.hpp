@@ -49,6 +49,7 @@ namespace stew::ui
   class widget
   {
     widget *_parent = nullptr;
+    std::list<widget *> _childs;
 
   public:
     widget(widget *parent);
@@ -61,7 +62,12 @@ namespace stew::ui
         std::string_view id,
         std::string_view value) = 0;
 
-    virtual void child(widget *ch) = 0;
+  protected:
+    std::list<widget *> &childs();
+    const std::list<widget *> &childs() const;
+
+  private:
+    void child(widget *ch);
   };
 
   class input : public widget
@@ -84,21 +90,15 @@ namespace stew::ui
     virtual void notify(
         std::string_view id,
         std::string_view value) override;
-
-    virtual void child(widget *ch) override;
   };
 
   class form : public widget
   {
     std::string _name;
-    std::vector<widget *> _inputs;
 
   public:
     form(widget *parent, std::string_view name);
     virtual ~form() = default;
-
-  public:
-    std::vector<widget *> &inputs();
 
   public:
     virtual widget_drawing paint() const override;
@@ -106,13 +106,10 @@ namespace stew::ui
     virtual void notify(
         std::string_view id,
         std::string_view value) override;
-
-    virtual void child(widget *ch) override;
   };
 
   class vlayout : public widget
   {
-    std::vector<widget *> _widgets;
 
   public:
     vlayout(widget *parent);
@@ -124,14 +121,10 @@ namespace stew::ui
     virtual void notify(
         std::string_view id,
         std::string_view value) override;
-
-    virtual void child(widget *ch) override;
   };
 
   class hlayout : public widget
   {
-    std::vector<widget *> _widgets;
-
   public:
     hlayout(widget *parent);
     virtual ~hlayout() = default;
@@ -142,8 +135,6 @@ namespace stew::ui
     virtual void notify(
         std::string_view id,
         std::string_view value) override;
-
-    virtual void child(widget *ch) override;
   };
 
   class menu : public stew::ui::widget
@@ -164,8 +155,6 @@ namespace stew::ui
     virtual void notify(
         std::string_view id,
         std::string_view value) override;
-
-    virtual void child(widget *ch) override;
   };
 }
 
