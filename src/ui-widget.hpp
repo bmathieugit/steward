@@ -7,6 +7,9 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <functional>
+
+#include <ui-marker.hpp>
 
 namespace stew::ui
 {
@@ -14,13 +17,15 @@ namespace stew::ui
   struct widget_drawing
   {
     std::vector<std::string> drawing;
-    std::vector<std::string> markers;
+    std::vector<marker> markers;
 
   public:
     template <typename... T>
     void drawln(T &&...t);
 
-    void mark(const std::string &id);
+    void mark(
+        const std::string &id,
+        std::function<bool(std::string_view)> validator);
   };
 
   template <typename... T>
@@ -58,10 +63,6 @@ namespace stew::ui
   public:
     virtual widget_drawing paint() const = 0;
 
-    virtual void notify(
-        std::string_view id,
-        std::string_view value) = 0;
-
   protected:
     std::list<widget *> &childs();
     const std::list<widget *> &childs() const;
@@ -73,23 +74,19 @@ namespace stew::ui
   class input : public widget
   {
     std::string _label;
-    std::string _value;
+    std::function<bool(std::string_view)> _validator;
 
   public:
     input(widget *parent,
-          std::string_view label);
+          std::string_view label, 
+          std::function<bool(std::string_view)> validator);
     virtual ~input() = default;
 
   public:
     const std::string &label() const;
-    const std::string &value() const;
 
   public:
     virtual widget_drawing paint() const override;
-
-    virtual void notify(
-        std::string_view id,
-        std::string_view value) override;
   };
 
   class form : public widget
@@ -102,10 +99,6 @@ namespace stew::ui
 
   public:
     virtual widget_drawing paint() const override;
-
-    virtual void notify(
-        std::string_view id,
-        std::string_view value) override;
   };
 
   class vlayout : public widget
@@ -118,9 +111,6 @@ namespace stew::ui
     void push(std::unique_ptr<widget> w);
 
     virtual widget_drawing paint() const override;
-    virtual void notify(
-        std::string_view id,
-        std::string_view value) override;
   };
 
   class hlayout : public widget
@@ -131,17 +121,12 @@ namespace stew::ui
 
   public:
     virtual widget_drawing paint() const override;
-
-    virtual void notify(
-        std::string_view id,
-        std::string_view value) override;
   };
 
   class menu : public stew::ui::widget
   {
     std::string _name;
     std::vector<std::string> _items;
-    std::size_t _choice = 0;
 
   public:
     menu(widget *parent,
@@ -151,11 +136,8 @@ namespace stew::ui
 
   public:
     virtual widget_drawing paint() const override;
-
-    virtual void notify(
-        std::string_view id,
-        std::string_view value) override;
   };
+
 }
 
 #endif

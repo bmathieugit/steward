@@ -7,12 +7,27 @@
 CC=clang++
 FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps
 
-all: clean compile stats run
+all:  clean building compile stats run
+
+building:
+	mkdir -p building
 
 clean: 
 	rm -rf building
 
-compile: src/main.cpp src/ui-widget.cpp src/ui-screen.cpp
+building/ui-cursor.o: src/ui-cursor.cpp
+	${CC} -o building/ui-cursor.o -c $< ${FLAGS}
+
+building/ui-screen.o: src/ui-screen.cpp
+	${CC} -o building/ui-screen.o -c $< ${FLAGS}
+
+building/ui-widget.o: src/ui-widget.cpp
+	${CC} -o building/ui-widget.o -c $< ${FLAGS}
+
+building/main.o: src/main.cpp
+	${CC} -o building/main.o -c $< ${FLAGS}
+
+compile: building/ui-cursor.o building/ui-screen.o building/ui-widget.o building/main.o
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS}
 
@@ -20,10 +35,4 @@ stats:
 	wc -l *.s
 
 run: compile
-	./building/steward.app vault list vault-test-repo.csv	
-#	./building/steward.app vault save github.com/bmathieugit password vault-test-repo.csv
-#	./building/steward.app vault save github.com/bmathieugit2 password2 vault-test-repo.csv
-#	./building/steward.app vault save github.com/bmathieugit3 password3 vault-test-repo.csv
-#	./building/steward.app vault save github.com/bmathieugit password4 vault-test-repo.csv
-#	./building/steward.app vault remove github.com/bmathieugit vault-test-repo.csv
-#	./building/steward.app vault list vault-test-repo.csv	
+	./building/steward.app

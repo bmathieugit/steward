@@ -28,14 +28,14 @@ try
     nullptr, 
     std::string("Enedis SSO"));
   
-  wf.build<ui::input>(f, std::string("login"));
-  wf.build<ui::input>(f, std::string("password"));
-  wf.build<ui::input>(f, std::string("email"));
+  wf.build<ui::input>(f, std::string("login"), [](std::string_view){return true;});
+  wf.build<ui::input>(f, std::string("password"), [](std::string_view){return true;});
+  wf.build<ui::input>(f, std::string("email"), [](std::string_view){return true;});
 
   ui::screen scr;
 
   scr.paint(std::vector<const stew::ui::widget *>{f, main_menu});
-  scr.notify(std::vector<stew::ui::widget *>{f, main_menu});
+  auto res = scr.get_inputs(std::vector<stew::ui::widget *>{f, main_menu});
 
   return EXIT_SUCCESS;
 }

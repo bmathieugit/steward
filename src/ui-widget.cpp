@@ -2,9 +2,11 @@
 
 namespace stew::ui
 {
-  void widget_drawing::mark(const std::string &id)
+  void widget_drawing::mark(
+      const std::string &id,
+      std::function<bool(std::string_view)> validator)
   {
-    markers.push_back(id);
+    markers.push_back(marker{id, validator});
   }
 
   widget::widget(widget *parent)
@@ -32,17 +34,13 @@ namespace stew::ui
   }
 
   input::input(widget *parent,
-               std::string_view lbl)
-      : widget(parent), _label(lbl) {}
+               std::string_view lbl,
+               std::function<bool(std::string_view)> validator)
+      : widget(parent), _label(lbl), _validator(validator) {}
 
   const std::string &input::label() const
   {
     return _label;
-  }
-
-  const std::string &input::value() const
-  {
-    return _value;
   }
 
   widget_drawing input::paint() const
@@ -50,18 +48,9 @@ namespace stew::ui
     widget_drawing wd;
     wd.drawln("----------------");
     wd.drawln(" + ", _label, " : %");
-    wd.mark(_label);
+    wd.mark(_label, [](std::string_view)
+            { return true; });
     return wd;
-  }
-
-  void input::notify(
-      std::string_view id,
-      std::string_view value)
-  {
-    if (id == _label)
-    {
-      _value = value;
-    }
   }
 
   form::form(widget *parent, std::string_view name)
@@ -90,16 +79,6 @@ namespace stew::ui
     return wd;
   }
 
-  void form::notify(
-      std::string_view id,
-      std::string_view value)
-  {
-    for (const auto &i : childs())
-    {
-      i->notify(id, value);
-    }
-  }
-
   vlayout::vlayout(widget *parent)
       : widget(parent) {}
 
@@ -123,16 +102,6 @@ namespace stew::ui
     }
 
     return wd;
-  }
-
-  void vlayout::notify(
-      std::string_view id,
-      std::string_view value)
-  {
-    for (auto &w : childs())
-    {
-      w->notify(id, value);
-    }
   }
 
   hlayout::hlayout(widget *parent)
@@ -203,16 +172,6 @@ namespace stew::ui
     return wdr;
   }
 
-  void hlayout::notify(
-      std::string_view id,
-      std::string_view value)
-  {
-    for (auto &w : childs())
-    {
-      w->notify(id, value);
-    }
-  }
-
   menu::menu(
       widget *parent,
       std::string_view name,
@@ -231,18 +190,9 @@ namespace stew::ui
     }
 
     wd.drawln(" ---> ? %");
-    wd.mark(_name);
+    wd.mark(_name, [](std::string_view)
+            { return true; });
 
     return wd;
-  }
-
-  void menu::notify(
-      std::string_view id,
-      std::string_view value)
-  {
-    if (id == _name)
-    {
-      _choice = std::stoull(std::string(value));
-    }
   }
 }
