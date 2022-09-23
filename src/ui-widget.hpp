@@ -44,9 +44,9 @@ namespace stew::ui
 
   public:
     template <typename W, typename... ARGS>
-    W *build(ARGS &&...args) requires std::derived_from<W, widget>
+    W *build(widget *parent, ARGS &&...args) requires std::derived_from<W, widget>
     {
-      ws.push_back(std::make_unique<W>(std::forward<ARGS>(args)...));
+      ws.push_back(std::make_unique<W>(parent, std::forward<ARGS>(args)...));
       return static_cast<W *>(ws.back().get());
     }
   };
@@ -78,7 +78,7 @@ namespace stew::ui
 
   public:
     input(widget *parent,
-          std::string_view label, 
+          std::string_view label,
           std::function<bool(std::string_view)> validator);
     virtual ~input() = default;
 

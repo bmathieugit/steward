@@ -91,4 +91,8 @@ namespace stew::ui
     _os << "\033[0m";
   }
 
+  position cursor::pos() const
+  {
+    return _pos;
+  }
 }

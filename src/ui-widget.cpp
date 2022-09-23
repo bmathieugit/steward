@@ -1,4 +1,6 @@
 #include <ui-widget.hpp>
+#include <sstream>
+#include <iostream>
 
 namespace stew::ui
 {
@@ -48,8 +50,7 @@ namespace stew::ui
     widget_drawing wd;
     wd.drawln("----------------");
     wd.drawln(" + ", _label, " : %");
-    wd.mark(_label, [](std::string_view)
-            { return true; });
+    wd.mark(_label, _validator);
     return wd;
   }
 
@@ -189,9 +190,34 @@ namespace stew::ui
       wd.drawln(i, ": -- ", _items[i - 1]);
     }
 
+    auto is_valid_choice = [nb = _items.size()](std::string_view v)
+    {
+      bool is_valid = true;
+
+      for (auto c : v)
+      {
+        if (!('0' <= c && c <= '9'))
+        {
+          is_valid = false;
+          break;
+        }
+      }
+
+      if (is_valid)
+      {
+        std::size_t tmp;
+        std::stringstream ss = std::stringstream(std::string(v));
+        ss >> tmp;
+        return 0 < tmp && tmp <= nb;
+      }
+      else
+      {
+        return false;
+      }
+    };
+
     wd.drawln(" ---> ? %");
-    wd.mark(_name, [](std::string_view)
-            { return true; });
+    wd.mark(_name, is_valid_choice);
 
     return wd;
   }

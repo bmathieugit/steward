@@ -33,6 +33,9 @@ namespace stew::ui
   public:
     void pushc(char c);
     void pushln();
+
+  public: 
+    position pos() const;
   };
 
 }

@@ -5,9 +5,9 @@
 # $* : nom d’un fichier sans son suffixe  
 
 CC=clang++
-FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps
+FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc
 
-all:  clean building compile stats run
+all:  clean building compile run
 
 building:
 	mkdir -p building
@@ -30,9 +30,6 @@ building/main.o: src/main.cpp
 compile: building/ui-cursor.o building/ui-screen.o building/ui-widget.o building/main.o
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS}
-
-stats:
-	wc -l *.s
 
 run: compile
 	./building/steward.app

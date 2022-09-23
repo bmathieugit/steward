@@ -26,7 +26,7 @@ namespace stew::ui
   private:
     std::vector<std::string> _buffer;
     std::vector<screen_marker> _markers;
-
+    position _messpos;
     cursor _curs{std::cout};
 
   public:
@@ -36,8 +36,8 @@ namespace stew::ui
     screen(screen &&) = default;
 
   public:
-    void paint(std::vector<const widget *> ws);
-    std::map<std::string, std::string> get_inputs(std::vector<widget *> ws);
+    void paint(const widget & w);
+    std::map<std::string, std::string> get_inputs();
   };
 }
 
