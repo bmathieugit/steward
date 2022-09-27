@@ -2,10 +2,13 @@
 #define __stew_pencil_hpp__
 
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <memory>
 #include <string>
 #include <string_view>
+
+#include <ui-screen-content.hpp>
 
 namespace stew::ui
 {
@@ -18,6 +21,8 @@ namespace stew::ui
   public:
     virtual ~sketch_content() = default;
     sketch_content(widget *w) : _w(w) {}
+    virtual void push_to(screen_content &content) = 0;
+    widget *source() { return _w; }
   };
 
   struct sketch
@@ -27,11 +32,16 @@ namespace stew::ui
 
   class marker_sktcontent : public sketch_content
   {
-    char _mark;
+    std::string _id;
 
   public:
     virtual ~marker_sktcontent() = default;
-    marker_sktcontent(widget *w, char mark) : sketch_content(w), _mark(mark) {}
+    marker_sktcontent(widget *w, const std::string &id) : sketch_content(w), _id(id) {}
+    marker_sktcontent(widget *w, std::string &&id) : sketch_content(w), _id(id) {}
+
+    virtual void push_to(screen_content &content) override
+    {
+    }
   };
 
   class text_sktcontent : public sketch_content
@@ -42,6 +52,19 @@ namespace stew::ui
     virtual ~text_sktcontent() = default;
     text_sktcontent(widget *w, const std::string &text) : sketch_content(w), _text(text) {}
     text_sktcontent(widget *w, std::string &&text) : sketch_content(w), _text(text) {}
+
+    virtual void push_to(screen_content &content) override
+    {
+      for (char c : _text)
+      {
+        if (content._table.empty())
+        {
+          content._table.push_back({});
+        }
+
+        content._table.back().push_back(screen_cell{source(), c});
+      }
+    }
   };
 
   class style_sktcontent : public sketch_content
@@ -52,12 +75,30 @@ namespace stew::ui
     virtual ~style_sktcontent() = default;
     style_sktcontent(widget *w, const std::string &style) : sketch_content(w), _style(style) {}
     style_sktcontent(widget *w, std::string &&style) : sketch_content(w), _style(style) {}
+    virtual void push_to(screen_content &content) override
+    {
+    }
   };
 
-  struct pencil
+  class pencil
   {
     widget *_widget;
     std::vector<std::unique_ptr<sketch_content>> _contents;
+
+  public:
+    pencil(widget *w) : _widget(w) {}
+
+  public:
+    pencil &merge(pencil &&other)
+    {
+      for (auto &&content : other._contents)
+      {
+        _contents.push_back(std::move(content));
+      }
+
+      other._contents.clear();
+      return *this;
+    }
 
     sketch draw_sktech()
     {
@@ -66,21 +107,44 @@ namespace stew::ui
       return std::move(skt);
     }
 
-    pencil &mark(char c = '%')
+    pencil &mark(const std::string &id)
     {
-      _contents.push_back(std::make_unique<marker_sktcontent>(_widget, c));
+      _contents.push_back(std::make_unique<marker_sktcontent>(_widget, id));
       return *this;
     }
 
-    pencil &text(const std::string &text)
+    pencil &mark(std::string &&id)
     {
-      _contents.push_back(std::make_unique<text_sktcontent>(_widget, text));
+      _contents.push_back(std::make_unique<marker_sktcontent>(_widget, id));
       return *this;
     }
 
-    pencil &text(std::string &&text)
+    template <typename... T>
+    pencil &text(const T &...t)
     {
-      _contents.push_back(std::make_unique<text_sktcontent>(_widget, text));
+      std::stringstream ss;
+
+      if (sizeof...(T) > 0)
+      {
+        (ss << ... << t);
+      }
+
+      _contents.push_back(std::make_unique<text_sktcontent>(_widget, std::move(ss.str())));
+      return *this;
+    }
+
+    template <typename... T>
+    pencil &textln(const T &...t)
+    {
+      std::stringstream ss;
+
+      if (sizeof...(T) > 0)
+      {
+        (ss << ... << t);
+      }
+
+      ss << '\n';
+      _contents.push_back(std::make_unique<text_sktcontent>(_widget, std::move(ss.str())));
       return *this;
     }
 

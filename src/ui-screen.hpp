@@ -11,6 +11,7 @@
 #include <ui-widget.hpp>
 #include <ui-cursor.hpp>
 #include <ui-position.hpp>
+#include <ui-screen-content.hpp>
 
 namespace stew::ui
 {
@@ -21,11 +22,14 @@ namespace stew::ui
     std::function<bool(std::string_view)> _validator;
   };
 
+
+
   class screen
   {
   private:
-    std::vector<std::string> _buffer;
+    screen_content _content;
     std::vector<screen_marker> _markers;
+    
     position _messpos;
     cursor _curs{std::cout};
 
@@ -36,7 +40,7 @@ namespace stew::ui
     screen(screen &&) = default;
 
   public:
-    void paint(const widget & w);
+    void paint(widget & w);
     std::map<std::string, std::string> get_inputs();
   };
 }

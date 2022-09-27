@@ -22,7 +22,7 @@ void pencil_test_code()
   auto skt = pen.style("\033[41m")
                  .text("login : ")
                  .style("\033[0m")
-                 .mark()
+                 .mark("login")
                  .draw_sktech();
 }
 

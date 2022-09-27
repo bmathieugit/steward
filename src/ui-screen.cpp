@@ -1,58 +1,41 @@
 #include <ui-screen.hpp>
+#include <ui-pencil.hpp>
 
 namespace stew::ui
 {
 
-  void screen::paint(const widget &w)
+  void screen::paint(widget &w)
   {
     _curs.erase();
     _curs.origin();
-
     _markers.clear();
 
-    widget_drawing wd(w.paint());
+    pencil pen = w.paint();
+    sketch skt = pen.draw_sktech();
 
     std::size_t nbm = 0;
 
-    for (const std::string &r : wd.drawing)
+    for (const std::unique_ptr<sketch_content> &content : skt._contents)
     {
-      for (const char c : r)
+      if (content)
       {
-        if (c == '%')
-        {
-          nbm = nbm + 1;
-        }
+        content->push_to(_content);
       }
     }
 
-    if (nbm == wd.markers.size())
+    for (std::vector<screen_cell> &row : _content._table)
     {
-      std::size_t mi = 0;
-
-      for (const std::string &r : wd.drawing)
+      for (screen_cell &cell : row)
       {
-        for (const char c : r)
+        if (cell._c == '\n')
         {
-          if (c == '%')
-          {
-            marker m = wd.markers[mi];
-
-            _markers.push_back(
-                screen_marker{._id = m._id,
-                              ._pos = _curs.pos(),
-                              ._validator = m._validator});
-            mi = mi + 1;
-          }
-
-          _curs.pushc(c);
+          _curs.pushln();
         }
-
-        _curs.pushln();
+        else
+        {
+          _curs.pushc(cell._c);
+        }
       }
-
-      _curs.pushln();
-      _curs.pushln();
-      _messpos = _curs.pos();
     }
   }
 
@@ -101,7 +84,7 @@ namespace stew::ui
           _curs.pushc('%');
           _curs.at(m._pos);
         }
-        else 
+        else
         {
           _curs.at(_messpos);
 

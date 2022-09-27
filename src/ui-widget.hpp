@@ -9,33 +9,11 @@
 #include <memory>
 #include <functional>
 
-#include <ui-marker.hpp>
+#include <ui-pencil.hpp>
+//#include <ui-marker.hpp>
 
 namespace stew::ui
 {
-
-  struct widget_drawing
-  {
-    std::vector<std::string> drawing;
-    std::vector<marker> markers;
-
-  public:
-    template <typename... T>
-    void drawln(T &&...t);
-
-    void mark(
-        const std::string &id,
-        std::function<bool(std::string_view)> validator);
-  };
-
-  template <typename... T>
-  void widget_drawing::drawln(T &&...t)
-  {
-    std::stringstream ss;
-    (ss << ... << std::forward<T>(t));
-    drawing.push_back(ss.str());
-  }
-
   class widget;
 
   class widget_factory
@@ -61,7 +39,7 @@ namespace stew::ui
     virtual ~widget() = default;
 
   public:
-    virtual widget_drawing paint() const = 0;
+    virtual pencil paint() = 0;
 
   protected:
     std::list<widget *> &childs();
@@ -86,7 +64,7 @@ namespace stew::ui
     const std::string &label() const;
 
   public:
-    virtual widget_drawing paint() const override;
+    virtual pencil paint() override;
   };
 
   class form : public widget
@@ -98,7 +76,7 @@ namespace stew::ui
     virtual ~form() = default;
 
   public:
-    virtual widget_drawing paint() const override;
+    virtual pencil paint() override;
   };
 
   class vlayout : public widget
@@ -110,17 +88,7 @@ namespace stew::ui
 
     void push(std::unique_ptr<widget> w);
 
-    virtual widget_drawing paint() const override;
-  };
-
-  class hlayout : public widget
-  {
-  public:
-    hlayout(widget *parent);
-    virtual ~hlayout() = default;
-
-  public:
-    virtual widget_drawing paint() const override;
+    virtual pencil paint() override;
   };
 
   class menu : public stew::ui::widget
@@ -135,7 +103,7 @@ namespace stew::ui
     virtual ~menu() = default;
 
   public:
-    virtual widget_drawing paint() const override;
+    virtual pencil paint() override;
   };
 
 }
