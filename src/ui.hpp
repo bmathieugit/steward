@@ -3,5 +3,6 @@
 
 #include <ui-screen.hpp>
 #include <ui-widget.hpp>
+#include <ui-pencil.hpp>
 
 #endif
