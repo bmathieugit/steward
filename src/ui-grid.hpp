@@ -2,11 +2,14 @@
 #define __stew_ui_grid_hpp__
 
 #include <vector>
-#include <array>
+#include <map>
 #include <memory>
 #include <exception>
+#include <string>
+#include <string_view>
 
 #include <ui-screen.hpp>
+#include <ui-position.hpp>
 
 namespace std
 {
@@ -21,6 +24,7 @@ namespace stew::ui
   public:
     virtual ~grid_cell() = default;
     virtual void to_screen(screen &scr) = 0;
+    virtual void from_screen(position pos, screen &scr) = 0;
   };
 
   class grid
@@ -38,6 +42,7 @@ namespace stew::ui
     const grid_cell &at(std::size_t row, std::size_t col) const;
 
     void to_screen(screen &scr);
+    void from_screen(screen &scr);
   };
 
   class text_grid_cell : public grid_cell
@@ -48,6 +53,7 @@ namespace stew::ui
     virtual ~text_grid_cell() = default;
     text_grid_cell(char c);
     virtual void to_screen(screen &scr) override;
+    virtual void from_screen(position pos, screen &scr) override;
   };
 
   enum class style_text_mode
@@ -83,12 +89,28 @@ namespace stew::ui
     virtual void to_screen(screen &scr) override;
   };
 
+  class marker_grid_cell : public text_grid_cell
+  {
+    std::string _id;
+    std::string _value;
+
+  public:
+    marker_grid_cell(std::string_view id, char c);
+    virtual ~marker_grid_cell() = default;
+    virtual void to_screen(screen &scr) override;
+    virtual void from_screen(position pos, screen &scr) override;
+  };
+
   text_grid_cell::text_grid_cell(char c)
       : _c(c) {}
 
   void text_grid_cell::to_screen(screen &scr)
   {
     scr.write(_c);
+  }
+
+  void text_grid_cell::from_screen(position pos, screen &scr)
+  {
   }
 
   style_text_grid_cell::style_text_grid_cell(
@@ -144,13 +166,29 @@ namespace stew::ui
 
   void style_text_grid_cell::to_screen(screen &scr)
   {
-    for (auto mode :_modes)
+    for (auto mode : _modes)
     {
       scr.write(convert(mode));
     }
-    
+
     text_grid_cell::to_screen(scr);
     scr.write(convert(style_text_mode::reset));
+  }
+
+  marker_grid_cell::marker_grid_cell(std::string_view id, char c)
+      : text_grid_cell(c), _id(id)
+  {
+  }
+
+  void marker_grid_cell::to_screen(screen &scr)
+  {
+    text_grid_cell::to_screen(scr);
+  }
+
+  void marker_grid_cell::from_screen(position pos, screen &scr)
+  {
+    scr.at(pos);
+    scr.read(_value);
   }
 
   void grid::push_back(std::ptr<grid_cell> &&cell)
@@ -192,6 +230,9 @@ namespace stew::ui
 
   void grid::to_screen(screen &scr)
   {
+    scr.erase();
+    scr.origin();
+
     for (auto &&row : _table)
     {
       for (auto &&cell : row)
@@ -203,6 +244,22 @@ namespace stew::ui
       }
 
       scr.write('\n');
+    }
+  }
+
+  void grid::from_screen(screen &scr)
+  {
+    scr.origin();
+
+    for (std::size_t row(0); row < _table.size(); ++row)
+    {
+      for (std::size_t col(0); col < _table[row].size(); ++col)
+      {
+        if (_table[row][col])
+        {
+          _table[row][col]->from_screen({row, col}, scr);
+        }
+      }
     }
   }
 }

@@ -3,6 +3,7 @@
 
 #include <string_view>
 #include <vector>
+
 #include <ui-grid.hpp>
 
 namespace stew::ui
@@ -16,7 +17,8 @@ namespace stew::ui
 
   public:
     pencil &text(std::string_view txt);
-    pencil &style_text(std::string_view txt, const std::vector<style_text_mode>& mode);
+    pencil &style_text(std::string_view txt, const std::vector<style_text_mode> &mode);
+    pencil &marker(std::string_view id, char c);
   };
 
   pencil::pencil(grid &grd)
@@ -39,7 +41,7 @@ namespace stew::ui
     return *this;
   }
 
-  pencil& pencil::style_text(std::string_view txt, const std::vector<style_text_mode>& modes)
+  pencil &pencil::style_text(std::string_view txt, const std::vector<style_text_mode> &modes)
   {
     for (char c : txt)
     {
@@ -53,6 +55,12 @@ namespace stew::ui
       }
     }
 
+    return *this;
+  }
+
+  pencil &pencil::marker(std::string_view id, char c)
+  {
+    _grd.push_back(std::ptr<grid_cell>(new marker_grid_cell(id, c)));
     return *this;
   }
 }

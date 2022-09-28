@@ -7,8 +7,8 @@ namespace stew::ui
 {
   struct position
   {
-    std::size_t _x = 0;
-    std::size_t _y = 0;
+    std::size_t _row = 0;
+    std::size_t _col = 0;
   };
 }
 

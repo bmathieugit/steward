@@ -15,15 +15,16 @@ try
 
   pen.style_text("-------------------------\n", {stm::back_blue, stm::fore_white})
       .style_text("-- email : ", {stm::back_blue, stm::fore_white})
-      .style_text("*********\n", {stm::back_white, stm::fore_black})
+      .marker("email", '%').text("\n")
       
       .style_text("-- login : ", {stm::back_blue, stm::fore_white})
-      .style_text("*********\n", {stm::back_white, stm::fore_black})
+      .marker("login", '%').text("\n")
       
       .style_text("-- password : ", {stm::back_blue, stm::fore_white})
-      .style_text("*********\n", {stm::back_white, stm::fore_black});
+      .marker("password", '%').text("\n");
 
   grd.to_screen(scr);
+  grd.from_screen(scr);
 
   return EXIT_SUCCESS;
 }
