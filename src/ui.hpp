@@ -5,5 +5,6 @@
 #include <ui-grid.hpp>
 #include <ui-pencil.hpp>
 #include <ui-event.hpp>
+#include <ui-position.hpp>
 
 #endif
