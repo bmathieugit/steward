@@ -7,9 +7,11 @@
 #include <exception>
 #include <string>
 #include <string_view>
+#include <optional>
 
 #include <ui-screen.hpp>
 #include <ui-position.hpp>
+#include <ui-event.hpp>
 
 namespace std
 {
@@ -19,12 +21,18 @@ namespace std
 
 namespace stew::ui
 {
+  struct from_event
+  {
+    std::string _id;
+    std::string _value;
+  };
+
   class grid_cell
   {
   public:
     virtual ~grid_cell() = default;
     virtual void to_screen(screen &scr) = 0;
-    virtual void from_screen(position pos, screen &scr) = 0;
+    virtual std::optional<message> from_screen(position pos, screen &scr) = 0;
   };
 
   class grid
@@ -42,7 +50,7 @@ namespace stew::ui
     const grid_cell &at(std::size_t row, std::size_t col) const;
 
     void to_screen(screen &scr);
-    void from_screen(screen &scr);
+    void from_screen(screen &scr, bus &bs);
   };
 
   class text_grid_cell : public grid_cell
@@ -53,7 +61,7 @@ namespace stew::ui
     virtual ~text_grid_cell() = default;
     text_grid_cell(char c);
     virtual void to_screen(screen &scr) override;
-    virtual void from_screen(position pos, screen &scr) override;
+    virtual std::optional<message> from_screen(position pos, screen &scr) override;
   };
 
   enum class style_text_mode
@@ -98,7 +106,7 @@ namespace stew::ui
     marker_grid_cell(std::string_view id, char c);
     virtual ~marker_grid_cell() = default;
     virtual void to_screen(screen &scr) override;
-    virtual void from_screen(position pos, screen &scr) override;
+    virtual std::optional<message> from_screen(position pos, screen &scr) override;
   };
 
   text_grid_cell::text_grid_cell(char c)
@@ -109,8 +117,9 @@ namespace stew::ui
     scr.write(_c);
   }
 
-  void text_grid_cell::from_screen(position pos, screen &scr)
+  std::optional<message> text_grid_cell::from_screen(position pos, screen &scr)
   {
+    return std::nullopt;
   }
 
   style_text_grid_cell::style_text_grid_cell(
@@ -160,6 +169,7 @@ namespace stew::ui
       return "\033[39m";
 
     case style_text_mode::reset:
+    default:
       return "\033[0m";
     }
   }
@@ -185,10 +195,11 @@ namespace stew::ui
     text_grid_cell::to_screen(scr);
   }
 
-  void marker_grid_cell::from_screen(position pos, screen &scr)
+  std::optional<message> marker_grid_cell::from_screen(position pos, screen &scr)
   {
     scr.at(pos);
     scr.read(_value);
+    return message{"user_input", _id + ":" + _value};
   }
 
   void grid::push_back(std::ptr<grid_cell> &&cell)
@@ -209,10 +220,10 @@ namespace stew::ui
   grid_cell &grid::at(std::size_t row, std::size_t col)
   {
     if (row >= _table.size() || col >= _table[row].size())
-      throw int(12); // TODO EXCEPTION;
+      throw int(12); // TODO: EXCEPTION;
 
     if (!_table[row][col])
-      throw int(12); // TODO EXCEPTION
+      throw int(12); // TODO: EXCEPTION
 
     return *_table[row][col];
   }
@@ -220,10 +231,10 @@ namespace stew::ui
   const grid_cell &grid::at(std::size_t row, std::size_t col) const
   {
     if (row >= _table.size() || col >= _table[row].size())
-      throw int(12); // TODO EXCEPTION;
+      throw int(12); // TODO: EXCEPTION;
 
     if (!_table[row][col])
-      throw int(12); // TODO EXCEPTION
+      throw int(12); // TODO: EXCEPTION
 
     return *_table[row][col];
   }
@@ -247,7 +258,7 @@ namespace stew::ui
     }
   }
 
-  void grid::from_screen(screen &scr)
+  void grid::from_screen(screen &scr, bus &bs)
   {
     scr.origin();
 
@@ -257,7 +268,12 @@ namespace stew::ui
       {
         if (_table[row][col])
         {
-          _table[row][col]->from_screen({row, col}, scr);
+          std::optional<message> mess = _table[row][col]->from_screen({row, col}, scr);
+
+          if (mess.has_value())
+          {
+            bs.emit(mess.value());
+          }
         }
       }
     }

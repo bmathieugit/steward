@@ -4,5 +4,6 @@
 #include <ui-screen.hpp>
 #include <ui-grid.hpp>
 #include <ui-pencil.hpp>
+#include <ui-event.hpp>
 
 #endif

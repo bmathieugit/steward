@@ -4,8 +4,8 @@
 # $? : liste des dépendances plus récentes que la cible                         
 # $* : nom d’un fichier sans son suffixe  
 
-CC=clang++
-FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc
+CC=g++
+FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps
 
 all: clean building compile run
 
