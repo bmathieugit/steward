@@ -27,6 +27,26 @@ namespace stew::ui
     std::cout << "\033[2J";
   }
 
+  void screen::save()
+  {
+    std::cout << "\033[?47h";
+  }
+
+  void screen::restore()
+  {
+    std::cout << "\033[?47l";
+  }
+
+  void screen::savec()
+  {
+    std::cout << "\033[s";
+  }
+
+  void screen::restorec()
+  {
+    std::cout << "\033[u";
+  }
+
   void screen::write(char c)
   {
     std::cout << c;

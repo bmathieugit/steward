@@ -22,6 +22,9 @@ try
   ui::dispatcher disp;
   ui::bus bs(&disp);
 
+  scr.savec();
+  scr.save();
+
   person p;
 
   disp.connect("user_input",
@@ -69,9 +72,10 @@ try
   grd.to_screen(scr);
   grd.from_screen(scr, bs);
 
-  disp.consume();
-
-  std::cout << p.login << p.email << p.passwd << std::endl;
+  scr.origin();
+  
+  scr.restore();
+  scr.restorec();
 
   return EXIT_SUCCESS;
 }
