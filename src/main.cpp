@@ -6,6 +6,13 @@
 namespace ui = stew::ui;
 using stm = ui::style_text_mode;
 
+struct person
+{
+  std::string login; 
+  std::string email;
+  std::string passwd;
+};
+
 int main(int argc, char **argv)
 try
 {
@@ -14,6 +21,34 @@ try
   ui::pencil pen(grd);
   ui::dispatcher disp;
   ui::bus bs(&disp);
+
+  person p;
+
+  disp.connect("user_input",
+               [&p](const std::vector<ui::message> &messs)
+               {
+                 for (const ui::message &mess : messs)
+                 {
+                   if (mess._data.starts_with("login"))
+                   {
+                     std::string_view sv = mess._data;
+                     sv.remove_prefix(6);
+                     p.login = sv;
+                   }
+                   else if (mess._data.starts_with("email"))
+                   {
+                     std::string_view sv = mess._data;
+                     sv.remove_prefix(6);
+                     p.email = sv;
+                   }
+                   else if (mess._data.starts_with("password"))
+                   {
+                     std::string_view sv = mess._data;
+                     sv.remove_prefix(9);
+                     p.passwd = sv;
+                   }
+                 }
+               });
 
   disp.connect("user_input", [](const ui::message &mess)
                { std::cout << mess._topic << " : " << mess._data << '\n'; });
@@ -35,6 +70,8 @@ try
   grd.from_screen(scr, bs);
 
   disp.consume();
+
+  std::cout << p.login << p.email << p.passwd << std::endl;
 
   return EXIT_SUCCESS;
 }

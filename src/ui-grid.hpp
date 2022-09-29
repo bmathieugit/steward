@@ -4,7 +4,6 @@
 #include <vector>
 #include <map>
 #include <memory>
-#include <exception>
 #include <string>
 #include <string_view>
 #include <optional>
@@ -45,9 +44,6 @@ namespace stew::ui
   public:
     void push_back(std::ptr<grid_cell> &&cell);
     void push_back_row();
-
-    grid_cell &at(std::size_t row, std::size_t col);
-    const grid_cell &at(std::size_t row, std::size_t col) const;
 
     void to_screen(screen &scr);
     void from_screen(screen &scr, bus &bs);
@@ -215,28 +211,6 @@ namespace stew::ui
   void grid::push_back_row()
   {
     _table.push_back(std::vector<std::ptr<grid_cell>>());
-  }
-
-  grid_cell &grid::at(std::size_t row, std::size_t col)
-  {
-    if (row >= _table.size() || col >= _table[row].size())
-      throw int(12); // TODO: EXCEPTION;
-
-    if (!_table[row][col])
-      throw int(12); // TODO: EXCEPTION
-
-    return *_table[row][col];
-  }
-
-  const grid_cell &grid::at(std::size_t row, std::size_t col) const
-  {
-    if (row >= _table.size() || col >= _table[row].size())
-      throw int(12); // TODO: EXCEPTION;
-
-    if (!_table[row][col])
-      throw int(12); // TODO: EXCEPTION
-
-    return *_table[row][col];
   }
 
   void grid::to_screen(screen &scr)
