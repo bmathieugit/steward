@@ -2,7 +2,62 @@
 
 namespace stew::ui
 {
-   text_grid_cell::text_grid_cell(char c)
+  void grid::push_back(std::ptr<grid_cell> &&cell)
+  {
+    if (_table.empty())
+    {
+      push_back_row();
+    }
+
+    _table.back().push_back(std::move(cell));
+  }
+
+  void grid::push_back_row()
+  {
+    _table.push_back(std::vector<std::ptr<grid_cell>>());
+  }
+
+  void grid::to_screen(screen &scr)
+  {
+    scr.erase();
+    scr.origin();
+
+    for (auto &&row : _table)
+    {
+      for (auto &&cell : row)
+      {
+        if (cell)
+        {
+          cell->to_screen(scr);
+        }
+      }
+
+      scr.write('\n');
+    }
+  }
+
+  void grid::from_screen(screen &scr, bus &bs)
+  {
+    scr.origin();
+
+    for (std::size_t row(0); row < _table.size(); ++row)
+    {
+      for (std::size_t col(0); col < _table[row].size(); ++col)
+      {
+        if (_table[row][col])
+        {
+          std::optional<message> mess = _table[row][col]->from_screen({row, col}, scr);
+
+          if (mess.has_value())
+          {
+            bs.emit(mess.value());
+          }
+        }
+      }
+    }
+  }
+
+  text_grid_cell::text_grid_cell(char c)
       : _c(c) {}
 
   void text_grid_cell::to_screen(screen &scr)
@@ -95,58 +150,14 @@ namespace stew::ui
     return message{"user_input", _id + ":" + _value};
   }
 
-  void grid::push_back(std::ptr<grid_cell> &&cell)
+  hidden_marker_grid_cell::hidden_marker_grid_cell(std::string_view id, char c)
+      : marker_grid_cell(id, c) {}
+
+  std::optional<message> hidden_marker_grid_cell::from_screen(position pos, screen &scr)
   {
-    if (_table.empty())
-    {
-      push_back_row();
-    }
-
-    _table.back().push_back(std::move(cell));
-  }
-
-  void grid::push_back_row()
-  {
-    _table.push_back(std::vector<std::ptr<grid_cell>>());
-  }
-
-  void grid::to_screen(screen &scr)
-  {
-    scr.erase();
-    scr.origin();
-
-    for (auto &&row : _table)
-    {
-      for (auto &&cell : row)
-      {
-        if (cell)
-        {
-          cell->to_screen(scr);
-        }
-      }
-
-      scr.write('\n');
-    }
-  }
-
-  void grid::from_screen(screen &scr, bus &bs)
-  {
-    scr.origin();
-
-    for (std::size_t row(0); row < _table.size(); ++row)
-    {
-      for (std::size_t col(0); col < _table[row].size(); ++col)
-      {
-        if (_table[row][col])
-        {
-          std::optional<message> mess = _table[row][col]->from_screen({row, col}, scr);
-
-          if (mess.has_value())
-          {
-            bs.emit(mess.value());
-          }
-        }
-      }
-    }
+    scr.write("\033[8m");
+    auto &&res = marker_grid_cell::from_screen(pos, scr);
+    scr.write("\033[28m");
+    return res;
   }
 }

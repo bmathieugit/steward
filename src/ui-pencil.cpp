@@ -44,4 +44,10 @@ namespace stew::ui
     _grd.push_back(std::ptr<grid_cell>(new marker_grid_cell(id, c)));
     return *this;
   }
+
+  pencil &pencil::hidden(std::string_view id, char c)
+  {
+    _grd.push_back(std::ptr<grid_cell>(new hidden_marker_grid_cell(id, c)));
+    return *this;
+  }
 }

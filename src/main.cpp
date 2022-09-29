@@ -8,7 +8,7 @@ using stm = ui::style_text_mode;
 
 struct person
 {
-  std::string login; 
+  std::string login;
   std::string email;
   std::string passwd;
 };
@@ -60,20 +60,20 @@ try
       .style_text("-- email : ", {stm::back_blue, stm::fore_white})
       .marker("email", '%')
       .text("\n")
-
       .style_text("-- login : ", {stm::back_blue, stm::fore_white})
       .marker("login", '%')
       .text("\n")
-
       .style_text("-- password : ", {stm::back_blue, stm::fore_white})
-      .marker("password", '%')
+      .hidden("password", '%')
       .text("\n");
 
   grd.to_screen(scr);
   grd.from_screen(scr, bs);
 
   scr.origin();
-  
+
+  disp.consume();
+
   scr.restore();
   scr.restorec();
 

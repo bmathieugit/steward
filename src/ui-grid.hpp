@@ -103,6 +103,14 @@ namespace stew::ui
     virtual void to_screen(screen &scr) override;
     virtual std::optional<message> from_screen(position pos, screen &scr) override;
   };
+
+  class hidden_marker_grid_cell : public marker_grid_cell
+  {
+  public:
+    hidden_marker_grid_cell(std::string_view id, char c);
+    virtual ~hidden_marker_grid_cell() = default;
+    virtual std::optional<message> from_screen(position pos, screen &scr) override;
+  };
 }
 
 #endif
