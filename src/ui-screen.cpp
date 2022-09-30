@@ -4,10 +4,8 @@ namespace stew::ui
 {
   screen::screen()
   {
-    save();
     savec();
-    erase();
-    origin();
+    save();
   }
 
   screen::~screen()

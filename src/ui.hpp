@@ -7,5 +7,6 @@
 #include <ui-event.hpp>
 #include <ui-position.hpp>
 #include <ui-view.hpp>
+#include <ui-application.hpp>
 
 #endif

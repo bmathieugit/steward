@@ -1,37 +1,18 @@
 #include <ui.hpp>
 
-#include <iostream>
-
-#include <exception>
-
 namespace ui = stew::ui;
 using stm = ui::style_text_mode;
 
 int main(int argc, char **argv)
-try
 {
-  ui::dispatcher disp;
-  ui::bus bs(&disp);
-
-  ui::screen scr;
-
-  ui::sso_view ssov(scr, bs);
-
-  disp.connect("user_input", [](const ui::message &mess)
-               { std::cout << mess._topic << " : " << mess._data << '\n'; });
-
-  ssov.draw();
-  ssov.show();
-  ssov.emit();
-
-  disp.consume();
-
-  std::string str;
-  std::cin >> str;
-
+  ui::application app;
+  
+  app.add_view("sso", std::ptr<ui::view>(new ui::sso_view()));
+  app.add_view("sso2", std::ptr<ui::view>(new ui::sso_view2()));
+  app.show("sso");
+  app.emit("sso");
+  app.show("sso2");
+  app.emit("sso2");
+  
   return EXIT_SUCCESS;
-}
-catch (const std::exception &e)
-{
-  std::cout << e.what() << '\n';
 }

@@ -1,25 +1,31 @@
 #include <ui-view.hpp>
 
-
 namespace stew::ui
 {
-  view::view(screen &scr, bus &bs)
-      : _scr(scr), _bs(bs) {}
-
-  void view::show()
+  void view::show(screen &scr)
   {
     if (!_showing)
     {
-      _grd.to_screen(_scr);
+      _grd.to_screen(scr);
       _showing = true;
     }
   }
 
-  void view::emit()
+  void view::emit(screen &scr, bus &bs)
   {
     if (_showing)
     {
-      _grd.from_screen(_scr, _bs);
+      _grd.from_screen(scr, bs);
+    }
+  }
+
+  void view::hide(screen &scr)
+  {
+    if (_showing)
+    {
+      scr.erase();
+      scr.origin();
+      _showing = false;
     }
   }
 
@@ -28,14 +34,10 @@ namespace stew::ui
     return pencil(_grd);
   }
 
-    sso_view::sso_view(screen &scr, bus &bs)
-      : view(scr, bs)
-  {
-  }
-
   void sso_view::draw()
   {
     using stm = style_text_mode;
+
     auto &&p = pen();
     p.style_text("-------------------------\n", {stm::back_blue, stm::fore_white})
         .style_text("-- email : ", {stm::back_blue, stm::fore_white})
@@ -45,6 +47,24 @@ namespace stew::ui
         .marker("login", '%')
         .text("\n")
         .style_text("-- password : ", {stm::back_blue, stm::fore_white})
+        .hidden("password", '%')
+        .text("\n");
+  }
+
+
+  void sso_view2::draw()
+  {
+    using stm = style_text_mode;
+
+    auto &&p = pen();
+    p.style_text("-------------------------\n", {stm::back_blue, stm::fore_white})
+        .style_text("-- email2 : ", {stm::back_blue, stm::fore_white})
+        .marker("email", '%')
+        .text("\n")
+        .style_text("-- login2 : ", {stm::back_blue, stm::fore_white})
+        .marker("login", '%')
+        .text("\n")
+        .style_text("-- password2 : ", {stm::back_blue, stm::fore_white})
         .hidden("password", '%')
         .text("\n");
   }

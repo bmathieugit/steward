@@ -56,22 +56,16 @@ namespace stew::ui
     _topics.clear();
   }
 
-  bus::bus(dispatcher *disp)
+  bus::bus(dispatcher &disp)
       : _disp(disp) {}
 
   void bus::emit(const message &mess)
   {
-    if (_disp != nullptr)
-    {
-      _disp->publish(mess);
-    }
+    _disp.publish(mess);
   }
 
   void bus::emit(message &&mess)
   {
-    if (_disp != nullptr)
-    {
-      _disp->publish(std::move(mess));
-    }
+    _disp.publish(std::move(mess));
   }
 }

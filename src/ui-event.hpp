@@ -40,10 +40,10 @@ namespace stew::ui
 
   class bus
   {
-    dispatcher *_disp;
+    dispatcher &_disp;
 
   public:
-    bus(dispatcher *disp);
+    bus(dispatcher &disp);
 
   public:
     void emit(const message &mess);
