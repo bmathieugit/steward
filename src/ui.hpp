@@ -6,5 +6,6 @@
 #include <ui-pencil.hpp>
 #include <ui-event.hpp>
 #include <ui-position.hpp>
+#include <ui-view.hpp>
 
 #endif

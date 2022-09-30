@@ -2,6 +2,20 @@
 
 namespace stew::ui
 {
+  screen::screen()
+  {
+    save();
+    savec();
+    erase();
+    origin();
+  }
+
+  screen::~screen()
+  {
+    restore();
+    restorec();
+  }
+
   void screen::origin()
   {
     std::cout << "\033[H";

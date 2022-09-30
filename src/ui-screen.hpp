@@ -12,6 +12,9 @@ namespace stew::ui
   class screen
   {
   public:
+    screen();
+    ~screen();
+  public:
     void origin();
     void at(position pos);
     void erase();
