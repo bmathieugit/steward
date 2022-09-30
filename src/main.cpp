@@ -1,11 +1,11 @@
 #include <ui.hpp>
 
 #include <iostream>
+
 #include <exception>
 
 namespace ui = stew::ui;
 using stm = ui::style_text_mode;
-
 
 int main(int argc, char **argv)
 try
@@ -23,8 +23,11 @@ try
   ssov.draw();
   ssov.show();
   ssov.emit();
-  
+
   disp.consume();
+
+  std::string str;
+  std::cin >> str;
 
   return EXIT_SUCCESS;
 }

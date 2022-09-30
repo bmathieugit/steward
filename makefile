@@ -29,11 +29,15 @@ building/ui-screen.o: src/ui-screen.cpp src/ui-screen.hpp
 	mkdir -p building
 	${CC} -o building/ui-screen.o -c $< ${FLAGS}
 
+building/ui-view.o: src/ui-view.cpp src/ui-view.hpp
+	mkdir -p building
+	${CC} -o building/ui-view.o -c $< ${FLAGS}
+
 building/main.o:src/main.cpp
 	mkdir -p building
 	${CC} -o building/main.o -c $< ${FLAGS}
 
-building/steward.app:  building/main.o building/ui-event.o building/ui-grid.o building/ui-screen.o building/ui-pencil.o
+building/steward.app:  building/main.o building/ui-view.o building/ui-event.o building/ui-grid.o building/ui-screen.o building/ui-pencil.o
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS}
 
