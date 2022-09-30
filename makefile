@@ -5,7 +5,7 @@
 # $* : nom d’un fichier sans son suffixe  
 
 CC=g++
-FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc
+FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps
 
 all: clean compile run
 
