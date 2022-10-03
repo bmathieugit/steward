@@ -2,70 +2,112 @@
 
 namespace stew::ui
 {
-  void dispatcher::connect(std::string_view topic, const consumer &cons)
+  void bus::send(const std::string &topic, const message &mess)
   {
-    _consumers[std::string(topic)].push_back(cons);
+    _topics[topic].push_back(mess);
   }
 
-  void dispatcher::connect(std::string_view topic, consumer &&cons)
+  void bus::send(const std::string &topic, message &&mess)
   {
-    _consumers[std::string(topic)].push_back(std::move(cons));
+    _topics[topic].push_back(std::move(mess));
   }
 
-  void dispatcher::connect(std::string_view topic, const aggregator &aggr)
+  std::optional<message> bus::receive(const std::string &topic, std::uuid id)
   {
-    _aggregators[std::string(topic)].push_back(aggr);
-  }
-
-  void dispatcher::connect(std::string_view topic, aggregator &&aggr)
-  {
-    _aggregators[std::string(topic)].push_back(std::move(aggr));
-  }
-
-  void dispatcher::publish(const message &mess)
-  {
-    _topics[mess._topic].push_back(mess);
-  }
-
-  void dispatcher::publish(message &&mess)
-  {
-    _topics[mess._topic].push_back(std::move(mess));
-  }
-
-  void dispatcher::consume()
-  {
-    for (auto &&[topic, consumers] : _consumers)
+    if (!_conso[id].contains(topic))
     {
-      for (consumer &cons : consumers)
-      {
-        for (const message &mess : _topics[topic])
-        {
-          cons(mess);
-        }
-      }
+      _conso[id][topic] = 0;
     }
 
-    for (auto &&[topic, aggregators] : _aggregators)
-    {
-      for (aggregator &aggr : aggregators)
-      {
-        aggr(_topics[topic]);
-      }
-    }
+    std::size_t idx = _conso[id][topic];
 
+    if (idx < _topics[topic].size())
+    {
+      _conso[id][topic] = idx + 1;
+      return _topics[topic][idx];
+    }
+    else
+    {
+      return std::nullopt;
+    }
+  }
+
+  void bus::purge(const std::string &topic)
+  {
+    _topics[topic].clear();
+
+    for (auto &[id, topics] : _conso)
+    {
+      topics.erase(topic);
+    }
+  }
+
+  void bus::purge()
+  {
     _topics.clear();
+    _conso.clear();
   }
 
-  bus::bus(dispatcher &disp)
-      : _disp(disp) {}
+  consumer::consumer(bus &bs, std::function<void(const message &)> &&cb)
+      : _cb(cb), _bus(bs), _uuid(std::next_uuid()) {}
 
-  void bus::emit(const message &mess)
+  bool consumer::consume(const std::string &topic)
   {
-    _disp.publish(mess);
+    std::optional<message> mess = _bus.receive(topic, _uuid);
+
+    if (mess.has_value())
+    {
+      _cb(mess.value());
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 
-  void bus::emit(message &&mess)
+  producer::producer(bus &bs)
+      : _bus(bs) {}
+
+  void producer::produce(const std::string &topic, const message &mess)
   {
-    _disp.publish(std::move(mess));
+    _bus.send(topic, mess);
+  }
+
+  void producer::produce(const std::string &topic, message &&mess)
+  {
+    _bus.send(topic, std::move(mess));
+  }
+
+  loop::loop(bus &bs)
+      : _bus(bs) {}
+
+  void loop::subscribe(const std::string &topic, const consumer &cons)
+  {
+    _subscriptions[topic].push_back(cons);
+  }
+
+  void loop::run()
+  {
+    int i = 0;
+
+    while (i < 1000)
+    {
+      turn();
+      ++i;
+    }
+  }
+
+  void loop::turn()
+  {
+    for (auto &[topic, consos] : _subscriptions)
+    {
+      for (consumer &conso : consos)
+      {
+        while (conso.consume(topic));
+      }
+    }
+
+    _bus.purge();
   }
 }

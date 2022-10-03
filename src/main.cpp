@@ -1,18 +1,31 @@
 #include <ui.hpp>
 
+#include <iostream>
+
 namespace ui = stew::ui;
-using stm = ui::style_text_mode;
 
 int main(int argc, char **argv)
 {
-  ui::application app;
-  
-  app.add_view("sso", std::ptr<ui::view>(new ui::sso_view()));
-  app.add_view("sso2", std::ptr<ui::view>(new ui::sso_view2()));
-  app.show("sso");
-  app.emit("sso");
-  app.show("sso2");
-  app.emit("sso2");
+  ui::bus bus;
+  ui::loop loop(bus);
+
+  ui::consumer cons(bus, [](const ui::message &mess)
+                    { std::cout << mess._data << '\n'; });
+  ui::producer prod(bus);
+
+  prod.produce("hello", ui::message{._data = "1 - Hello World !!"});
+  prod.produce("hello2", ui::message{._data = "2 - Hello World !!"});
+  prod.produce("hello3", ui::message{._data = "3 - Hello World !!"});
+  prod.produce("hello4", ui::message{._data = "4 - Hello World !!"});
+
+  loop.subscribe("hello", cons);
+  loop.subscribe("hello", cons);
+  loop.subscribe("hello", cons);
+  loop.subscribe("hello2", cons);
+  loop.subscribe("hello3", cons);
+  loop.subscribe("hello4", cons);
+
+  loop.run();
   
   return EXIT_SUCCESS;
 }

@@ -3,9 +3,11 @@
 
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
-#include <string_view>
 #include <vector>
+
+#include <ui-config.hpp>
 
 namespace stew::ui
 {
@@ -15,40 +17,64 @@ namespace stew::ui
     std::string _data;
   };
 
-  class dispatcher
-  {
-    using consumer = std::function<void(const message &)>;
-    using aggregator = std::function<void(const std::vector<message> &)>;
-
-    std::map<std::string, std::vector<message>> _topics;
-    std::map<std::string, std::vector<consumer>> _consumers;
-    std::map<std::string, std::vector<aggregator>> _aggregators;
-
-  public:
-    void connect(std::string_view topic, const consumer &cons);
-    void connect(std::string_view topic, consumer &&cons);
-    void connect(std::string_view topic, const aggregator &aggr);
-    void connect(std::string_view topic, aggregator &&aggr);
-
-  public:
-    void publish(const message &mess);
-    void publish(message &&mess);
-
-  public:
-    void consume();
-  };
-
   class bus
   {
-    dispatcher &_disp;
+    std::map<std::string, std::vector<message>> _topics;
+    std::map<std::uuid, std::map<std::string, std::size_t>> _conso;
 
   public:
-    bus(dispatcher &disp);
+    void send(const std::string &topic, const message &mess);
+    void send(const std::string &topic, message &&mess);
+
+    std::optional<message> receive(const std::string &topic, std::uuid id);
 
   public:
-    void emit(const message &mess);
-    void emit(message &&mess);
+    void purge(const std::string &topic);
+    void purge();
   };
+
+  class consumer
+  {
+    bus &_bus;
+    std::uuid _uuid = 0;
+    std::function<void(const message &)> _cb;
+
+  public:
+    consumer(bus &bs, std::function<void(const message &)> &&cb);
+
+  public:
+    bool consume(const std::string &topic);
+  };
+
+  class producer
+  {
+    bus &_bus;
+
+  public:
+    producer(bus &bs);
+
+  public:
+    void produce(const std::string &topic, const message &mess);
+    void produce(const std::string &topic, message &&mess);
+  };
+
+  class loop
+  {
+    bus &_bus;
+    bool _continue = true;
+    std::map<std::string, std::vector<consumer>> _subscriptions;
+
+  public:
+    loop(bus &bs);
+
+  public:
+    void subscribe(const std::string &topic, const consumer &cons);
+    void run();
+
+  private:
+    void turn();
+  };
+
 }
 
 #endif

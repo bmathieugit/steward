@@ -10,12 +10,7 @@
 #include <ui-screen.hpp>
 #include <ui-position.hpp>
 #include <ui-event.hpp>
-
-namespace std
-{
-  template <typename T>
-  using ptr = unique_ptr<T>;
-}
+#include <ui-config.hpp>
 
 namespace stew::ui
 {
