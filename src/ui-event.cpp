@@ -1,30 +1,30 @@
 #include <ui-event.hpp>
 
+#include <thread>
+
 namespace stew::ui
 {
   void bus::send(const std::string &topic, const message &mess)
   {
-    _topics[topic].push_back(mess);
+    std::scoped_lock<std::mutex> sl(_guardian);
+    _topics[topic].push(mess);
   }
 
   void bus::send(const std::string &topic, message &&mess)
   {
-    _topics[topic].push_back(std::move(mess));
+    std::scoped_lock<std::mutex> sl(_guardian);
+    _topics[topic].push(std::move(mess));
   }
 
-  std::optional<message> bus::receive(const std::string &topic, std::uuid id)
+  std::optional<message> bus::receive(const std::string &topic)
   {
-    if (!_conso[id].contains(topic))
-    {
-      _conso[id][topic] = 0;
-    }
+    std::scoped_lock<std::mutex> sl(_guardian);
 
-    std::size_t idx = _conso[id][topic];
-
-    if (idx < _topics[topic].size())
+    if (!_topics[topic].empty())
     {
-      _conso[id][topic] = idx + 1;
-      return _topics[topic][idx];
+      message mess = std::move(_topics[topic].front());
+      _topics[topic].pop();
+      return mess;
     }
     else
     {
@@ -32,82 +32,24 @@ namespace stew::ui
     }
   }
 
-  void bus::purge(const std::string &topic)
-  {
-    _topics[topic].clear();
+  consumer::consumer(bus &bs, const std::string& topic)
+      : _bus(bs), _topic(topic) {}
 
-    for (auto &[id, topics] : _conso)
-    {
-      topics.erase(topic);
-    }
+  std::optional<message> consumer::consume()
+  {
+    return _bus.receive(_topic);
   }
 
-  void bus::purge()
+  producer::producer(bus &bs, const std::string& topic)
+      : _bus(bs), _topic(topic) {}
+
+  void producer::produce(const message &mess)
   {
-    _topics.clear();
-    _conso.clear();
+    _bus.send(_topic, mess);
   }
 
-  consumer::consumer(bus &bs, std::function<void(const message &)> &&cb)
-      : _cb(cb), _bus(bs), _uuid(std::next_uuid()) {}
-
-  bool consumer::consume(const std::string &topic)
+  void producer::produce(message &&mess)
   {
-    std::optional<message> mess = _bus.receive(topic, _uuid);
-
-    if (mess.has_value())
-    {
-      _cb(mess.value());
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-  }
-
-  producer::producer(bus &bs)
-      : _bus(bs) {}
-
-  void producer::produce(const std::string &topic, const message &mess)
-  {
-    _bus.send(topic, mess);
-  }
-
-  void producer::produce(const std::string &topic, message &&mess)
-  {
-    _bus.send(topic, std::move(mess));
-  }
-
-  loop::loop(bus &bs)
-      : _bus(bs) {}
-
-  void loop::subscribe(const std::string &topic, const consumer &cons)
-  {
-    _subscriptions[topic].push_back(cons);
-  }
-
-  void loop::run()
-  {
-    int i = 0;
-
-    while (i < 1000)
-    {
-      turn();
-      ++i;
-    }
-  }
-
-  void loop::turn()
-  {
-    for (auto &[topic, consos] : _subscriptions)
-    {
-      for (consumer &conso : consos)
-      {
-        while (conso.consume(topic));
-      }
-    }
-
-    _bus.purge();
+    _bus.send(_topic, std::move(mess));
   }
 }

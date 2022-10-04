@@ -6,6 +6,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <queue>
+#include <mutex>
 
 #include <ui-config.hpp>
 
@@ -19,14 +21,15 @@ namespace stew::ui
 
   class bus
   {
-    std::map<std::string, std::vector<message>> _topics;
-    std::map<std::uuid, std::map<std::string, std::size_t>> _conso;
+    std::mutex _guardian;
+    std::map<std::string, std::queue<message>> _topics;
 
   public:
     void send(const std::string &topic, const message &mess);
     void send(const std::string &topic, message &&mess);
 
-    std::optional<message> receive(const std::string &topic, std::uuid id);
+    std::optional<message>
+    receive(const std::string &topic);
 
   public:
     void purge(const std::string &topic);
@@ -36,45 +39,27 @@ namespace stew::ui
   class consumer
   {
     bus &_bus;
-    std::uuid _uuid = 0;
-    std::function<void(const message &)> _cb;
+    std::string _topic;
 
   public:
-    consumer(bus &bs, std::function<void(const message &)> &&cb);
+    consumer(bus &bs, const std::string& topic);
 
   public:
-    bool consume(const std::string &topic);
+    std::optional<message> consume();
   };
 
   class producer
   {
     bus &_bus;
+    std::string _topic;
 
   public:
-    producer(bus &bs);
+    producer(bus &bs, const std::string& topic);
 
   public:
-    void produce(const std::string &topic, const message &mess);
-    void produce(const std::string &topic, message &&mess);
+    void produce(const message &mess);
+    void produce(message &&mess);
   };
-
-  class loop
-  {
-    bus &_bus;
-    bool _continue = true;
-    std::map<std::string, std::vector<consumer>> _subscriptions;
-
-  public:
-    loop(bus &bs);
-
-  public:
-    void subscribe(const std::string &topic, const consumer &cons);
-    void run();
-
-  private:
-    void turn();
-  };
-
 }
 
 #endif

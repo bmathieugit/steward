@@ -1,31 +1,49 @@
 #include <ui.hpp>
 
+#include <thread>
 #include <iostream>
 
 namespace ui = stew::ui;
 
+/**
+ * Mon prochain but est de faire une application qui 
+ * va copier un gros paquet de fichier (virtuellement) 
+ * et qui va rafraichir l'affichage avce le nom du fichier qui va etre copié. 
+ * on aura aussi un pourcentage du processus de copie global qui se mettra à jour. 
+ * 
+ * Il me faut donc deux zone de message dans la partie TUI de l'application:  
+ *  - une pour accueillir le path courant
+ *  - une pour accueillir le % courant en cours.
+ * 
+ * Il y aura donc un producer et un consumer utilisé dans un thread chacun
+ * 
+ * Il y aura une view qui aura utilisera le consumer pour obtenir l'information
+ * d'avancement et du fichier encours de copie.
+ * 
+ * Il y aura dans le m^eme temps un acteur qui fera la copie et se servira du 
+ * producer pour emettre un event à chaque fichier copié.
+ */ 
+
 int main(int argc, char **argv)
 {
   ui::bus bus;
-  ui::loop loop(bus);
 
-  ui::consumer cons(bus, [](const ui::message &mess)
-                    { std::cout << mess._data << '\n'; });
-  ui::producer prod(bus);
+  ui::consumer cons(bus, "hello");
+  ui::producer prod(bus, "hello");
 
-  prod.produce("hello", ui::message{._data = "1 - Hello World !!"});
-  prod.produce("hello2", ui::message{._data = "2 - Hello World !!"});
-  prod.produce("hello3", ui::message{._data = "3 - Hello World !!"});
-  prod.produce("hello4", ui::message{._data = "4 - Hello World !!"});
 
-  loop.subscribe("hello", cons);
-  loop.subscribe("hello", cons);
-  loop.subscribe("hello", cons);
-  loop.subscribe("hello2", cons);
-  loop.subscribe("hello3", cons);
-  loop.subscribe("hello4", cons);
+  std::thread tprod([&prod]
+                    {
+    int i = 0;
 
-  loop.run();
-  
+    while(true)
+    {
+      std::cout << std::string("production") + std::to_string(i) + '\n';
+      prod.produce(ui::message{._data = std::to_string(i) + " - Hello World !!"});
+      i = i + 1;
+    } });
+
+    tprod.join();
+
   return EXIT_SUCCESS;
 }
