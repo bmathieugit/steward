@@ -35,6 +35,8 @@ namespace stew::ui
 
     void to_screen(screen &scr);
     void from_screen(screen &scr, bus &bs);
+
+    void clear();
   };
 
   class text_grid_cell : public grid_cell

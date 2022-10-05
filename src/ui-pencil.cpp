@@ -3,7 +3,10 @@
 namespace stew::ui
 {
   pencil::pencil(grid &grd)
-      : _grd(grd) {}
+      : _grd(grd)
+  {
+    _grd.clear();
+  }
 
   pencil &pencil::text(std::string_view txt)
   {

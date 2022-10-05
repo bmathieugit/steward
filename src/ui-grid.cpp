@@ -33,7 +33,6 @@ namespace stew::ui
       }
 
       scr.write('\n');
-
     }
   }
 
@@ -56,6 +55,11 @@ namespace stew::ui
         }
       }
     }
+  }
+
+  void grid::clear()
+  {
+    _table.clear();
   }
 
   text_grid_cell::text_grid_cell(char c)
