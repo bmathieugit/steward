@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 #include <mutex>
+#include <condition_variable>
 
 #include <ui-config.hpp>
 
@@ -29,13 +30,26 @@ namespace stew::ui
 
     std::optional<message>
     pop(const std::string &topic);
+
+    bool empty(const std::string& topic);
   };
 
   class bus_guard
   {
-    // un bus guard permet de poser un mutex sur les topics afin de 
-    // protéger chaque topic et de permettre de ne lancer la lecture que s'il y a un 
+    // un bus guard permet de poser un mutex sur les topics afin de
+    // protéger chaque topic et de permettre de ne lancer la lecture que s'il y a un
     // event dans le topic.
+    std::mutex _mutex;
+    std::condition_variable _cv;
+    bus &_bus;
+
+  public:
+    bus_guard(bus &bs);
+
+    void push(const std::string &topic, const message &mess);
+    void push(const std::string &topic, message &&mess);
+
+    std::optional<message> pop(const std::string &topic);
   };
 
   class consumer

@@ -31,25 +31,35 @@ int main(int argc, char **argv)
 {
 
   ui::bus bs;
-  ui::producer prod(bs, "fcopy");
-  ui::consumer cons(bs, "fcopy");
+  ui::bus_guard bguard(bs);
 
   ui::screen scr;
   copy_view cpv;
 
-  
+  std::jthread prod([&bguard]
+                    {
+    for (int i=0; i<10000; i++)
+    {
+      bguard.push("fcopy", ui::message{._data=std::to_string(i)+"/file"});
+    } });
 
-  for (int i = 0; i < 1000000; ++i)
-  {
-    std::string fname = "file";
-    fname += std::to_string(i);
-    prod.produce(ui::message{._data = fname});
-    cpv._filename = cons.consume().value()._data;
+  std::jthread cons([&bguard, &scr, &cpv]
+                    {
+    for (int i=0; i<1000; i++)
+    {
+      std::optional<ui::message> mess =  bguard.pop("fcopy");
+      if (mess.has_value())
+      {
+        cpv._filename = mess.value()._data;
     cpv.draw();
     cpv.show(scr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     cpv.hide(scr);
-  }
+      }
+    } });
+
+  prod.join();
+  cons.join();
 
   std::string dodo;
   std::cin >> dodo;
