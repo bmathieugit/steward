@@ -45,7 +45,7 @@ building/main.o: src/main.cpp
 	mkdir -p building
 	${CC} -o building/main.o -c $< ${FLAGS}
 
-building/steward.app:  building/main.o building/ui-config.o building/ui-event.o 
+building/steward.app:  building/main.o building/ui-config.o  building/ui-grid.o building/ui-event.o building/ui-view.o building/ui-screen.o building/ui-pencil.o 
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS}
 

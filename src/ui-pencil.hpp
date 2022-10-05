@@ -19,6 +19,7 @@ namespace stew::ui
     pencil &text(std::string_view txt);
     pencil &style_text(std::string_view txt, const std::vector<style_text_mode> &mode);
     pencil &marker(std::string_view id, char c);
+    pencil &message(std::string_view id, char c);
     pencil &hidden(std::string_view id, char c);
   };
 }

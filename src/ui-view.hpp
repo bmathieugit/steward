@@ -10,6 +10,7 @@ namespace stew::ui
 {
   class view
   {
+  protected:
     grid _grd;
     bool _showing = false;
 
@@ -19,9 +20,9 @@ namespace stew::ui
   public:
     virtual void draw() = 0;
 
-    void show(screen& scr);
-    void emit(screen& scr, bus& bs);
-    void hide(screen& scr);
+    void show(screen &scr);
+    void emit(screen &scr, bus &bs);
+    void hide(screen &scr);
 
   protected:
     pencil pen();
@@ -33,7 +34,8 @@ namespace stew::ui
 {
   class sso_view : public view
   {
-  public:;
+  public:
+    ;
     virtual ~sso_view() = default;
 
   public:
@@ -42,7 +44,8 @@ namespace stew::ui
 
   class sso_view2 : public view
   {
-  public:;
+  public:
+    ;
     virtual ~sso_view2() = default;
 
   public:

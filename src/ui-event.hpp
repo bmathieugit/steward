@@ -21,19 +21,21 @@ namespace stew::ui
 
   class bus
   {
-    std::mutex _guardian;
     std::map<std::string, std::queue<message>> _topics;
 
   public:
-    void send(const std::string &topic, const message &mess);
-    void send(const std::string &topic, message &&mess);
+    void push(const std::string &topic, const message &mess);
+    void push(const std::string &topic, message &&mess);
 
     std::optional<message>
-    receive(const std::string &topic);
+    pop(const std::string &topic);
+  };
 
-  public:
-    void purge(const std::string &topic);
-    void purge();
+  class bus_guard
+  {
+    // un bus guard permet de poser un mutex sur les topics afin de 
+    // protéger chaque topic et de permettre de ne lancer la lecture que s'il y a un 
+    // event dans le topic.
   };
 
   class consumer
@@ -42,7 +44,7 @@ namespace stew::ui
     std::string _topic;
 
   public:
-    consumer(bus &bs, const std::string& topic);
+    consumer(bus &bs, const std::string &topic);
 
   public:
     std::optional<message> consume();
@@ -54,7 +56,7 @@ namespace stew::ui
     std::string _topic;
 
   public:
-    producer(bus &bs, const std::string& topic);
+    producer(bus &bs, const std::string &topic);
 
   public:
     void produce(const message &mess);

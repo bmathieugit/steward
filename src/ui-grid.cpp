@@ -33,6 +33,7 @@ namespace stew::ui
       }
 
       scr.write('\n');
+
     }
   }
 
@@ -50,7 +51,7 @@ namespace stew::ui
 
           if (mess.has_value())
           {
-            bs.emit(mess.value());
+            bs.push("user_input", mess.value());
           }
         }
       }
@@ -148,6 +149,21 @@ namespace stew::ui
     scr.at(pos);
     scr.read(_value);
     return message{"user_input", _id + ":" + _value};
+  }
+
+  message_grid_cell::message_grid_cell(std::string_view id, char c)
+      : text_grid_cell(c), _id(id)
+  {
+  }
+
+  void message_grid_cell::to_screen(screen &scr)
+  {
+    text_grid_cell::to_screen(scr);
+  }
+
+  std::optional<message> message_grid_cell::from_screen(position pos, screen &scr)
+  {
+    return std::nullopt;
   }
 
   hidden_marker_grid_cell::hidden_marker_grid_cell(std::string_view id, char c)

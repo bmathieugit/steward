@@ -4,22 +4,18 @@
 
 namespace stew::ui
 {
-  void bus::send(const std::string &topic, const message &mess)
+  void bus::push(const std::string &topic, const message &mess)
   {
-    std::scoped_lock<std::mutex> sl(_guardian);
     _topics[topic].push(mess);
   }
 
-  void bus::send(const std::string &topic, message &&mess)
+  void bus::push(const std::string &topic, message &&mess)
   {
-    std::scoped_lock<std::mutex> sl(_guardian);
     _topics[topic].push(std::move(mess));
   }
 
-  std::optional<message> bus::receive(const std::string &topic)
+  std::optional<message> bus::pop(const std::string &topic)
   {
-    std::scoped_lock<std::mutex> sl(_guardian);
-
     if (!_topics[topic].empty())
     {
       message mess = std::move(_topics[topic].front());
@@ -37,7 +33,7 @@ namespace stew::ui
 
   std::optional<message> consumer::consume()
   {
-    return _bus.receive(_topic);
+    return _bus.pop(_topic);
   }
 
   producer::producer(bus &bs, const std::string& topic)
@@ -45,11 +41,11 @@ namespace stew::ui
 
   void producer::produce(const message &mess)
   {
-    _bus.send(_topic, mess);
+    _bus.push(_topic, mess);
   }
 
   void producer::produce(message &&mess)
   {
-    _bus.send(_topic, std::move(mess));
+    _bus.push(_topic, std::move(mess));
   }
 }

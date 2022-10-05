@@ -14,12 +14,6 @@
 
 namespace stew::ui
 {
-  struct from_event
-  {
-    std::string _id;
-    std::string _value;
-  };
-
   class grid_cell
   {
   public:
@@ -95,6 +89,18 @@ namespace stew::ui
   public:
     marker_grid_cell(std::string_view id, char c);
     virtual ~marker_grid_cell() = default;
+    virtual void to_screen(screen &scr) override;
+    virtual std::optional<message> from_screen(position pos, screen &scr) override;
+  };
+
+  class message_grid_cell : public text_grid_cell
+  {
+    std::string _id;
+    std::string _value;
+
+  public:
+    message_grid_cell(std::string_view id, char c);
+    virtual ~message_grid_cell() = default;
     virtual void to_screen(screen &scr) override;
     virtual std::optional<message> from_screen(position pos, screen &scr) override;
   };
