@@ -5,7 +5,7 @@
 #include <map>
 #include <optional>
 #include <string>
-#include <vector>
+#include <list>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
@@ -14,67 +14,90 @@
 
 namespace stew::ui
 {
+  template <typename M>
+  std::scoped_lock<M> make_scoped(M &mutex)
+  {
+    return std::scoped_lock<M>(mutex);
+  }
+
   struct message
   {
-    std::string _topic;
     std::string _data;
   };
 
-  class bus
+  class subscriber
   {
-    std::map<std::string, std::queue<message>> _topics;
-
-  public:
-    void push(const std::string &topic, const message &mess);
-    void push(const std::string &topic, message &&mess);
-
-    std::optional<message>
-    pop(const std::string &topic);
-
-    bool empty(const std::string& topic);
-  };
-
-  class bus_guard
-  {
-    // un bus guard permet de poser un mutex sur les topics afin de
-    // protéger chaque topic et de permettre de ne lancer la lecture que s'il y a un
-    // event dans le topic.
     std::mutex _mutex;
-    std::condition_variable _cv;
-    bus &_bus;
+    std::queue<message> _messages;
 
   public:
-    bus_guard(bus &bs);
+    subscriber() = default;
+    subscriber(const subscriber &) = delete;
+    subscriber(subscriber && o) : 
+      _mutex(std::move(o._mutex))
+    {
 
-    void push(const std::string &topic, const message &mess);
-    void push(const std::string &topic, message &&mess);
+    }
+    subscriber &operator=(const subscriber &) = delete;
+    subscriber &operator=(subscriber &&) = default;
 
-    std::optional<message> pop(const std::string &topic);
+  public:
+    std::optional<message> consume()
+    {
+      auto scoped = make_scoped(_mutex);
+
+      if (!_messages.empty())
+      {
+        auto mess = std::move(_messages.front());
+        _messages.pop();
+        return mess;
+      }
+      else
+      {
+        return std::nullopt;
+      }
+    }
+
+    friend class topic;
   };
 
-  class consumer
+  class topic
   {
-    bus &_bus;
-    std::string _topic;
+    std::mutex _mutex;
+    std::vector<subscriber> _subscribers;
 
   public:
-    consumer(bus &bs, const std::string &topic);
+    subscriber &subscribe()
+    {
+      {
+        auto scoped = make_scoped(_mutex);
+        _subscribers.emplace_back();
+      }
 
-  public:
-    std::optional<message> consume();
-  };
+      return _subscribers.back();
+    }
 
-  class producer
-  {
-    bus &_bus;
-    std::string _topic;
+    void post(const message &mess)
+    {
+      auto scoped = make_scoped(_mutex);
 
-  public:
-    producer(bus &bs, const std::string &topic);
+      for (auto &cons : _subscribers)
+      {
+        auto scoped2 = make_scoped(_mutex);
+        cons._messages.push(mess);
+      }
+    }
 
-  public:
-    void produce(const message &mess);
-    void produce(message &&mess);
+    void post(message &&mess)
+    {
+      auto scoped = make_scoped(_mutex);
+
+      for (auto &cons : _subscribers)
+      {
+        auto scoped2 = make_scoped(_mutex);
+        cons._messages.push(std::move(mess));
+      }
+    }
   };
 }
 
