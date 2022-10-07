@@ -18,6 +18,12 @@ namespace stew::ui
     return std::scoped_lock<M>(mutex);
   }
 
+  template <typename M>
+  std::unique_lock<M> make_uniquelk(M &mutex)
+  {
+    return std::unique_lock<M>(mutex);
+  }
+
   struct message
   {
     std::string _data;
@@ -26,9 +32,10 @@ namespace stew::ui
   class subscriber
   {
     std::mutex _mutex;
-//    std::condition_variable _empty_guard;
+    std::condition_variable _empty_guard;
     std::queue<message> _messages;
-
+    bool _closed = false;
+    
   public:
     subscriber() = default;
     subscriber(const subscriber &) = delete;
@@ -50,6 +57,7 @@ namespace stew::ui
   public:
     subscriber &subscribe();
     void post(const message &mess);
+    void close();
   };
 }
 
