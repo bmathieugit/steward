@@ -5,7 +5,7 @@
 
 namespace ui = stew::ui;
 
-constexpr int maxi = 100000;
+constexpr int maxi = 1000000;
 
 int main(int argc, char **argv)
 {
@@ -22,23 +22,25 @@ int main(int argc, char **argv)
                      {
                        fcopy.post(ui::message{._data = "Hello World"});
                      }
-                   });
+                     
+                     std::cout << "end producing \n"; 
+                     fcopy.close(); });
 
   std::jthread jt2([&s1]
                    {
-    for (std::size_t i(0); i<maxi; ++i)
-    {
-      auto&& mess = s1.consume();
-      if (mess.has_value())
-      {
-      std::cout << std::string("s1 consume : ") + mess.value()._data  + std::to_string(i)+'\n';
-    }}
-    
-    ; });
+                     for (std::size_t i(0); i < maxi + 10; ++i)
+                     {
+                       auto &&mess = s1.consume();
+                       if (mess.has_value())
+                       {
+                         std::cout << std::string("s1 consume : ") + mess.value()._data + std::to_string(i) + '\n';
+                       }
+                     }
+                   });
 
   std::jthread jt3([&s2]
                    {
-    for (std::size_t i(0); i<maxi; ++i)
+    for (std::size_t i(0); i<maxi+10; ++i)
     {
       auto&& mess = s2.consume();
       if (mess.has_value())
