@@ -1,7 +1,7 @@
 #ifndef __stew_ui_application_hpp__
 #define __stew_ui_application_hpp__
 
-#include <ui-event.hpp>
+#include <event.hpp>
 
 #include <memory>
 #include <map>

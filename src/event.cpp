@@ -1,4 +1,4 @@
-#include <ui-event.hpp>
+#include <event.hpp>
 
 namespace stew::ui
 {

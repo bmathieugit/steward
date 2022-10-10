@@ -3,7 +3,7 @@
 
 #include <ui-grid.hpp>
 #include <ui-pencil.hpp>
-#include <ui-event.hpp>
+#include <event.hpp>
 #include <ui-screen.hpp>
 
 namespace stew::ui
@@ -21,7 +21,7 @@ namespace stew::ui
     virtual void draw() = 0;
 
     void show(screen &scr);
-    void emit(screen &scr, bus &bs);
+    void emit(screen &scr, topic &tpc);
     void hide(screen &scr);
 
   protected:

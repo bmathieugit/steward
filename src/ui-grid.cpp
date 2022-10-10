@@ -36,7 +36,7 @@ namespace stew::ui
     }
   }
 
-  void grid::from_screen(screen &scr, bus &bs)
+  void grid::from_screen(screen &scr, topic &tpc)
   {
     scr.origin();
 
@@ -50,7 +50,7 @@ namespace stew::ui
 
           if (mess.has_value())
           {
-            bs.push("user_input", mess.value());
+            tpc.post(mess.value());
           }
         }
       }
@@ -152,7 +152,7 @@ namespace stew::ui
   {
     scr.at(pos);
     scr.read(_value);
-    return message{"user_input", _id + ":" + _value};
+    return message{_id + ":" + _value};
   }
 
   message_grid_cell::message_grid_cell(std::string_view id, char c)

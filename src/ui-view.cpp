@@ -11,11 +11,11 @@ namespace stew::ui
     }
   }
 
-  void view::emit(screen &scr, bus &bs)
+  void view::emit(screen &scr, topic &tpc)
   {
     if (_showing)
     {
-      _grd.from_screen(scr, bs);
+      _grd.from_screen(scr, tpc);
     }
   }
 

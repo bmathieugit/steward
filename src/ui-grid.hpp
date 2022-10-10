@@ -9,7 +9,7 @@
 
 #include <ui-screen.hpp>
 #include <ui-position.hpp>
-#include <ui-event.hpp>
+#include <event.hpp>
 #include <ui-config.hpp>
 
 namespace stew::ui
@@ -34,7 +34,7 @@ namespace stew::ui
     void push_back_row();
 
     void to_screen(screen &scr);
-    void from_screen(screen &scr, bus &bs);
+    void from_screen(screen &scr, topic &tpc);
 
     void clear();
   };

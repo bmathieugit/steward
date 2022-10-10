@@ -55,6 +55,13 @@ namespace stew::ui
     std::list<subscriber> _subscribers;
 
   public:
+    topic() = default;
+    topic(const topic&) = delete;
+    topic(topic&&) = default;
+    topic& operator=(const topic&) = delete;
+    topic& operator=(topic&&) = default;
+
+  public:
     subscriber &subscribe();
     void post(const message &mess);
     void close();
