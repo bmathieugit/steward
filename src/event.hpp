@@ -8,9 +8,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#include <ui-config.hpp>
-
-namespace stew::ui
+namespace stew
 {
   template <typename M>
   std::scoped_lock<M> make_scoped(M &mutex)

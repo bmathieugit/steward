@@ -1,4 +1,80 @@
-#include <ui-grid.hpp>
+#include <ui.hpp>
+#include <iostream>
+
+namespace stew::ui
+{
+  screen::screen()
+  {
+    savec();
+    save();
+  }
+
+  screen::~screen()
+  {
+    restore();
+    restorec();
+  }
+
+  void screen::origin()
+  {
+    std::cout << "\033[H";
+  }
+
+  void screen::at(position pos)
+  {
+    origin();
+
+    if (pos._row)
+    {
+      std::cout << "\033[" << pos._row << 'B';
+    }
+
+    if (pos._col)
+    {
+      std::cout << "\033[" << pos._col << 'C';
+    }
+  }
+
+  void screen::erase()
+  {
+    std::cout << "\033[2J";
+  }
+
+  void screen::save()
+  {
+    std::cout << "\033[?47h";
+  }
+
+  void screen::restore()
+  {
+    std::cout << "\033[?47l";
+  }
+
+  void screen::savec()
+  {
+    std::cout << "\033[s";
+  }
+
+  void screen::restorec()
+  {
+    std::cout << "\033[u";
+  }
+
+  void screen::write(char c)
+  {
+    std::cout << c;
+  }
+
+  void screen::write(std::string_view txt)
+  {
+    std::cout << txt;
+  }
+
+  void screen::read(std::string &resp)
+  {
+    std::getline(std::cin, resp);
+  }
+}
 
 namespace stew::ui
 {
@@ -60,6 +136,15 @@ namespace stew::ui
   void grid::clear()
   {
     _table.clear();
+  }
+
+  void empty_cell::to_screen(screen &scr)
+  {
+  }
+
+  std::optional<message> empty_cell::from_screen(position pos, screen &scr)
+  {
+    return std::nullopt;
   }
 
   text_grid_cell::text_grid_cell(char c)
@@ -179,5 +264,109 @@ namespace stew::ui
     auto &&res = marker_grid_cell::from_screen(pos, scr);
     scr.write("\033[28m");
     return res;
+  }
+}
+
+namespace stew::ui
+{
+  pencil::pencil(grid &grd)
+      : _grd(grd)
+  {
+    _grd.clear();
+  }
+
+  pencil &pencil::text(std::string_view txt)
+  {
+    for (char c : txt)
+    {
+      if (c == '\n')
+      {
+        _grd.push_back_row();
+      }
+      else
+      {
+        _grd.push_back(std::ptr<grid_cell>(new text_grid_cell(c)));
+      }
+    }
+
+    return *this;
+  }
+
+  pencil &pencil::style_text(std::string_view txt, const std::vector<style_text_mode> &modes)
+  {
+    for (char c : txt)
+    {
+      if (c == '\n')
+      {
+        _grd.push_back_row();
+      }
+      else
+      {
+        _grd.push_back(std::ptr<grid_cell>(new style_text_grid_cell(c, modes)));
+      }
+    }
+
+    return *this;
+  }
+
+  pencil &pencil::marker(std::string_view id, char c)
+  {
+    _grd.push_back(std::ptr<grid_cell>(new marker_grid_cell(id, c)));
+    return *this;
+  }
+
+  pencil &pencil::message(std::string_view id, char c)
+  {
+    _grd.push_back(std::ptr<grid_cell>(new message_grid_cell(id, c)));
+    return *this;
+  }
+
+  pencil &pencil::hidden(std::string_view id, char c)
+  {
+    _grd.push_back(std::ptr<grid_cell>(new hidden_marker_grid_cell(id, c)));
+    return *this;
+  }
+}
+
+namespace stew::ui
+{
+  void view::show(screen &scr)
+  {
+    if (!_showing)
+    {
+      _grd.to_screen(scr);
+      _showing = true;
+    }
+  }
+
+  void view::emit(screen &scr, topic &tpc)
+  {
+    if (_showing)
+    {
+      _grd.from_screen(scr, tpc);
+    }
+  }
+
+  void view::hide(screen &scr)
+  {
+    if (_showing)
+    {
+      scr.erase();
+      scr.origin();
+      _showing = false;
+    }
+  }
+
+  pencil &view::pen()
+  {
+    return _pen;
+  }
+
+  text_field::text_field(const std::string &label)
+      : _label(label) {}
+
+  void text_field::draw(pencil &pen)
+  {
+    pen.text("----- ").text(_label).text(" : ").marker(_label, '%').text("\n");
   }
 }

@@ -1,6 +1,6 @@
 #include <event.hpp>
 
-namespace stew::ui
+namespace stew
 {
   std::optional<message> subscriber::consume()
   {
