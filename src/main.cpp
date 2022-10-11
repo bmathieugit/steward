@@ -20,11 +20,18 @@ namespace stew
 int main(int argc, char **argv)
 {
   ui::screen scr;
+  stew::topic tpc;
 
-  auto v = ui::make_view<10, 50>(ui::text_field("login"), ui::text_field("password"));
+
+  auto v = ui::make_view<10, 50>(
+    ui::text_field("login"), 
+    ui::text_field("password"));
+  
   v.draw();
   v.show(scr);
-
+  v.emit(scr, tpc);
+  
+  
   stew::pause();
 
   return EXIT_SUCCESS;

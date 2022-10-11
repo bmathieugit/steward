@@ -116,7 +116,7 @@ namespace stew::ui
   {
     stew::matrix<std::ptr<grid_cell>, R, C> _table;
     stew::position _cur{0, 0};
-
+  
   public:
     grid() = default;
     grid(const grid &) = delete;
@@ -207,6 +207,8 @@ namespace stew::ui
         _table[xy{row, col}] = nullptr;
       }
     }
+
+    _cur = xy{0, 0};
   }
 
   class text_grid_cell : public grid_cell
