@@ -106,6 +106,10 @@ namespace stew::ui
   class grid_cell
   {
   public:
+    std::size_t _row = 0;
+    std::size_t _col = 0;
+
+  public:
     virtual ~grid_cell() = default;
     virtual void to_screen(screen &scr) = 0;
     virtual std::optional<message> from_screen(position pos, screen &scr) = 0;
@@ -116,7 +120,7 @@ namespace stew::ui
   {
     stew::matrix<std::ptr<grid_cell>, R, C> _table;
     stew::position _cur{0, 0};
-  
+
   public:
     grid() = default;
     grid(const grid &) = delete;
@@ -149,6 +153,7 @@ namespace stew::ui
   {
     if (_cur._row < _table.rows())
     {
+      _cur._col = 0;
       _cur._row++;
     }
   }
@@ -459,8 +464,7 @@ namespace stew::ui
     void draw(pencil<R, C> &pen);
   };
 
-
-  template<std::size_t R, std::size_t C>
+  template <std::size_t R, std::size_t C>
   void text_field::draw(pencil<R, C> &pen)
   {
     pen.text("----- ").text(_label).text(" : ").marker(_label, '%').text("\n");

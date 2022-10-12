@@ -78,7 +78,6 @@ namespace stew::ui
 
 namespace stew::ui
 {
-
   text_grid_cell::text_grid_cell(char c)
       : _c(c) {}
 
@@ -168,6 +167,7 @@ namespace stew::ui
   std::optional<message> marker_grid_cell::from_screen(position pos, screen &scr)
   {
     scr.at(pos);
+    std::cout << "row:" << pos._row << ",col:" << pos._col;
     scr.read(_value);
     return message{_id + ":" + _value};
   }
