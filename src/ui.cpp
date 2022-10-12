@@ -167,7 +167,6 @@ namespace stew::ui
   std::optional<message> marker_grid_cell::from_screen(position pos, screen &scr)
   {
     scr.at(pos);
-    std::cout << "row:" << pos._row << ",col:" << pos._col;
     scr.read(_value);
     return message{_id + ":" + _value};
   }

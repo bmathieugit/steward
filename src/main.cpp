@@ -32,7 +32,7 @@ int main(int argc, char **argv)
   v.emit(scr, tpc);
   
   
-  stew::pause();
+  //stew::pause();
 
   return EXIT_SUCCESS;
 }
