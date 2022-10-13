@@ -10,12 +10,56 @@
 #include <optional>
 #include <tuple>
 
+#include <format.hpp>
 #include <event.hpp>
+
+int getch();
 
 namespace std
 {
   template <typename T>
   using ptr = std::unique_ptr<T>;
+}
+
+namespace stew::ui
+{
+  enum class keyboard : int
+  {
+    NUL = 0,
+    SOH,
+    STX,
+    ETX,
+    EOT,
+    ENQ,
+    ACK,
+    BEL,
+    BS,
+    TAB,
+    LF,
+    VT,
+    FF,
+    CR,
+    SO,
+    SI,
+    DLE,
+    DC1,
+    DC2,
+    DC3,
+    DC4,
+    NAK,
+    SYN,
+    ETB,
+    CAN,
+    EM,
+    SUB,
+    ESC,
+    FS,
+    GS,
+    RS,
+    US,
+    SPACE,
+    DEL = 127
+  };
 }
 
 namespace stew
@@ -27,28 +71,6 @@ namespace stew
   };
 
   using xy = position;
-}
-
-namespace stew::ui
-{
-  class screen
-  {
-  public:
-    screen();
-    ~screen();
-
-  public:
-    void origin();
-    void at(position pos);
-    void erase();
-    void save();
-    void restore();
-    void savec();
-    void restorec();
-    void write(char c);
-    void write(std::string_view txt);
-    void read(std::string &resp);
-  };
 }
 
 namespace stew
@@ -103,130 +125,200 @@ namespace stew
 
 namespace stew::ui
 {
-  class grid_cell
+  struct screen_cell
   {
-  public:
-    std::size_t _row = 0;
-    std::size_t _col = 0;
-
-  public:
-    virtual ~grid_cell() = default;
-    virtual void to_screen(screen &scr) = 0;
-    virtual std::optional<message> from_screen(position pos, screen &scr) = 0;
+    char _c = ' ';
+    std::optional<std::vector<std::string>> _style;
   };
 
   template <std::size_t R, std::size_t C>
-  class grid
+  class screen_writer
   {
-    stew::matrix<std::ptr<grid_cell>, R, C> _table;
-    stew::position _cur{0, 0};
+    position _pos = {0, 0};
+    matrix<screen_cell, R, C> _data;
 
   public:
-    grid() = default;
-    grid(const grid &) = delete;
-    grid(grid &&) = default;
-    grid &operator=(const grid &) = delete;
-    grid &operator=(grid &&) = default;
+    ~screen_writer() = default;
+    screen_writer() = default;
+    screen_writer(const screen_writer &) = default;
+    screen_writer(screen_writer &&) = default;
+    screen_writer &operator=(const screen_writer &) = default;
+    screen_writer &operator=(screen_writer &&) = default;
 
   public:
-    void push_back(std::ptr<grid_cell> &&cell);
-    void push_back_row();
-
-    void to_screen(screen &scr);
-    void from_screen(screen &scr, topic &tpc);
-
-    void clear();
+    position write(char c);
+    //  position style(std::string_view sty);
+    void render();
   };
 
   template <std::size_t R, std::size_t C>
-  void grid<R, C>::push_back(std::ptr<grid_cell> &&cell)
+  position screen_writer<R, C>::write(char c)
   {
-    if (_cur._row < _table.rows() && _cur._col < _table.cols())
+    if (c == '\n')
     {
-      _table[_cur] = std::move(cell);
-      _cur._col++;
-    }
-  }
-
-  template <std::size_t R, std::size_t C>
-  void grid<R, C>::push_back_row()
-  {
-    if (_cur._row < _table.rows())
-    {
-      _cur._col = 0;
-      _cur._row++;
-    }
-  }
-
-  template <std::size_t R, std::size_t C>
-  void grid<R, C>::to_screen(screen &scr)
-  {
-    scr.erase();
-    scr.origin();
-
-    for (std::size_t row(0); row < _table.rows(); ++row)
-    {
-      for (std::size_t col(0); col < _table.cols(); ++col)
+      if (_pos._row < R)
       {
-        if (_table[xy{row, col}])
-        {
-          _table[xy{row, col}]->to_screen(scr);
-        }
-      }
-
-      scr.write('\n');
-    }
-  }
-
-  template <std::size_t R, std::size_t C>
-  void grid<R, C>::from_screen(screen &scr, topic &tpc)
-  {
-    scr.origin();
-
-    for (std::size_t row(0); row < _table.rows(); ++row)
-    {
-      for (std::size_t col(0); col < _table.cols(); ++col)
-      {
-        auto pos = xy{row, col};
-
-        if (_table[pos])
-        {
-          std::optional<message> mess = _table[pos]->from_screen(pos, scr);
-
-          if (mess.has_value())
-          {
-            tpc.post(mess.value());
-          }
-        }
+        _pos._col = 0;
+        _pos._row = _pos._row + 1;
       }
     }
-  }
-
-  template <std::size_t R, std::size_t C>
-  void grid<R, C>::clear()
-  {
-    for (std::size_t row(0); row < _table.rows(); ++row)
+    else
     {
-      for (std::size_t col(0); col < _table.cols(); ++col)
+      if (_pos._col < C)
       {
-        _table[xy{row, col}] = nullptr;
+        _data[_pos]._c = c;
+        _pos._col = _pos._col + 1;
       }
     }
 
-    _cur = xy{0, 0};
+    return _pos;
   }
 
-  class text_grid_cell : public grid_cell
+  template <std::size_t R, std::size_t C>
+  void screen_writer<R, C>::render()
   {
-    char _c;
+    for (std::size_t r(0); r < R; ++r)
+    {
+      for (std::size_t c(0); c < C; ++c)
+      {
+        std::cout << _data[xy{r, c}]._c;
+      }
+
+      std::cout << '\n';
+    }
+  }
+
+  // template <std::size_t R, std::size_t C>
+  // screen<R, C>::screen()
+  // {
+  //   std::cout << "\033[s";
+  //   std::cout << "\033[?47h";
+  // }
+
+  // template <std::size_t R, std::size_t C>
+  // screen<R, C>::~screen()
+  // {
+  //   std::cout << "\033[?47l";
+  //   std::cout << "\033[u";
+  // }
+
+  template <std::size_t R, std::size_t C>
+  class screen_move
+  {
+    position _pos = {0, 0};
 
   public:
-    virtual ~text_grid_cell() = default;
-    text_grid_cell(char c);
-    virtual void to_screen(screen &scr) override;
-    virtual std::optional<message> from_screen(position pos, screen &scr) override;
+    ~screen_move() = default;
+    screen_move() = default;
+    screen_move(const screen_move &) = default;
+    screen_move(screen_move &&) = default;
+    screen_move &operator=(const screen_move &) = default;
+    screen_move &operator=(screen_move &&) = default;
+
+  public:
+    position left();
+    position right();
+    position up();
+    position down();
+    position origin();
+    position at(position pos);
   };
 
+  template <std::size_t R, std::size_t C>
+  position screen_move<R, C>::left()
+  {
+    if (_pos._col > 0)
+    {
+      _pos._col = _pos._col - 1;
+    }
+
+    std::cout << "\033[D";
+    return _pos;
+  }
+
+  template <std::size_t R, std::size_t C>
+  position screen_move<R, C>::right()
+  {
+    if (_pos._col > 0)
+    {
+      _pos._col = _pos._col + 1;
+    }
+
+    std::cout << "\033[C";
+    return _pos;
+  }
+
+  template <std::size_t R, std::size_t C>
+  void screen_move<R, C>::up()
+  {
+    if (_pos._row > 0)
+    {
+      _pos._row = _pos._row - 1;
+    }
+
+    std::cout << "\033[A";
+  }
+
+  template <std::size_t R, std::size_t C>
+  void screen_move<R, C>::down()
+  {
+    if (_pos._row > 0)
+    {
+      _pos._row = _pos._row + 1;
+    }
+
+    std::cout << "\033[B";
+  }
+
+  template <std::size_t R, std::size_t C>
+  void screen_move<R, C>::origin()
+  {
+    _pos._col = 0;
+    _pos._row = 0;
+    std::cout << "\033[H";
+  }
+
+  template <std::size_t R, std::size_t C>
+  void screen_move<R, C>::at(position pos)
+  {
+    _pos = pos;
+
+    origin();
+
+    if (pos._row)
+    {
+      std::cout << "\033[" << pos._row << 'B';
+    }
+
+    if (pos._col)
+    {
+      std::cout << "\033[" << pos._col << 'C';
+    }
+  
+  template <std::size_t R, std::size_t C>
+  position screen<R, C>::pos()
+  {
+    return _pos;
+  }
+
+  template <std::size_t R, std::size_t C>
+  void screen<R, C>::render()
+  {
+    std::cout << "\033[2J";
+
+    for (std::size_t r(0); r < R; ++r)
+    {
+      for (std::size_t c(0); c < C; ++c)
+      {
+
+        std::cout << _data[xy{r, c}]._c;
+      }
+    }
+  }
+}
+
+namespace stew::ui
+{
   enum class style_text_mode
   {
     back_black,
@@ -250,251 +342,79 @@ namespace stew::ui
     reset
   };
 
-  class style_text_grid_cell : public text_grid_cell
-  {
-    std::vector<style_text_mode> _modes;
-
-  public:
-    style_text_grid_cell(char c, const std::vector<style_text_mode> &modes);
-    virtual ~style_text_grid_cell() = default;
-    virtual void to_screen(screen &scr) override;
-  };
-
-  class marker_grid_cell : public text_grid_cell
-  {
-    std::string _id;
-    std::string _value;
-
-  public:
-    marker_grid_cell(std::string_view id, char c);
-    virtual ~marker_grid_cell() = default;
-    virtual void to_screen(screen &scr) override;
-    virtual std::optional<message> from_screen(position pos, screen &scr) override;
-  };
-
-  class message_grid_cell : public text_grid_cell
-  {
-    std::string _id;
-    std::string _value;
-
-  public:
-    message_grid_cell(std::string_view id, char c);
-    virtual ~message_grid_cell() = default;
-    virtual void to_screen(screen &scr) override;
-    virtual std::optional<message> from_screen(position pos, screen &scr) override;
-  };
-
-  class hidden_marker_grid_cell : public marker_grid_cell
-  {
-  public:
-    hidden_marker_grid_cell(std::string_view id, char c);
-    virtual ~hidden_marker_grid_cell() = default;
-    virtual std::optional<message> from_screen(position pos, screen &scr) override;
-  };
 }
 
 namespace stew::ui
 {
-
-  template <std::size_t R, std::size_t C>
   class pencil
   {
-    grid<R, C> &_grd;
+    screen &_scr;
 
   public:
-    pencil(grid<R, C> &grd);
+    pencil(screen &scr);
 
   public:
-    pencil &text(std::string_view txt);
-    pencil &style_text(std::string_view txt, const std::vector<style_text_mode> &mode);
-    pencil &marker(std::string_view id, char c);
-    pencil &message(std::string_view id, char c);
-    pencil &hidden(std::string_view id, char c);
+    position text(std::string_view txt);
   };
 
-  template <std::size_t R, std::size_t C>
-  pencil<R, C>::pencil(grid<R, C> &grd)
-      : _grd(grd)
-  {
-    _grd.clear();
-  }
+  pencil::pencil(screen &scr)
+      : _scr(scr) {}
 
-  template <std::size_t R, std::size_t C>
-  pencil<R, C> &pencil<R, C>::text(std::string_view txt)
+  position pencil::text(std::string_view txt)
   {
     for (char c : txt)
     {
-      if (c == '\n')
-      {
-        _grd.push_back_row();
-      }
-      else
-      {
-        _grd.push_back(std::ptr<grid_cell>(new text_grid_cell(c)));
-      }
+      _scr.write(c);
     }
-
-    return *this;
-  }
-
-  template <std::size_t R, std::size_t C>
-  pencil<R, C> &pencil<R, C>::style_text(std::string_view txt, const std::vector<style_text_mode> &modes)
-  {
-    for (char c : txt)
-    {
-      if (c == '\n')
-      {
-        _grd.push_back_row();
-      }
-      else
-      {
-        _grd.push_back(std::ptr<grid_cell>(new style_text_grid_cell(c, modes)));
-      }
-    }
-
-    return *this;
-  }
-
-  template <std::size_t R, std::size_t C>
-  pencil<R, C> &pencil<R, C>::marker(std::string_view id, char c)
-  {
-    _grd.push_back(std::ptr<grid_cell>(new marker_grid_cell(id, c)));
-    return *this;
-  }
-
-  template <std::size_t R, std::size_t C>
-  pencil<R, C> &pencil<R, C>::message(std::string_view id, char c)
-  {
-    _grd.push_back(std::ptr<grid_cell>(new message_grid_cell(id, c)));
-    return *this;
-  }
-
-  template <std::size_t R, std::size_t C>
-  pencil<R, C> &pencil<R, C>::hidden(std::string_view id, char c)
-  {
-    _grd.push_back(std::ptr<grid_cell>(new hidden_marker_grid_cell(id, c)));
-    return *this;
   }
 }
 
 namespace stew::ui
 {
-  template <std::size_t R, std::size_t C>
-  class view
+  template <typename T>
+  concept display_component = requires(T &t, screen &scr)
   {
-  protected:
-    grid<R, C> _grd;
-    pencil<R, C> _pen{_grd};
-    bool _showing = false;
-
-  public:
-    virtual ~view() = default;
-
-  public:
-    virtual void draw() = 0;
-
-    void show(screen &scr);
-    void emit(screen &scr, topic &tpc);
-    void hide(screen &scr);
-
-  protected:
-    pencil<R, C> &pen();
+    t.render(scr);
   };
 
-  template <std::size_t R, std::size_t C>
-  void view<R, C>::show(screen &scr)
+  template <typename T>
+  concept input_component = requires(T &t, screen &scr)
   {
-    if (!_showing)
-    {
-      _grd.to_screen(scr);
-      _showing = true;
-    }
-  }
+    t.collect(scr);
+  };
 
-  template <std::size_t R, std::size_t C>
-  void view<R, C>::emit(screen &scr, topic &tpc)
+  template <typename T>
+  concept notify_component = requires(T &t, message &mess)
   {
-    if (_showing)
-    {
-      _grd.from_screen(scr, tpc);
-    }
-  }
-
-  template <std::size_t R, std::size_t C>
-  void view<R, C>::hide(screen &scr)
-  {
-    if (_showing)
-    {
-      scr.erase();
-      scr.origin();
-      _showing = false;
-    }
-  }
-
-  template <std::size_t R, std::size_t C>
-  pencil<R, C> &view<R, C>::pen()
-  {
-    return _pen;
-  }
-
-}
-
-namespace stew::ui
-{
-  template <typename T, std::size_t R, std::size_t C>
-  concept component = requires(T &t, pencil<R, C> &pen)
-  {
-    t.draw(pen);
+    t.notify(mess);
   };
 
   class text_field
   {
     std::string _label;
+    position _vpos;
 
   public:
-    text_field(const std::string &label);
+    ~text_field() = default;
+    text_field() = default;
     text_field(const text_field &) = default;
     text_field(text_field &&) = default;
     text_field &operator=(const text_field &) = default;
     text_field &operator=(text_field &&) = default;
-    ~text_field() = default;
 
   public:
-    template <std::size_t R, std::size_t C>
-    void draw(pencil<R, C> &pen);
+    void render(screen &scr);
+    void notify(const std::pair<std::string, std::string> &v);
+    std::pair<std::string, std::string> collect(screen &scr);
   };
 
-  template <std::size_t R, std::size_t C>
-  void text_field::draw(pencil<R, C> &pen)
+  void text_field::render(screen &scr)
   {
-    pen.text("----- ").text(_label).text(" : ").marker(_label, '%').text("\n");
+    scr.write(std::format("  + {} : ", _label))
+        _vpos = scr.pos();
+    scr.write("\n");
   }
 
-  template <std::size_t R, std::size_t C, typename... CMP>
-  class composed_view : public view<R, C>
-  {
-    std::tuple<CMP...> _components;
-
-  public:
-    template <typename... CMPO>
-    composed_view(CMPO &&...cmpo)
-        : view<R, C>(), _components(std::forward<CMPO>(cmpo)...) {}
-
-    virtual ~composed_view() = default;
-
-    virtual void draw()
-    {
-      std::apply([this](CMP &...cmp)
-                 { (cmp.draw(this->pen()), ...); },
-                 _components);
-    }
-  };
-
-  template <std::size_t R, std::size_t C, typename... CMP>
-  composed_view<R, C, std::decay_t<CMP>...> make_view(CMP &&...cmp)
-  {
-    return composed_view<R, C, std::decay_t<CMP>...>(std::forward<CMP>(cmp)...);
-  }
 }
 
 #endif
