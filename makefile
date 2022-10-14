@@ -5,7 +5,7 @@
 # $* : nom d’un fichier sans son suffixe  
 
 CC=g++
-FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps
+FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc -save-temps -lncurses
 
 all: clean compile run
 
@@ -13,9 +13,13 @@ all: clean compile run
 clean: 
 	rm -rf building
 
-# building/ui.o: src/ui.cpp src/ui.hpp
-# 	mkdir -p building
-# 	${CC} -o building/ui.o -c $< ${FLAGS}
+building/ui.o: src/ui.cpp src/ui.hpp
+	mkdir -p building
+	${CC} -o building/ui.o -c $< ${FLAGS}
+
+building/ui-component.o: src/ui-component.cpp src/ui-component.hpp
+	mkdir -p building
+	${CC} -o building/ui-component.o -c $< ${FLAGS}
 
 building/event.o: src/event.cpp src/event.hpp
 	mkdir -p building
@@ -25,7 +29,7 @@ building/main.o: src/main.cpp
 	mkdir -p building
 	${CC} -o building/main.o -c $< ${FLAGS}
 
-building/steward.app: building/main.o building/event.o 
+building/steward.app: building/main.o building/event.o   
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS}
 

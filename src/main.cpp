@@ -1,11 +1,13 @@
-//#include <ui.hpp>
+#include <ui.hpp>
+//#include <ui-component.hpp>
+
 #include <event.hpp>
 #include <format.hpp>
 
 #include <thread>
 #include <iostream>
 
-/*namespace ui = stew::ui;
+// namespace ui = stew::ui;
 
 constexpr int maxi = 1000000;
 
@@ -18,58 +20,36 @@ namespace stew
   }
 }
 
-namespace stew::jewel
+int main(void)
 {
-  void draw_term()
-  {
-    ui::screen scr;
+  namespace ui = stew::ui;
 
-    int c[3];
+  ui::screen scr;
+  scr.init();
 
-    while (true)
-    {
+  scr.write("Hello World!");
+  scr.refresh();
 
-      c[0] = getch();
-      c[1] = getch();
-      c[2] = getch();
+  std::string s;
+  int c;
 
-      using kb = ui::keyboard;
+  // while ((c = getch()) != KEY_ENTER)
+  // {
+  //   s += c;
+  // }
 
-      if (c[0] == int(kb::ESC) && c[1] == '[')
-      {
-        scr.write("\033[40m \033[0m");
-        scr.left();
 
-        switch (c[2])
-        {
-        case 'A':
-          scr.up();
-          break;
-        case 'B':
-          scr.down();
-          break;
-        case 'C':
-          scr.right();
-          break;
-        case 'D':
-          scr.left();
-          break;
-        }
-      }
-    }
-  }
-}
+  scr.write("you print ");
+    ::addch('a'|A_BOLD);
 
-void copyfile(std::size_t nbfile)
-{
-  for (std::size_t i(0); i < nbfile; ++i)
-  {   
-    std::string file = std::string("/tmp/") + std::to_string(i) + ".txt";
-  }
-}
-*/
-int main(int argc, char **argv)
-{
-  std::cout << std::format("{} {} !\n", "helloooo", "world");
-  return EXIT_SUCCESS;
+
+
+  
+  scr.refresh();
+
+  getch();
+
+  scr.close();
+
+  return 0;
 }

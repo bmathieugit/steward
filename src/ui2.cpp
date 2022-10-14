@@ -24,6 +24,8 @@ int getch()
 
 #endif
 
+
+/*
 namespace stew::ui
 {
   std::string_view convert(style_text_mode mode)
@@ -74,5 +76,6 @@ namespace stew::ui
     }
   }
 
-  
+
 }
+*/
