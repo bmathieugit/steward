@@ -61,7 +61,17 @@ namespace stew::ui
       scr.writer().write('\n');
       vals[_label] = val;
     }
-    // void notify(const std::pair<std::string, std::string> &v);
+
+    template <std::size_t R, std::size_t C>
+    void notify(screen<R, C> &scr, std::map<std::string, std::string> &v)
+    {
+      scr.move().at(_vpos);
+     
+      for (char c : v[_label])
+      {
+        scr.writer().write('*');
+      }
+    }
   };
 
 }

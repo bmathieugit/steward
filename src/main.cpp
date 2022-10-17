@@ -37,10 +37,8 @@ int main(void)
   f1.collect(scr, vals);
   f2.collect(scr, vals);
 
-  for (auto&& [key, val] : vals)
-  {
-    std::cout << std::format("{} -> {}\n", key, val);
-  }
+  f1.notify(scr, vals);
+  f2.notify(scr, vals);
 
   stew::pause();
 
