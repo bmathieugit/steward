@@ -5,6 +5,7 @@
 #include <format.hpp>
 #include <cstddef>
 #include <string>
+#include <map>
 
 namespace stew::ui
 {
@@ -16,7 +17,7 @@ namespace stew::ui
   public:
     ~text_field() = default;
     text_field() = default;
-    text_field(const std::string& label);
+    text_field(const std::string &label);
     text_field(const text_field &) = default;
     text_field(text_field &&) = default;
     text_field &operator=(const text_field &) = default;
@@ -24,22 +25,45 @@ namespace stew::ui
 
   public:
     template <std::size_t R, std::size_t C>
-    void render(screen_writer<R, C> &scr);
-    // void notify(const std::pair<std::string, std::string> &v);
-    // std::pair<std::string, std::string> collect(screen &scr);
-  };
-
-  template <std::size_t R, std::size_t C>
-  void text_field::render(screen_writer<R, C> &scr)
-  {
-    for (auto c : std::format("+ {} : ", _label))
+    void render(screen<R, C> &scr)
     {
-      scr.write(c);
+      for (auto c : std::format("+ {} : ", _label))
+      {
+        scr.writer().write(c);
+      }
+
+      _vpos = scr.pos();
+      scr.writer().write('\n');
     }
 
-    _vpos = scr.pos();
-    scr.write('\n');
-  }
+    template <std::size_t R, std::size_t C>
+    void collect(
+        screen<R, C> &scr,
+        std::map<std::string, std::string> &vals)
+    {
+      scr.move().at(_vpos);
+
+      std::string val;
+
+      int c = '\0';
+
+      while (c != '\n')
+      {
+        c = scr.reader().readc();
+
+        if (std::isprint(c))
+        {
+          scr.writer().write(c);
+          val += (char)c;
+        }
+      }
+
+      scr.writer().write('\n');
+      vals[_label] = val;
+    }
+    // void notify(const std::pair<std::string, std::string> &v);
+  };
+
 }
 
 #endif

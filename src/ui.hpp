@@ -24,47 +24,7 @@ namespace std
 
 namespace stew::ui
 {
-  enum class keyboard : int
-  {
-    NUL = 0,
-    SOH,
-    STX,
-    ETX,
-    EOT,
-    ENQ,
-    ACK,
-    BEL,
-    BS,
-    TAB,
-    LF,
-    VT,
-    FF,
-    CR,
-    SO,
-    SI,
-    DLE,
-    DC1,
-    DC2,
-    DC3,
-    DC4,
-    NAK,
-    SYN,
-    ETB,
-    CAN,
-    EM,
-    SUB,
-    ESC,
-    FS,
-    GS,
-    RS,
-    US,
-    SPACE,
-    DEL = 127
-  };
-}
 
-namespace stew
-{
   struct position
   {
     std::size_t _row = 0;
@@ -72,445 +32,182 @@ namespace stew
   };
 
   using xy = position;
-}
 
-namespace stew
-{
-  template <
-      typename T,
-      std::size_t R,
-      std::size_t C>
-  class matrix
+  template <std::size_t R, std::size_t C>
+  class screen_reader
   {
-    std::array<std::array<T, C>, R> _data;
+    position &_pos;
 
   public:
-    matrix() = default;
-    matrix(const matrix &) = default;
-    matrix(matrix &&) = default;
-    matrix &operator=(const matrix &) = default;
-    matrix &operator=(matrix &&) = default;
+    ~screen_reader() = default;
+    screen_reader(position &pos) : _pos(pos) {}
+    screen_reader(const screen_reader &) = default;
+    screen_reader(screen_reader &&) = default;
+    screen_reader &operator=(const screen_reader &) = default;
+    screen_reader &operator=(screen_reader &&) = default;
 
   public:
-    std::size_t rows() const;
-    std::size_t cols() const;
-
-    T &operator[](position pos);
-    const T &operator[](position pos) const;
-  };
-
-  template <typename T, std::size_t R, std::size_t C>
-  std::size_t matrix<T, R, C>::rows() const
-  {
-    return R;
-  }
-
-  template <typename T, std::size_t R, std::size_t C>
-  std::size_t matrix<T, R, C>::cols() const
-  {
-    return C;
-  }
-
-  template <typename T, std::size_t R, std::size_t C>
-  T &matrix<T, R, C>::operator[](position pos)
-  {
-    return _data[pos._row][pos._col];
-  }
-
-  template <typename T, std::size_t R, std::size_t C>
-  const T &matrix<T, R, C>::operator[](position pos) const
-  {
-    return _data[pos._row][pos._col];
-  }
-}
-
-namespace stew::ui
-{
-  template <std::size_t R, std::size_t C>
-  class screen_command
-  {
-  public:
-    ~screen_command() = default;
-    screen_command() = default;
-    screen_command(const screen_command &) = delete;
-    screen_command(screen_command &&) = delete;
-    screen_command &operator=(const screen_command &) = delete;
-    screen_command &operator=(screen_command &&) = delete;
-
-  public:
-    void erase();
-    void savec();
-    void saves();
-    void restorec();
-    void restores();
-  };
-
-  template <std::size_t R, std::size_t C>
-  void screen_command<R, C>::erase()
-  {
-    std::cout << "\033[2J";
-  }
-
-  template <std::size_t R, std::size_t C>
-  void screen_command<R, C>::savec()
-  {
-    std::cout << "\033[s";
-  }
-
-  template <std::size_t R, std::size_t C>
-  void screen_command<R, C>::saves()
-  {
-    std::cout << "\033[?47h";
-  }
-
-  template <std::size_t R, std::size_t C>
-  void screen_command<R, C>::restorec()
-  {
-    std::cout << "\033[u";
-  }
-
-  template <std::size_t R, std::size_t C>
-  void screen_command<R, C>::restores()
-  {
-    std::cout << "\033[?47l";
-  }
-
-  template <std::size_t R, std::size_t C>
-  class screen_move
-  {
-    position _pos = {0, 0};
-
-  public:
-    ~screen_move() = default;
-    screen_move() = default;
-    screen_move(const screen_move &) = delete;
-    screen_move(screen_move &&) = delete;
-    screen_move &operator=(const screen_move &) = delete;
-    screen_move &operator=(screen_move &&) = delete;
-
-  public:
-    position left();
-    position right();
-    position up();
-    position down();
-    position origin();
-    position at(position pos);
-  };
-
-  template <std::size_t R, std::size_t C>
-  position screen_move<R, C>::left()
-  {
-    if (_pos._col > 0)
+    int readc()
     {
-      _pos._col = _pos._col - 1;
+      return getch();
     }
-
-    std::cout << "\033[D";
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  position screen_move<R, C>::right()
-  {
-    if (_pos._col > 0)
-    {
-      _pos._col = _pos._col + 1;
-    }
-
-    std::cout << "\033[C";
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  position screen_move<R, C>::up()
-  {
-    if (_pos._row > 0)
-    {
-      _pos._row = _pos._row - 1;
-    }
-
-    std::cout << "\033[A";
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  position screen_move<R, C>::down()
-  {
-    if (_pos._row > 0)
-    {
-      _pos._row = _pos._row + 1;
-    }
-
-    std::cout << "\033[B";
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  position screen_move<R, C>::origin()
-  {
-    _pos._col = 0;
-    _pos._row = 0;
-    std::cout << "\033[H";
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  position screen_move<R, C>::at(position pos)
-  {
-    _pos = pos;
-
-    origin();
-
-    if (pos._row)
-    {
-      std::cout << "\033[" << pos._row << 'B';
-    }
-
-    if (pos._col)
-    {
-      std::cout << "\033[" << pos._col << 'C';
-    }
-
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  class screen_init
-  {
-  public:
-    ~screen_init();
-    screen_init();
-    screen_init(const screen_init &) = delete;
-    screen_init(screen_init &&) = delete;
-    screen_init &operator=(const screen_init &) = delete;
-    screen_init &operator=(screen_init &&) = delete;
-  };
-
-  template <std::size_t R, std::size_t C>
-  screen_init<R, C>::screen_init()
-  {
-    screen_command<R, C> sc;
-    sc.savec();
-    sc.saves();
-    sc.erase();
-    screen_move<R, C>().origin();
-  }
-
-  template <std::size_t R, std::size_t C>
-  screen_init<R, C>::~screen_init()
-  {
-    screen_command<R, C> sc;
-    sc.restores();
-    sc.restorec();
-  }
-
-  enum class screen_cell_style
-  {
-
-  };
-
-  struct screen_cell
-  {
-    char _c = ' ';
-    std::optional<std::vector<screen_cell_style>> _style;
   };
 
   template <std::size_t R, std::size_t C>
   class screen_writer
   {
-    position _pos = {0, 0};
-    matrix<screen_cell, R, C> _data;
+    position &_pos;
 
   public:
     ~screen_writer() = default;
-    screen_writer() = default;
+    screen_writer(position &pos) : _pos(pos) {}
     screen_writer(const screen_writer &) = default;
     screen_writer(screen_writer &&) = default;
     screen_writer &operator=(const screen_writer &) = default;
     screen_writer &operator=(screen_writer &&) = default;
 
   public:
-    position write(char c);
-    //  position style(std::string_view sty);
-    void render();
-    position pos();
-  };
-
-  template <std::size_t R, std::size_t C>
-  position screen_writer<R, C>::pos()
-  {
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  position screen_writer<R, C>::write(char c)
-  {
-    if (c == '\n')
+    position write(char c)
     {
-      if (_pos._row < R)
+      if (c == '\n')
       {
-        _pos._col = 0;
-        _pos._row = _pos._row + 1;
+        if (_pos._row < R)
+        {
+          _pos._col = 0;
+          _pos._row = _pos._row + 1;
+          std::cout << '\n';
+        }
       }
+      else
+      {
+        if (_pos._col < C)
+        {
+          _pos._col = _pos._col + 1;
+          std::cout << c;
+        }
+      }
+
+      return _pos;
     }
-    else
+  };
+
+  template <std::size_t R, std::size_t C>
+  class screen_move
+  {
+    position &_pos;
+
+  public:
+    ~screen_move() = default;
+    screen_move(position &pos) : _pos(pos) {}
+    screen_move(const screen_move &) = default;
+    screen_move(screen_move &&) = default;
+    screen_move &operator=(const screen_move &) = default;
+    screen_move &operator=(screen_move &&) = default;
+
+  public:
+    void origin()
     {
-      if (_pos._col < C)
-      {
-        _data[_pos]._c = c;
-        _pos._col = _pos._col + 1;
-      }
+      std::cout << "\033[H";
+      _pos = position();
     }
 
-    return _pos;
-  }
-
-  template <std::size_t R, std::size_t C>
-  void screen_writer<R, C>::render()
-  {
-    screen_move<R, C>().origin();
-
-    for (std::size_t r(0); r < R; ++r)
+    void at(position pos)
     {
-      for (std::size_t c(0); c < C; ++c)
+      origin();
+
+      if (pos._row)
       {
-        std::cout << _data[xy{r, c}]._c;
+        std::cout << "\033[" << pos._row << 'B';
       }
 
-      std::cout << '\n';
+      if (pos._col)
+      {
+        std::cout << "\033[" << pos._col << 'C';
+      }
+
+      _pos = pos;
     }
-  }
-
-  template <std::size_t R, std::size_t C>
-  class screen_collector
-  {
-  public:
-    ~screen_collector() = default;
-    screen_collector() = default;
-    screen_collector(const screen_collector &) = delete;
-    screen_collector(screen_collector &&) = delete;
-    screen_collector &operator=(const screen_collector &) = delete;
-    screen_collector &operator=(screen_collector &&) = delete;
-
-  public:
-    int readc();
   };
 
   template <std::size_t R, std::size_t C>
-  int screen_collector<R, C>::readc()
+  class screen
   {
-    return getch();
-  }
-}
+    position _pos;
 
-namespace stew::ui
-{
-  enum class style_text_mode
-  {
-    back_black,
-    back_red,
-    back_green,
-    back_yellow,
-    back_blue,
-    back_magenta,
-    back_cyan,
-    back_white,
-    back_default,
-    fore_black,
-    fore_red,
-    fore_green,
-    fore_yellow,
-    fore_blue,
-    fore_magenta,
-    fore_cyan,
-    fore_white,
-    fore_default,
-    reset
-  };
-
-}
-
-namespace stew::ui
-{
-  template <typename T, std::size_t R, std::size_t C>
-  concept display_component = requires(T &t, screen_writer<R, C> &scr)
-  {
-    t.render(scr);
-  };
-
-  template <typename T, std::size_t R, std::size_t C>
-  concept collect_component = requires(T &t, screen_collector<R, C> &scr)
-  {
-    t.collect(scr);
-  };
-
-  template <typename T>
-  concept notify_component = requires(T &t, message &mess)
-  {
-    t.notify(mess);
-  };
-}
-
-namespace stew::ui
-{
-  template <typename... COMP>
-  class view
-  {
-    std::tuple<COMP...> _components;
+    screen_move<R, C> _move = _pos;
+    screen_writer<R, C> _writer = _pos;
+    screen_reader<R, C> _reader = _pos;
 
   public:
-    ~view() = default;
-    view(const COMP &...comps);
-    view(const view &) = default;
-    view(view &&) = default;
-    view &operator=(const view &) = default;
-    view &operator=(view &&) = default;
+    ~screen() { close(); }
+    screen() { open(); }
+    screen(const screen &) = default;
+    screen(screen &&) = default;
+    screen &operator=(const screen &) = default;
+    screen &operator=(screen &&) = default;
 
   public:
-    template <std::size_t R, std::size_t C>
-    void render(screen_writer<R, C> &scr);
-
-    template <std::size_t R, std::size_t C>
-    void collect(screen_collector<R, C> &scr);
-  };
-
-  template <typename... COMP>
-  view<COMP...>::view(const COMP &...comp) : _components(comp...) {}
-
-  template <typename... COMP>
-  template <std::size_t R, std::size_t C>
-  void view<COMP...>::render(screen_writer<R, C> &scr)
-  {
-    constexpr auto render_one = [](auto &comp, screen_writer<R, C> &scr)
+    screen_move<R, C> &move()
     {
-      if constexpr (display_component<std::decay_t<decltype(comp)>, R, C>)
-      {
-        comp.render(scr);
-      }
-    };
+      return _move;
+    }
 
-    screen_command<R, C>().erase();
-    screen_move<R, C>().origin();
+    screen_writer<R, C> &writer()
+    {
+      return _writer;
+    }
 
-    std::apply([&scr, render_one](COMP &...comp)
-               { (render_one(comp, scr), ...); },
-               _components);
-  }
+    screen_reader<R, C> &reader()
+    {
+      return _reader;
+    }
 
-  template <typename... COMP>
-  template <std::size_t R, std::size_t C>
-  void view<COMP...>::collect(screen_collector<R, C> &scr)
-  {
-    constexpr auto collect_one = [](auto &comp, screen_collector<R, C> &scr) {
+    position pos()
+    {
+      return _pos;
+    }
 
-    };
-  }
+  private:
+    void open()
+    {
+      savec();
+      saves();
+      erase();
+      _move.origin();
+    }
 
-  template <typename... COMP>
-  constexpr view<std::decay_t<COMP>...> make_view(const COMP &...comp)
-  {
-    return view<std::decay_t<COMP>...>(comp...);
-  }
+    void close()
+    {
+      restores();
+      restorec();
+    }
+
+  public:
+    void erase()
+    {
+      std::cout << "\033[2J";
+    }
+
+    void savec()
+    {
+      std::cout << "\033[s";
+    }
+
+    void saves()
+    {
+      std::cout << "\033[?47h";
+    }
+
+    void restorec()
+    {
+      std::cout << "\033[u";
+    }
+
+    void restores()
+    {
+      std::cout << "\033[?47l";
+    }
+  };
 }
 
 #endif

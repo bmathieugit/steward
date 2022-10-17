@@ -24,15 +24,25 @@ int main(void)
 {
   namespace ui = stew::ui;
 
-  ui::screen_writer<50, 100> sw;
+  ui::screen<10, 20> scr;
 
   ui::text_field f1("login");
   ui::text_field f2("password");
 
-  f1.render(sw);
-  f2.render(sw);
+  f1.render(scr);
+  f2.render(scr);
 
-  sw.render();
+  std::map<std::string, std::string> vals;
+
+  f1.collect(scr, vals);
+  f2.collect(scr, vals);
+
+  for (auto&& [key, val] : vals)
+  {
+    std::cout << std::format("{} -> {}\n", key, val);
+  }
+
+  stew::pause();
 
   return 0;
 }
