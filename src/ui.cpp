@@ -5,10 +5,8 @@
 #ifdef _WIN32
 #include <conio.h>
 #endif
-
 #ifdef __unix__
 #include <termios.h>
-
 int getch()
 {
   termios oldt, newt;
@@ -21,11 +19,9 @@ int getch()
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   return ch;
 }
-
 #endif
 
 
-/*
 namespace stew::ui
 {
   std::string_view convert(style_text_mode mode)
@@ -78,4 +74,3 @@ namespace stew::ui
 
 
 }
-*/

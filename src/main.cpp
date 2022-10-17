@@ -1,5 +1,5 @@
 #include <ui.hpp>
-//#include <ui-component.hpp>
+#include <ui-component.hpp>
 
 #include <event.hpp>
 #include <format.hpp>
@@ -7,7 +7,7 @@
 #include <thread>
 #include <iostream>
 
-// namespace ui = stew::ui;
+namespace ui = stew::ui;
 
 constexpr int maxi = 1000000;
 
@@ -24,32 +24,15 @@ int main(void)
 {
   namespace ui = stew::ui;
 
-  ui::screen scr;
-  scr.init();
+  ui::screen_writer<50, 100> sw;
 
-  scr.write("Hello World!");
-  scr.refresh();
+  ui::text_field f1("login");
+  ui::text_field f2("password");
 
-  std::string s;
-  int c;
+  f1.render(sw);
+  f2.render(sw);
 
-  // while ((c = getch()) != KEY_ENTER)
-  // {
-  //   s += c;
-  // }
-
-
-  scr.write("you print ");
-    ::addch('a'|A_BOLD);
-
-
-
-  
-  scr.refresh();
-
-  getch();
-
-  scr.close();
+  sw.render();
 
   return 0;
 }

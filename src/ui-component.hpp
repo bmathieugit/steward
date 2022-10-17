@@ -32,7 +32,7 @@ namespace stew::ui
   template <std::size_t R, std::size_t C>
   void text_field::render(screen_writer<R, C> &scr)
   {
-    for (auto c : std::format("  + {} : ", _label))
+    for (auto c : std::format("+ {} : ", _label))
     {
       scr.write(c);
     }
