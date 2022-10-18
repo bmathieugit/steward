@@ -66,8 +66,10 @@ namespace stew::ui
       scr.move().at(_vpos);
 
       std::string val;
+      std::size_t i = 0;
+      bool is_newline = false;
 
-      while (true)
+      while (!is_newline)
       {
         keyevent ev = getkey();
 
@@ -78,10 +80,18 @@ namespace stew::ui
           switch (std::get<arrow_event>(ev))
           {
           case arrow_event::LEFT:
-            scr.move().left();
+            if (i > 0)
+            {
+              scr.move().left();
+              --i;
+            }
             break;
           case arrow_event::RIGHT:
-            scr.move().right();
+            if (i < val.size())
+            {
+              scr.move().right();
+              ++i;
+            }
             break;
           case arrow_event::DOWN:
           case arrow_event::UP:
@@ -93,8 +103,10 @@ namespace stew::ui
 
         case case_of<char, keyevent>:
 
-          if (std::get<char>(ev) == 127) // BACKSPACE
+          switch (std::get<char>(ev))
           {
+          case 127:
+
             if (!val.empty())
             {
               scr.move().left();
@@ -102,12 +114,49 @@ namespace stew::ui
               scr.move().left();
               val.pop_back();
             }
-          }
-          else if (std::isprint(std::get<char>(ev)))
-          {
-            scr.writer().write(std::get<char>(ev));
-            val += std::get<char>(ev);
-          }
+
+            if (i > 0)
+            {
+              --i;
+            }
+
+            break;
+
+          case '\n':
+
+            is_newline = true;
+            break;
+
+          default:
+
+            if (std::isprint(std::get<char>(ev))) // PRINTABLE
+            {
+              scr.writer().write(std::get<char>(ev));
+
+              if (i == val.size())
+              {
+                val += std::get<char>(ev);
+              }
+              else
+              {
+                std::size_t save = i;
+                position pos = scr.pos();
+                pos._col = pos._col - i;
+                scr.move().at(pos);
+                val.insert(i, &std::get<char>(ev), 1);
+                
+                for (char c : val)
+                {
+                  scr.writer().write(c);
+                }
+              }
+
+              if (i < C)
+              {
+                ++i;
+              }
+            }
+          };
 
           break;
         }

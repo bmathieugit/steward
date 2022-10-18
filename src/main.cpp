@@ -39,7 +39,12 @@ int main()
 
   f1.notify(scr, vals);
   f2.notify(scr, vals);
-  
+
+  for (const auto &[key, val] : vals)
+  {
+    std::cout << key << " --> " << val << '\n';
+  }
+
   stew::pause();
 
   return 0;
