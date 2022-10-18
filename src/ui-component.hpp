@@ -63,10 +63,11 @@ namespace stew::ui
         screen<R, C> &scr,
         std::map<std::string, std::string> &vals)
     {
-      scr.move().at(_vpos);
-
       std::string val;
-      std::size_t i = 0;
+
+      scr.move().at(_vpos);
+      position cur = _vpos;
+
       bool is_newline = false;
 
       while (!is_newline)
@@ -80,17 +81,17 @@ namespace stew::ui
           switch (std::get<arrow_event>(ev))
           {
           case arrow_event::LEFT:
-            if (i > 0)
+            if (cur._col > _vpos._col)
             {
               scr.move().left();
-              --i;
+              --cur._col;
             }
             break;
           case arrow_event::RIGHT:
-            if (i < val.size())
+            if (cur._col < val.size() && cur._col < C)
             {
               scr.move().right();
-              ++i;
+              ++cur._col;
             }
             break;
           case arrow_event::DOWN:
@@ -105,61 +106,43 @@ namespace stew::ui
 
           switch (std::get<char>(ev))
           {
-          case 127:
-
-            if (!val.empty())
-            {
-              scr.move().left();
-              scr.writer().write(' ');
-              scr.move().left();
-              val.pop_back();
-            }
-
-            if (i > 0)
-            {
-              --i;
-            }
-
-            break;
-
           case '\n':
-
             is_newline = true;
             break;
-
-          default:
-
-            if (std::isprint(std::get<char>(ev))) // PRINTABLE
+          case 127:
+            // Ici on doit retirer le caractère courant de la string.
+            if (cur._col > _vpos._col && !val.empty())
             {
-              scr.writer().write(std::get<char>(ev));
-
-              if (i == val.size())
-              {
-                val += std::get<char>(ev);
-              }
-              else
-              {
-                std::size_t save = i;
-                position pos = scr.pos();
-                pos._col = pos._col - i;
-                scr.move().at(pos);
-                val.insert(i, &std::get<char>(ev), 1);
-                
-                for (char c : val)
-                {
-                  scr.writer().write(c);
-                }
-              }
-
-              if (i < C)
-              {
-                ++i;
-              }
+              val.erase(scr.pos()._col - cur._col, 1);
+              --cur._col;
             }
-          };
+            break;
+          default:
+            if (cur._col < C)
+            {
+              ++cur._col;
+              val.insert(cur._col - _vpos._col, std::get<char>(ev), 1);
+            }
+          }
 
           break;
         }
+
+        scr.move().at(_vpos);
+
+        for (char c : val)
+        {
+          scr.writer().write(' ');
+        }
+
+        scr.move().at(_vpos);
+        
+        for (char c : val)
+        {
+          scr.writer().write(c);
+        }
+
+        scr.move().at(cur);
       }
 
       scr.writer().write('\n');
