@@ -21,9 +21,33 @@ int getch()
 }
 #endif
 
-
 namespace stew::ui
 {
+  keyevent getkey()
+  {
+    keyevent k;
+
+    int c = getch();
+
+    if (c == '\033')
+    {
+      getch();
+
+      switch (getch())
+      {
+      case 'A':
+        return arrow_event::UP;
+      case 'B':
+        return arrow_event::DOWN;
+      case 'C':
+        return arrow_event::RIGHT;
+      case 'D':
+        return arrow_event::LEFT;
+      }
+    }
+
+    return (char)c;
+  }
   // std::string_view convert(style_text_mode mode)
   // {
   //   switch (mode)
@@ -71,6 +95,5 @@ namespace stew::ui
   //     return "\033[0m";
   //   }
   // }
-
 
 }

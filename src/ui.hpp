@@ -5,25 +5,31 @@
 #include <iostream>
 #include <string_view>
 #include <string>
-#include <vector>
-#include <array>
-#include <memory>
-#include <optional>
 #include <tuple>
+#include <variant>
 
 #include <format.hpp>
 #include <event.hpp>
 
 int getch();
 
-namespace std
-{
-  template <typename T>
-  using ptr = std::unique_ptr<T>;
-}
-
 namespace stew::ui
 {
+
+  enum class arrow_event
+  {
+    UP,
+    DOWN,
+    RIGHT,
+    LEFT
+  };
+
+  using keyevent = std::variant<char, arrow_event>;
+
+  keyevent getkey();
+
+
+  
 
   struct position
   {
@@ -47,9 +53,9 @@ namespace stew::ui
     screen_reader &operator=(screen_reader &&) = default;
 
   public:
-    int readc()
+    keyevent readc()
     {
-      return getch();
+      return getkey();
     }
   };
 
@@ -126,6 +132,42 @@ namespace stew::ui
       }
 
       _pos = pos;
+    }
+
+    void left()
+    {
+      if (_pos._col > 0)
+      {
+        _pos._col = _pos._col - 1;
+        std::cout << "\033[D";
+      }
+    }
+
+    void right()
+    {
+      if (_pos._col < C)
+      {
+        _pos._col = _pos._col + 1;
+        std::cout << "\033[C";
+      }
+    }
+
+    void up()
+    {
+      if (_pos._row > 0)
+      {
+        _pos._row = _pos._row - 1;
+        std::cout << "\033[A";
+      }
+    }
+
+    void down()
+    {
+      if (_pos._row < R)
+      {
+        _pos._row = _pos._row + 1;
+        std::cout << "\033[B";
+      }
     }
   };
 

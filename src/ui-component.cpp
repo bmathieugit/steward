@@ -4,4 +4,7 @@ namespace stew::ui
 {
   text_field::text_field(const std::string &label)
       : _label(label) {}
+
+  hidden_text_field::hidden_text_field(const std::string &label)
+      : _label(label) {}
 }

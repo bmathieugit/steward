@@ -6,8 +6,8 @@
 
 #include <thread>
 #include <iostream>
-
-namespace ui = stew::ui;
+#include <variant>
+// namespace ui = stew::ui;
 
 constexpr int maxi = 1000000;
 
@@ -20,11 +20,11 @@ namespace stew
   }
 }
 
-int main(void)
+int main()
 {
   namespace ui = stew::ui;
 
-  ui::screen<10, 20> scr;
+  ui::screen<10, 40> scr;
 
   ui::text_field f1("login");
   ui::text_field f2("password");
@@ -39,7 +39,7 @@ int main(void)
 
   f1.notify(scr, vals);
   f2.notify(scr, vals);
-
+  
   stew::pause();
 
   return 0;
