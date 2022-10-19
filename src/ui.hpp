@@ -28,9 +28,6 @@ namespace stew::ui
 
   keyevent getkey();
 
-
-  
-
   struct position
   {
     std::size_t _row = 0;
@@ -91,6 +88,16 @@ namespace stew::ui
           _pos._col = _pos._col + 1;
           std::cout << c;
         }
+      }
+
+      return _pos;
+    }
+
+    position write_n(std::size_t n, char c = ' ')
+    {
+      for (std::size_t i(0); i < n; ++i)
+      {
+        write(c);
       }
 
       return _pos;

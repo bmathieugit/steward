@@ -6,8 +6,6 @@
 
 #include <thread>
 #include <iostream>
-#include <variant>
-// namespace ui = stew::ui;
 
 constexpr int maxi = 1000000;
 

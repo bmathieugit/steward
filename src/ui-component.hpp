@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <string>
 #include <map>
+#include <list>
 
 namespace stew::ui
 {
@@ -63,90 +64,80 @@ namespace stew::ui
         screen<R, C> &scr,
         std::map<std::string, std::string> &vals)
     {
-      std::string val;
+      std::list<char> head;
+      std::list<char> tail;
 
-      scr.move().at(_vpos);
       position cur = _vpos;
 
-      bool is_newline = false;
+      scr.move().at(_vpos);
 
-      while (!is_newline)
+      bool there_is_newline = false;
+
+      while (!there_is_newline)
       {
         keyevent ev = getkey();
 
-        switch (ev.index())
-        {
-        case case_of<arrow_event, keyevent>:
+        scr.move().at(_vpos);
+        scr.writer().write_n(head.size() + tail.size());
 
-          switch (std::get<arrow_event>(ev))
+        if (ev.index() == case_of<arrow_event, keyevent>)
+        {
+          arrow_event ae = std::get<arrow_event>(ev);
+
+          if (ae == arrow_event::LEFT)
           {
-          case arrow_event::LEFT:
-            if (cur._col > _vpos._col)
+            if (!head.empty())
             {
               scr.move().left();
-              --cur._col;
-            }
-            break;
-          case arrow_event::RIGHT:
-            if (cur._col < val.size() && cur._col < C)
-            {
-              scr.move().right();
-              ++cur._col;
-            }
-            break;
-          case arrow_event::DOWN:
-          case arrow_event::UP:
-          default:
-            break;
-          };
-
-          break;
-
-        case case_of<char, keyevent>:
-
-          switch (std::get<char>(ev))
-          {
-          case '\n':
-            is_newline = true;
-            break;
-          case 127:
-            // Ici on doit retirer le caractère courant de la string.
-            if (cur._col > _vpos._col && !val.empty())
-            {
-              val.erase(scr.pos()._col - cur._col, 1);
-              --cur._col;
-            }
-            break;
-          default:
-            if (cur._col < C)
-            {
-              ++cur._col;
-              val.insert(cur._col - _vpos._col, std::get<char>(ev), 1);
+              tail.push_front(head.back());
+              head.pop_back();
             }
           }
-
-          break;
+          else if (ae == arrow_event::RIGHT)
+          {
+            if (!tail.empty())
+            {
+              scr.move().right();
+              head.push_back(tail.front());
+              tail.pop_front();
+            }
+          }
         }
-
-        scr.move().at(_vpos);
-
-        for (char c : val)
+        else if (ev.index() == case_of<char, keyevent>)
         {
-          scr.writer().write(' ');
+          char c = std::get<char>(ev);
+
+          if (c == '\n')
+          {
+            there_is_newline = true;
+          }
+          else if (c == 127)
+          {
+            head.pop_back();
+          }
+          else if (std::isprint(c))
+          {
+            head.push_back(c);
+          }
         }
 
         scr.move().at(_vpos);
         
-        for (char c : val)
+        for (char c : head)
         {
           scr.writer().write(c);
         }
 
-        scr.move().at(cur);
+        for (char c : tail)
+        {
+          scr.writer().write(c);
+        }
+
+        scr.move().at(position{_vpos._row, _vpos._col + head.size()});
       }
 
       scr.writer().write('\n');
-      vals[_label] = val;
+      vals[_label] = std::string(head.begin(), head.end()) + std::string(tail.begin(), tail.end());
     }
 
     template <std::size_t R, std::size_t C>
