@@ -22,9 +22,9 @@ int main()
 {
   namespace ui = stew::ui;
 
-  ui::screen<10, 40> scr;
+  ui::screen<10, 30> scr;
 
-  ui::text_field f1("login");
+  ui::text_field f1("login", 50);
   ui::text_field f2("password");
 
   f1.render(scr);

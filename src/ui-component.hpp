@@ -35,14 +35,14 @@ namespace stew::ui
   class text_field
   {
     std::string _label;
-    std::size_t _max_length = 10;
+    std::size_t _max_length;
 
     position _vpos;
 
   public:
     ~text_field() = default;
     text_field() = default;
-    text_field(const std::string &label);
+    text_field(const std::string &label, std::size_t max_length = 10);
     text_field(const text_field &) = default;
     text_field(text_field &&) = default;
     text_field &operator=(const text_field &) = default;
@@ -66,10 +66,10 @@ namespace stew::ui
         screen<R, C> &scr,
         std::map<std::string, std::string> &vals)
     {
+      std::list<char> hide_head;
       std::list<char> head;
       std::list<char> tail;
-
-      position cur = _vpos;
+      std::list<char> hide_tail;
 
       scr.move().at(_vpos);
 
@@ -94,6 +94,17 @@ namespace stew::ui
               tail.push_front(head.back());
               head.pop_back();
             }
+            else if (!hide_head.empty())
+            {
+              tail.push_front(hide_head.back());
+              hide_head.pop_back();
+
+              if (_vpos._col + tail.size() == C)
+              {
+                hide_tail.push_front(tail.back());
+                tail.pop_back();
+              }
+            }
           }
           else if (ae == arrow_event::RIGHT)
           {
@@ -102,6 +113,17 @@ namespace stew::ui
               scr.move().right();
               head.push_back(tail.front());
               tail.pop_front();
+            }
+            else if (!hide_tail.empty())
+            {
+              head.push_back(hide_tail.front());
+              hide_tail.pop_front();
+
+              if (_vpos._col + head.size() == C)
+              {
+                hide_head.push_back(head.front());
+                head.pop_front();
+              }
             }
           }
         }
@@ -115,12 +137,52 @@ namespace stew::ui
           }
           else if (c == 127)
           {
-            head.pop_back();
+            if (head.empty() && !tail.empty())
+            {
+              if (!hide_head.empty())
+              {
+                hide_head.pop_back();
+              }
+            }
+            else if (!head.empty() && tail.empty())
+            {
+              head.pop_back();
+
+              if (!hide_tail.empty())
+              {
+                head.push_back(hide_tail.front());
+                hide_tail.pop_front();
+              }
+            }
+            else if (head.empty() && !tail.empty())
+            {
+              head.pop_back();
+
+              if (!hide_tail.empty())
+              {
+                tail.push_back(hide_tail.front());
+                hide_tail.pop_front();
+              }
+            }
+            else if (head.empty() && tail.empty())
+            {
+              if (!hide_head.empty())
+              {
+                head.push_front(hide_head.back());
+                hide_head.pop_back();
+              }
+            }
           }
           else if (std::isprint(c) &&
-                   (head.size() + tail.size()) < _max_length)
+                   (hide_head.size() + head.size() + tail.size() + hide_tail.size()) < _max_length)
           {
             head.push_back(c);
+
+            if ((_vpos._col + head.size() + tail.size()) == C)
+            {
+              hide_head.push_back(head.front());
+              head.pop_front();
+            }
           }
         }
 
@@ -139,8 +201,10 @@ namespace stew::ui
         scr.move().at(position{_vpos._row, _vpos._col + head.size()});
       }
 
-      scr.writer().write('\n');
-      vals[_label] = std::string(head.begin(), head.end()) + std::string(tail.begin(), tail.end());
+      vals[_label] = std::string(hide_head.begin(), hide_head.end()) +
+                     std::string(head.begin(), head.end()) +
+                     std::string(tail.begin(), tail.end()) +
+                     std::string(hide_tail.begin(), hide_tail.end());
     }
 
     template <std::size_t R, std::size_t C>
