@@ -35,6 +35,8 @@ namespace stew::ui
   class text_field
   {
     std::string _label;
+    std::size_t _max_length = 10;
+
     position _vpos;
 
   public:
@@ -115,14 +117,15 @@ namespace stew::ui
           {
             head.pop_back();
           }
-          else if (std::isprint(c))
+          else if (std::isprint(c) &&
+                   (head.size() + tail.size()) < _max_length)
           {
             head.push_back(c);
           }
         }
 
         scr.move().at(_vpos);
-        
+
         for (char c : head)
         {
           scr.writer().write(c);
