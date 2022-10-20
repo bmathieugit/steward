@@ -66,10 +66,9 @@ namespace stew::ui
         screen<R, C> &scr,
         std::map<std::string, std::string> &vals)
     {
-      std::list<char> head;
-      std::list<char> tail;
-
       scr.move().at(_vpos);
+
+      std::string value;
 
       bool there_is_newline = false;
 
@@ -78,32 +77,9 @@ namespace stew::ui
         keyevent ev = getkey();
 
         scr.move().at(_vpos);
-        scr.writer().write_n(head.size() + tail.size());
+        scr.writer().write_n(value.size(), ' ');
 
-        if (ev.index() == case_of<arrow_event, keyevent>)
-        {
-          arrow_event ae = std::get<arrow_event>(ev);
-
-          if (ae == arrow_event::LEFT)
-          {
-            if (!head.empty())
-            {
-              scr.move().left();
-              tail.push_front(head.back());
-              head.pop_back();
-            }
-          }
-          else if (ae == arrow_event::RIGHT)
-          {
-            if (!tail.empty())
-            {
-              scr.move().right();
-              head.push_back(tail.front());
-              tail.pop_front();
-            }
-          }
-        }
-        else if (ev.index() == case_of<char, keyevent>)
+        if (ev.index() == case_of<char, keyevent>)
         {
           char c = std::get<char>(ev);
 
@@ -113,32 +89,40 @@ namespace stew::ui
           }
           else if (c == 127)
           {
-            if (!head.empty())
+            if (!value.empty())
             {
-              head.pop_back();
+              value.pop_back();
             }
           }
-          else if (std::isprint(c) && (head.size() + tail.size()) < _max_length)
+          else if (std::isprint(c) && value.size() < _max_length)
           {
-            head.push_back(c);
+            value.push_back(c);
           }
         }
 
-        std::size_t min = _vpos._col;
-        std::size_t max = C;
+        scr.move().at(_vpos);
 
-        position cur = scr.pos();
-        position tmp = cur;
+        std::size_t total = value.size();
+        std::size_t width = std::min(value.size(), C - _vpos._col);
+        std::size_t start = 0;
 
-        // HERE
-
-        while (scr.pos()._col > min)
+        if (total > width)
         {
-          scr.writer().write()
+          start = total - width;
         }
-        
+        else
+        {
+          start = 0;
+        }
 
-        scr.move().at(position{_vpos._row, _vpos._col + i});
+        std::string_view tmp = std::string_view(value).substr(start, width);
+
+        for (char c : tmp)
+        {
+          scr.writer().write(c);
+        }
+
+        scr.move().at(position{_vpos._row, _vpos._col + tmp.size()});
       }
 
       vals[_label] = value;
@@ -148,8 +132,10 @@ namespace stew::ui
     void notify(screen<R, C> &scr, std::map<std::string, std::string> &v)
     {
       scr.move().at(_vpos);
+      std::string& value = v[_label];
+      std::size_t width = std::min(value.size(), C - _vpos._col);
 
-      for (char c : v[_label])
+      for (char c : std::string_view(value).substr(0, width))
       {
         scr.writer().write(c);
       }
@@ -159,12 +145,15 @@ namespace stew::ui
   class hidden_text_field
   {
     std::string _label;
+    std::size_t _max_length;
+    char _mask;
+
     position _vpos;
 
   public:
     ~hidden_text_field() = default;
     hidden_text_field() = default;
-    hidden_text_field(const std::string &labesl);
+    hidden_text_field(const std::string &label, std::size_t max_length = 10, char mask = '*');
     hidden_text_field(const hidden_text_field &) = default;
     hidden_text_field(hidden_text_field &&) = default;
     hidden_text_field &operator=(const hidden_text_field &) = default;
@@ -190,10 +179,64 @@ namespace stew::ui
     {
       scr.move().at(_vpos);
 
-      std::string val;
+      std::string value;
 
-      scr.writer().write('\n');
-      vals[_label] = val;
+      bool there_is_newline = false;
+
+      while (!there_is_newline)
+      {
+        keyevent ev = getkey();
+
+        scr.move().at(_vpos);
+        scr.writer().write_n(value.size(), ' ');
+
+        if (ev.index() == case_of<char, keyevent>)
+        {
+          char c = std::get<char>(ev);
+
+          if (c == '\n')
+          {
+            there_is_newline = true;
+          }
+          else if (c == 127)
+          {
+            if (!value.empty())
+            {
+              value.pop_back();
+            }
+          }
+          else if (std::isprint(c) && value.size() < _max_length)
+          {
+            value.push_back(c);
+          }
+        }
+
+        scr.move().at(_vpos);
+
+        std::size_t total = value.size();
+        std::size_t width = std::min(value.size(), C - _vpos._col);
+        std::size_t start = 0;
+
+        if (total > width)
+        {
+          start = total - width;
+        }
+        else
+        {
+          start = 0;
+        }
+
+        std::string_view tmp = std::string_view(value).substr(start, width);
+
+        for (char c : tmp)
+        {
+          scr.writer().write(_mask);
+        }
+
+        scr.move().at(position{_vpos._row, _vpos._col + tmp.size()});
+      }
+
+      vals[_label] = value;
     }
 
     template <std::size_t R, std::size_t C>
@@ -201,9 +244,13 @@ namespace stew::ui
     {
       scr.move().at(_vpos);
 
-      for (char c : v[_label])
+      std::string& value = v[_label];
+      std::size_t width = std::min(value.size(), C - _vpos._col);
+      
+
+      for (char c : std::string_view(value).substr(0, width))
       {
-        scr.writer().write('*');
+        scr.writer().write(_mask);
       }
     }
   };

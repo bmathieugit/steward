@@ -22,10 +22,10 @@ int main()
 {
   namespace ui = stew::ui;
 
-  ui::screen<10, 30> scr;
+  ui::screen<10, 80> scr;
 
   ui::text_field f1("login", 50);
-  ui::text_field f2("password");
+  ui::hidden_text_field f2("password", 50, '-');
 
   f1.render(scr);
   f2.render(scr);
@@ -35,8 +35,8 @@ int main()
   f1.collect(scr, vals);
   f2.collect(scr, vals);
 
-  f1.notify(scr, vals);
-  f2.notify(scr, vals);
+ f1.notify(scr, vals);
+ f2.notify(scr, vals);
 
   for (const auto &[key, val] : vals)
   {
