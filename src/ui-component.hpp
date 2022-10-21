@@ -36,6 +36,7 @@ namespace stew::ui
   {
     std::string _label;
     std::size_t _max_length;
+    std::string _value;
 
     position _vpos;
 
@@ -59,6 +60,58 @@ namespace stew::ui
 
       _vpos = scr.pos();
       scr.writer().write('\n');
+    }
+
+    template <std::size_t R, std::size_t C>
+    void notify(keyevent ev, screen<R, C> &scr, topic &tpc)
+    {
+      scr.move().at(_vpos);
+      scr.writer().write_n(_value.size(), ' ');
+
+      if (ev.index() == case_of<char, keyevent>)
+      {
+        char c = std::get<char>(ev);
+
+        if (c == '\n')
+        {
+          tpc.post(message{std::format("{}:{}", _label, _value)});
+        }
+        else if (c == 127)
+        {
+          if (!_value.empty())
+          {
+            _value.pop_back();
+          }
+        }
+        else if (std::isprint(c) && _value.size() < _max_length)
+        {
+          _value.push_back(c);
+        }
+      }
+
+      scr.move().at(_vpos);
+
+      std::size_t total = _value.size();
+      std::size_t width = std::min(total, C - _vpos._col);
+      std::size_t start = 0;
+
+      if (total > width)
+      {
+        start = total - width;
+      }
+      else
+      {
+        start = 0;
+      }
+
+      std::string_view tmp = std::string_view(_value).substr(start, width);
+
+      for (char c : tmp)
+      {
+        scr.writer().write(c);
+      }
+
+      scr.move().at(position{_vpos._row, _vpos._col + tmp.size()});
     }
 
     template <std::size_t R, std::size_t C>
@@ -132,7 +185,7 @@ namespace stew::ui
     void notify(screen<R, C> &scr, std::map<std::string, std::string> &v)
     {
       scr.move().at(_vpos);
-      std::string& value = v[_label];
+      std::string &value = v[_label];
       std::size_t width = std::min(value.size(), C - _vpos._col);
 
       for (char c : std::string_view(value).substr(0, width))
@@ -244,13 +297,48 @@ namespace stew::ui
     {
       scr.move().at(_vpos);
 
-      std::string& value = v[_label];
+      std::string &value = v[_label];
       std::size_t width = std::min(value.size(), C - _vpos._col);
-      
 
       for (char c : std::string_view(value).substr(0, width))
       {
         scr.writer().write(_mask);
+      }
+    }
+  };
+
+  class text_message
+  {
+    position _vpos;
+
+  public:
+    ~text_message() = default;
+    text_message() = default;
+    text_message(const text_message &) = default;
+    text_message(text_message &&) = default;
+    text_message &operator=(const text_message &) = default;
+    text_message &operator=(text_message &&) = default;
+
+  public:
+    template <std::size_t R, std::size_t C>
+    void render(screen<R, C> &scr)
+    {
+      for (char c : std::string_view("(I) : "))
+      {
+        scr.writer().write(c);
+      }
+
+      _vpos = scr.pos();
+    }
+
+    template <std::size_t R, std::size_t C>
+    void notify(const message &mess, screen<R, C> &scr)
+    {
+      scr.move().at(_vpos);
+
+      for (char c : mess._data)
+      {
+        scr.writer().write(c);
       }
     }
   };

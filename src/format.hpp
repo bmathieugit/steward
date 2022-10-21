@@ -8,12 +8,6 @@
 
 namespace std
 {
-  template <std::convertible_to<std::string> T>
-  std::string to_string(const T &t)
-  {
-    return static_cast<std::string>(t);
-  }
-
   template <typename H, typename... T>
   void format_impl(std::string_view tail, std::stringstream &ss, H &&h, T &&...t)
   {
@@ -22,7 +16,7 @@ namespace std
     if (pos != std::string::npos)
     {
       ss << tail.substr(0, pos);
-      ss << std::to_string(std::forward<H>(h));
+      ss << std::forward<H>(h);
 
       if constexpr (sizeof...(T) != 0)
       {

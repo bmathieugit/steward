@@ -18,6 +18,33 @@ namespace stew
   }
 }
 
+void view(stew::ui::text_field &f1,
+          stew::ui::text_message &mess,
+          stew::ui::screen<10, 80> &scr,
+          stew::topic &tpc)
+{
+  namespace ui = stew::ui;
+
+  f1.render(scr);
+  mess.render(scr);
+
+  while (true)
+  {
+    ui::keyevent ev = scr.reader().readc();
+    f1.notify(ev, scr, tpc);
+  }
+}
+
+void consume(stew::ui::text_message &mess,
+             stew::ui::screen<10, 80> &scr,
+             stew::subscriber &sub)
+{
+  while (true)
+  {
+    mess.notify(sub.consume().value(), scr);
+  }
+}
+
 int main()
 {
   namespace ui = stew::ui;
@@ -25,25 +52,12 @@ int main()
   ui::screen<10, 80> scr;
 
   ui::text_field f1("login", 50);
-  ui::hidden_text_field f2("password", 50, '-');
+  ui::text_message mess;
 
-  f1.render(scr);
-  f2.render(scr);
+  stew::topic tpc;
 
-  std::map<std::string, std::string> vals;
-
-  f1.collect(scr, vals);
-  f2.collect(scr, vals);
-
- f1.notify(scr, vals);
- f2.notify(scr, vals);
-
-  for (const auto &[key, val] : vals)
-  {
-    std::cout << key << " --> " << val << '\n';
-  }
-
-  stew::pause();
+  std::jthread v(&view, std::ref(f1), std::ref(mess), std::ref(scr), std::ref(tpc));
+  std::jthread s(&consume, std::ref(mess), std::ref(scr), std::ref(tpc.subscribe()));
 
   return 0;
 }
