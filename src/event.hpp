@@ -72,6 +72,7 @@ namespace stew
 
   public:
     std::optional<message> consume();
+    bool closed() const;
 
     friend class topic;
   };

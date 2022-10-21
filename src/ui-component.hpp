@@ -168,13 +168,8 @@ namespace stew::ui
       scr.move().at(_vpos);
       scr.writer().write_n(_previous.size(), ' ');
       scr.move().at(_vpos);
-
       _previous = mess.get(_key).value_or("");
-
-      for (char c : _previous)
-      {
-        scr.writer().write(c);
-      }
+      scr.writer().write_s(_previous);
     }
   };
 

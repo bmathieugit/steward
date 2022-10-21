@@ -72,6 +72,11 @@ namespace stew
     }
   }
 
+  bool subscriber::closed() const
+  {
+    return _closed;
+  }
+
   subscriber &topic::subscribe()
   {
     auto scoped = make_scoped(_mutex);

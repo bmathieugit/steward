@@ -165,6 +165,33 @@ namespace stew::ui
 
       return _pos;
     }
+
+    position write_s(std::string_view s)
+    {
+      std::cout << s;
+      std::cout << std::flush;
+
+      for (char c : s)
+      {
+        if (c == '\n')
+        {
+          if (_pos._row < R)
+          {
+            _pos._col = 0;
+            _pos._row = _pos._row + 1;
+          }
+        }
+        else
+        {
+          if (_pos._col < C)
+          {
+            _pos._col = _pos._col + 1;
+          }
+        }
+      }
+
+      return _pos;
+    }
   };
 
   template <std::size_t R, std::size_t C>
