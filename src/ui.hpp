@@ -8,10 +8,15 @@
 #include <tuple>
 #include <variant>
 
+#ifdef _WIN32
+#include <conio.h>
+#endif
+#ifdef __unix__
+#include <termios.h>
+#endif
+
 #include <format.hpp>
 #include <event.hpp>
-
-int getch();
 
 namespace stew::ui
 {
@@ -24,9 +29,19 @@ namespace stew::ui
     LEFT
   };
 
-  using keyevent = std::variant<char, arrow_event>;
+  struct backspace_event
+  {
+  };
 
-  keyevent getkey();
+  struct enter_event
+  {
+  };
+
+  using keyboard_event = std::variant<
+      char,
+      arrow_event,
+      backspace_event,
+      enter_event>;
 
   struct position
   {
@@ -50,9 +65,57 @@ namespace stew::ui
     screen_reader &operator=(screen_reader &&) = default;
 
   public:
-    keyevent readc()
+    keyboard_event readc()
     {
-      return getkey();
+      keyboard_event k;
+
+      int c = nextch();
+
+      if (c == '\033')
+      {
+        nextch();
+
+        switch (nextch())
+        {
+        case 'A':
+          return arrow_event::UP;
+        case 'B':
+          return arrow_event::DOWN;
+        case 'C':
+          return arrow_event::RIGHT;
+        case 'D':
+          return arrow_event::LEFT;
+        }
+      }
+      else if (c == '\n')
+      {
+        return enter_event();
+      }
+      else if (c == 127)
+      {
+        return backspace_event();
+      }
+
+      return (char)c;
+    }
+
+  private:
+    int nextch()
+    {
+#ifdef _WIN32
+      return getch();
+#endif
+#ifdef __unix__
+      termios oldt, newt;
+      int ch;
+      tcgetattr(STDIN_FILENO, &oldt);
+      newt = oldt;
+      newt.c_lflag &= ~(ICANON | ECHO);
+      tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+      ch = getchar();
+      tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+      return ch;
+#endif
     }
   };
 

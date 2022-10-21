@@ -1,12 +1,15 @@
 #ifndef __stew_ui_component_hpp__
 #define __stew_ui_component_hpp__
 
+#include <cstddef>
+#include <functional>
+#include <list>
+#include <map>
+#include <string>
+#include <variant>
+
 #include <ui.hpp>
 #include <format.hpp>
-#include <cstddef>
-#include <string>
-#include <map>
-#include <list>
 
 namespace stew::ui
 {
@@ -32,7 +35,12 @@ namespace stew::ui
   template <typename T, typename V>
   constexpr int case_of = case_of_impl<T, V>();
 
-  class text_field
+  template <typename T>
+  constexpr int event_from = case_of<T, keyboard_event>;
+
+  using component = subject;
+
+  class text_field : public component
   {
     std::string _label;
     std::size_t _max_length;
@@ -63,30 +71,40 @@ namespace stew::ui
     }
 
     template <std::size_t R, std::size_t C>
-    void notify(keyevent ev, screen<R, C> &scr, topic &tpc)
+    void notify(keyboard_event ev, screen<R, C> &scr)
     {
       scr.move().at(_vpos);
       scr.writer().write_n(_value.size(), ' ');
 
-      if (ev.index() == case_of<char, keyevent>)
+      switch (ev.index())
       {
+      case event_from<backspace_event>:
+
+        if (!_value.empty())
+        {
+          _value.pop_back();
+        }
+
+        break;
+
+      case event_from<enter_event>:
+      {
+        message mess;
+        mess.append(std::format("{}.value", _label), _value);
+        update(mess);
+      }
+      break;
+
+      case event_from<char>:
+
         char c = std::get<char>(ev);
 
-        if (c == '\n')
-        {
-          tpc.post(message{std::format("{}:{}", _label, _value)});
-        }
-        else if (c == 127)
-        {
-          if (!_value.empty())
-          {
-            _value.pop_back();
-          }
-        }
-        else if (std::isprint(c) && _value.size() < _max_length)
+        if (std::isprint(c) && _value.size() < _max_length)
         {
           _value.push_back(c);
         }
+
+        break;
       }
 
       scr.move().at(_vpos);
@@ -113,206 +131,17 @@ namespace stew::ui
 
       scr.move().at(position{_vpos._row, _vpos._col + tmp.size()});
     }
-
-    template <std::size_t R, std::size_t C>
-    void collect(
-        screen<R, C> &scr,
-        std::map<std::string, std::string> &vals)
-    {
-      scr.move().at(_vpos);
-
-      std::string value;
-
-      bool there_is_newline = false;
-
-      while (!there_is_newline)
-      {
-        keyevent ev = getkey();
-
-        scr.move().at(_vpos);
-        scr.writer().write_n(value.size(), ' ');
-
-        if (ev.index() == case_of<char, keyevent>)
-        {
-          char c = std::get<char>(ev);
-
-          if (c == '\n')
-          {
-            there_is_newline = true;
-          }
-          else if (c == 127)
-          {
-            if (!value.empty())
-            {
-              value.pop_back();
-            }
-          }
-          else if (std::isprint(c) && value.size() < _max_length)
-          {
-            value.push_back(c);
-          }
-        }
-
-        scr.move().at(_vpos);
-
-        std::size_t total = value.size();
-        std::size_t width = std::min(value.size(), C - _vpos._col);
-        std::size_t start = 0;
-
-        if (total > width)
-        {
-          start = total - width;
-        }
-        else
-        {
-          start = 0;
-        }
-
-        std::string_view tmp = std::string_view(value).substr(start, width);
-
-        for (char c : tmp)
-        {
-          scr.writer().write(c);
-        }
-
-        scr.move().at(position{_vpos._row, _vpos._col + tmp.size()});
-      }
-
-      vals[_label] = value;
-    }
-
-    template <std::size_t R, std::size_t C>
-    void notify(screen<R, C> &scr, std::map<std::string, std::string> &v)
-    {
-      scr.move().at(_vpos);
-      std::string &value = v[_label];
-      std::size_t width = std::min(value.size(), C - _vpos._col);
-
-      for (char c : std::string_view(value).substr(0, width))
-      {
-        scr.writer().write(c);
-      }
-    }
   };
 
-  class hidden_text_field
+  class text_message : public component
   {
-    std::string _label;
-    std::size_t _max_length;
-    char _mask;
-
-    position _vpos;
-
-  public:
-    ~hidden_text_field() = default;
-    hidden_text_field() = default;
-    hidden_text_field(const std::string &label, std::size_t max_length = 10, char mask = '*');
-    hidden_text_field(const hidden_text_field &) = default;
-    hidden_text_field(hidden_text_field &&) = default;
-    hidden_text_field &operator=(const hidden_text_field &) = default;
-    hidden_text_field &operator=(hidden_text_field &&) = default;
-
-  public:
-    template <std::size_t R, std::size_t C>
-    void render(screen<R, C> &scr)
-    {
-      for (auto c : std::format("+ {} : ", _label))
-      {
-        scr.writer().write(c);
-      }
-
-      _vpos = scr.pos();
-      scr.writer().write('\n');
-    }
-
-    template <std::size_t R, std::size_t C>
-    void collect(
-        screen<R, C> &scr,
-        std::map<std::string, std::string> &vals)
-    {
-      scr.move().at(_vpos);
-
-      std::string value;
-
-      bool there_is_newline = false;
-
-      while (!there_is_newline)
-      {
-        keyevent ev = getkey();
-
-        scr.move().at(_vpos);
-        scr.writer().write_n(value.size(), ' ');
-
-        if (ev.index() == case_of<char, keyevent>)
-        {
-          char c = std::get<char>(ev);
-
-          if (c == '\n')
-          {
-            there_is_newline = true;
-          }
-          else if (c == 127)
-          {
-            if (!value.empty())
-            {
-              value.pop_back();
-            }
-          }
-          else if (std::isprint(c) && value.size() < _max_length)
-          {
-            value.push_back(c);
-          }
-        }
-
-        scr.move().at(_vpos);
-
-        std::size_t total = value.size();
-        std::size_t width = std::min(value.size(), C - _vpos._col);
-        std::size_t start = 0;
-
-        if (total > width)
-        {
-          start = total - width;
-        }
-        else
-        {
-          start = 0;
-        }
-
-        std::string_view tmp = std::string_view(value).substr(start, width);
-
-        for (char c : tmp)
-        {
-          scr.writer().write(_mask);
-        }
-
-        scr.move().at(position{_vpos._row, _vpos._col + tmp.size()});
-      }
-
-      vals[_label] = value;
-    }
-
-    template <std::size_t R, std::size_t C>
-    void notify(screen<R, C> &scr, std::map<std::string, std::string> &v)
-    {
-      scr.move().at(_vpos);
-
-      std::string &value = v[_label];
-      std::size_t width = std::min(value.size(), C - _vpos._col);
-
-      for (char c : std::string_view(value).substr(0, width))
-      {
-        scr.writer().write(_mask);
-      }
-    }
-  };
-
-  class text_message
-  {
+    std::string _key;
+    std::string _previous;
     position _vpos;
 
   public:
     ~text_message() = default;
+    text_message(const std::string &key);
     text_message() = default;
     text_message(const text_message &) = default;
     text_message(text_message &&) = default;
@@ -329,16 +158,92 @@ namespace stew::ui
       }
 
       _vpos = scr.pos();
+
+      scr.writer().write('\n');
     }
 
     template <std::size_t R, std::size_t C>
     void notify(const message &mess, screen<R, C> &scr)
     {
       scr.move().at(_vpos);
+      scr.writer().write_n(_previous.size(), ' ');
+      scr.move().at(_vpos);
 
-      for (char c : mess._data)
+      _previous = mess.get(_key).value_or("");
+
+      for (char c : _previous)
       {
         scr.writer().write(c);
+      }
+    }
+  };
+
+  class gauge_field : public component
+  {
+    std::size_t _value = 0;
+    position _vpos;
+
+  public:
+    ~gauge_field() = default;
+    gauge_field() = default;
+    gauge_field(const gauge_field &) = default;
+    gauge_field(gauge_field &&) = default;
+    gauge_field &operator=(const gauge_field &) = default;
+    gauge_field &operator=(gauge_field &&) = default;
+
+  public:
+    template <std::size_t R, std::size_t C>
+    void render(screen<R, C> &scr)
+    {
+      for (char c : std::string_view("\u2206\u2207"))
+      {
+        scr.writer().write(c);
+      }
+
+      _vpos = scr.pos();
+      
+      for (char c : std::to_string(_value))
+      {
+        scr.writer().write(' ');
+      }
+
+
+      scr.writer().write('\n');
+    }
+
+    template <std::size_t R, std::size_t C>
+    void notify(keyboard_event ev, screen<R, C> &scr)
+    {
+      if (ev.index() == event_from<arrow_event>)
+      {
+
+        scr.move().at(_vpos);
+
+        for (char c : std::to_string(_value))
+        {
+          scr.writer().write(' ');
+        }
+
+        arrow_event a = std::get<arrow_event>(ev);
+
+        if (a == arrow_event::UP)
+        {
+          ++_value;
+        }
+        else if (a == arrow_event::DOWN)
+        {
+          if (_value > 0)
+          {
+            --_value;
+          }
+        }
+
+        scr.move().at(_vpos);
+
+        for (char c : std::to_string(_value))
+        {
+          scr.writer().write(c);
+        }
       }
     }
   };

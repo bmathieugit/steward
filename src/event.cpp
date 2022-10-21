@@ -2,6 +2,49 @@
 
 namespace stew
 {
+
+  bool message::contains(const std::string &key) const
+  {
+    return _data.contains(key);
+  }
+
+  std::optional<std::string> message::get(const std::string &key) const
+  {
+    auto found = _data.find(key);
+
+    if (found == _data.end())
+    {
+      return std::nullopt;
+    }
+    else
+    {
+      return std::optional<std::string>((*found).second);
+    }
+  }
+
+  void message::append(const std::string &key, const std::string &val)
+  {
+    _data[key] = val;
+  }
+
+  std::list<subject::observer> &subject::observers()
+  {
+    return _observers;
+  }
+
+  void subject::attach(subject::observer obs)
+  {
+    _observers.push_back(std::move(obs));
+  }
+
+  void subject::update(const message &mess)
+  {
+    for (observer &obs : _observers)
+    {
+      obs(mess);
+    }
+  }
+
   std::optional<message> subscriber::consume()
   {
     {

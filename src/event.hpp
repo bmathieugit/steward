@@ -2,6 +2,8 @@
 #define __stew_ui_event_hpp__
 
 #include <optional>
+#include <functional>
+#include <map>
 #include <string>
 #include <list>
 #include <queue>
@@ -22,9 +24,36 @@ namespace stew
     return std::unique_lock<M>(mutex);
   }
 
-  struct message
+  class message
   {
-    std::string _data;
+    std::map<std::string, std::string> _data;
+
+  public:
+    ~message() = default;
+    message() = default;
+    message(const message &) = default;
+    message(message &&) = default;
+    message &operator=(const message &) = default;
+    message &operator=(message &&) = default;
+
+  public:
+    bool contains(const std::string &key) const;
+    std::optional<std::string> get(const std::string &key) const;
+    void append(const std::string &key, const std::string &val);
+  };
+
+  class subject
+  {
+  public:
+    using observer = std::function<void(const message &)>;
+
+  private:
+    std::list<observer> _observers;
+
+  public:
+    std::list<observer> &observers();
+    void attach(observer obs);
+    void update(const message &mess);
   };
 
   class subscriber
@@ -33,7 +62,7 @@ namespace stew
     std::condition_variable _empty_guard;
     std::queue<message> _messages;
     bool _closed = false;
-    
+
   public:
     subscriber() = default;
     subscriber(const subscriber &) = delete;
@@ -54,10 +83,10 @@ namespace stew
 
   public:
     topic() = default;
-    topic(const topic&) = delete;
-    topic(topic&&) = default;
-    topic& operator=(const topic&) = delete;
-    topic& operator=(topic&&) = default;
+    topic(const topic &) = delete;
+    topic(topic &&) = default;
+    topic &operator=(const topic &) = delete;
+    topic &operator=(topic &&) = default;
 
   public:
     subscriber &subscribe();

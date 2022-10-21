@@ -5,6 +5,5 @@ namespace stew::ui
     text_field::text_field(const std::string &label, std::size_t max_length)
         : _label(label), _max_length(max_length) {}
 
-    hidden_text_field::hidden_text_field(const std::string &label, std::size_t max_length, char mask)
-        : _label(label), _max_length(max_length), _mask(mask) {}
+    text_message::text_message(const std::string &key) : _key(key) {}
 }

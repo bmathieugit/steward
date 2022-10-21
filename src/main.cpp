@@ -18,46 +18,28 @@ namespace stew
   }
 }
 
-void view(stew::ui::text_field &f1,
-          stew::ui::text_message &mess,
-          stew::ui::screen<10, 80> &scr,
-          stew::topic &tpc)
-{
-  namespace ui = stew::ui;
-
-  f1.render(scr);
-  mess.render(scr);
-
-  while (true)
-  {
-    ui::keyevent ev = scr.reader().readc();
-    f1.notify(ev, scr, tpc);
-  }
-}
-
-void consume(stew::ui::text_message &mess,
-             stew::ui::screen<10, 80> &scr,
-             stew::subscriber &sub)
-{
-  while (true)
-  {
-    mess.notify(sub.consume().value(), scr);
-  }
-}
-
 int main()
 {
   namespace ui = stew::ui;
 
   ui::screen<10, 80> scr;
 
-  ui::text_field f1("login", 50);
-  ui::text_message mess;
+  ui::gauge_field gf;
+  ui::text_field f1("input", 50);
+  ui::text_message tm("input.value");
 
-  stew::topic tpc;
+  f1.render(scr);
+  tm.render(scr);
+  gf.render(scr);
 
-  std::jthread v(&view, std::ref(f1), std::ref(mess), std::ref(scr), std::ref(tpc));
-  std::jthread s(&consume, std::ref(mess), std::ref(scr), std::ref(tpc.subscribe()));
+  f1.attach([&tm, &scr](const stew::message &mess)
+            { tm.notify(mess, scr); });
+
+  while (true)
+  {
+    gf.notify(scr.reader().readc(), scr);
+    // f1.notify(scr.reader().readc(), scr);
+  }
 
   return 0;
 }

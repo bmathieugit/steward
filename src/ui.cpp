@@ -1,53 +1,7 @@
 #include <ui.hpp>
 
-#include <iostream>
-
-#ifdef _WIN32
-#include <conio.h>
-#endif
-#ifdef __unix__
-#include <termios.h>
-int getch()
-{
-  termios oldt, newt;
-  int ch;
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  ch = getchar();
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  return ch;
-}
-#endif
-
 namespace stew::ui
 {
-  keyevent getkey()
-  {
-    keyevent k;
-
-    int c = getch();
-
-    if (c == '\033')
-    {
-      getch();
-
-      switch (getch())
-      {
-      case 'A':
-        return arrow_event::UP;
-      case 'B':
-        return arrow_event::DOWN;
-      case 'C':
-        return arrow_event::RIGHT;
-      case 'D':
-        return arrow_event::LEFT;
-      }
-    }
-
-    return (char)c;
-  }
   // std::string_view convert(style_text_mode mode)
   // {
   //   switch (mode)
