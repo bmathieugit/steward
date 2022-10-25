@@ -72,7 +72,8 @@ namespace stew
 
   public:
     std::optional<message> consume();
-    bool closed() const;
+    bool closed();
+    bool can_consume_again();
 
     friend class topic;
   };

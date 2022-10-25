@@ -72,9 +72,18 @@ namespace stew
     }
   }
 
-  bool subscriber::closed() const
+  bool subscriber::closed()
   {
+    make_scoped(_mutex);
+    
     return _closed;
+  }
+  
+  bool subscriber::can_consume_again() 
+  {
+    make_scoped(_mutex);
+
+    return !_closed || !_messages.empty();
   }
 
   subscriber &topic::subscribe()
