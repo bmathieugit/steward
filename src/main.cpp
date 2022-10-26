@@ -1,141 +1,187 @@
-#include <ui.hpp>
-#include <ui-component.hpp>
-
-#include <event.hpp>
-#include <format.hpp>
-
-#include <thread>
-#include <iostream>
-
-constexpr int maxi = 1000000;
-
-namespace stew
-{
-  void pause()
-  {
-    std::string str;
-    std::getline(std::cin, str);
-  }
-}
-
-void copy(stew::topic &copytp, std::size_t n)
-{
-  using namespace std::chrono_literals;
-
-  for (std::size_t i(0); i < n; ++i)
-  {
-    stew::message mess;
-    mess.append("file.name", std::format("/tmp/file-to-copy-{}.txt", i));
-    mess.append("file.index", std::to_string(i));
-    copytp.post(mess);
-  }
-
-  copytp.close();
-}
-
-void view(
-    stew::subscriber &copysub,
-    stew::ui::text_message &fname,
-    stew::ui::text_message &findex,
-    stew::ui::screen<10, 80> &scr)
-{
-  std::optional<stew::message> mess;
-
-  while (copysub.can_consume_again())
-  {
-    if (mess.has_value())
-    {
-      fname.notify(mess.value(), scr);
-      findex.notify(mess.value(), scr);
-    }
-  }
-}
-
-// int main()
-// {
-//   namespace ui = stew::ui;
-
-//   ui::screen<10, 80> scr;
-
-//   scr.writer().write_s("\033[?25l");
-
-//   scr.move().origin();
-
-//   ui::text_message fname("file.name");
-//   ui::text_message findex("file.index");
-
-//   fname.render(scr);
-//   findex.render(scr);
-
-//   stew::topic copytp;
-//   stew::subscriber &copysub = copytp.subscribe();
-
-//   std::jthread copyth(copy, std::ref(copytp), 1000000);
-//   std::jthread viewth(view, std::ref(copysub), std::ref(fname),
-//                       std::ref(findex), std::ref(scr));
-
-//   stew::pause();
-
-//   return 0;
-// }
+#include <dbfile.hpp>
 
 #include <string>
-#include <dbfile.hpp>
-#include <boost/optional.hpp>
-#include <boost/archive/...>
+#include <tuple>
 
-namespace stew = std;
-// namespace stew = boost;
-
-struct person
-{
-  std::string name;
-  stew::string name;
-};
+#include <filesystem>
+#include <iostream>
 
 namespace stew
 {
-  template <typename T>
-  using optional = boost::optional<T>;
-  using string = std::string;
-
-  using error_type = void;
-
-  template <typename T>
-  error_type select(stew::optional<T> &op, const stew::string &path)
+  namespace dbf::db
   {
-    // il faut se servir de filesystem ici pour créer ou bien supprimer des fichiers.
-    // Il va me falloir un systeme de sérialization pour permettre de transformer une 
-    // structure en text et vice-verca.
-  }
+    using schema_name = std::string;
 
-  template <typename T>
-  error_type update(T &t, const stew::string &path)
-  {
-  }
+    void create_schema(const schema_name &sch)
+    {
+      namespace fs = std::filesystem;
 
-  template <typename T>
-  error_type insert(T &t, const stew::string &path)
-  {
-  }
+      if (!fs::exists(sch))
+      {
+        fs::create_directories(fs::path(sch));
+      }
+    }
+    enum class conn_status
+    {
+      opened,
+      closed,
+      error
+    };
 
-  error_type remove(const stew::string &path)
-  {
+    class connection
+    {
+      schema_name _schema;
+      conn_status _status = conn_status::closed;
+
+    public:
+      ~connection() = default;
+      connection() = default;
+      connection(const connection &) = delete;
+      connection(connection &&) = default;
+      connection &operator=(const connection &) = delete;
+      connection &operator=(connection &&) = default;
+
+    public:
+      const schema_name &target() const;
+      const bool opened() const;
+      const bool closed() const;
+      const bool error() const;
+      const conn_status status() const;
+
+    public:
+      friend connection connect(const schema_name &sch);
+      friend connection connect(schema_name &&sch);
+    };
+
+    const schema_name &connection::target() const
+    {
+      return _schema;
+    }
+
+    const bool connection::opened() const
+    {
+      return _status == conn_status::opened;
+    }
+
+    const bool connection::closed() const
+    {
+      return _status == conn_status::closed;
+    }
+
+    const bool connection::error() const
+    {
+      return _status == conn_status::error;
+    }
+
+    const conn_status connection::status() const
+    {
+      return _status;
+    }
+
+    connection connect(const schema_name &sch)
+    {
+      connection conn;
+      conn._schema = sch;
+      return {};
+    }
+
+    connection connect(schema_name &&sch)
+    {
+      namespace fs = std::filesystem;
+
+      connection conn;
+      conn._schema = std::move(sch);
+
+      if (fs::exists(sch))
+      {
+        conn._status = conn_status::opened;
+      }
+      else
+      {
+        conn._status = conn_status::error;
+      }
+
+      return conn;
+    }
+
+    template <typename T>
+    struct table_descriptor;
+
+    template <typename T>
+    struct column_descriptor
+    {
+      std::string name;
+    };
+
+    template <typename T>
+    void create_table(connection &conn)
+    {
+      namespace fs = std::filesystem;
+      namespace io = std;
+
+      table_descriptor<T> td;
+
+      if (conn.opened())
+      {
+        fs::path t(conn.target());
+        t = t / td.name;
+
+        if (!fs::exists(t))
+        {
+          fs::create_directory(t);
+        }
+
+        std::apply([](auto &&...cd)
+                   { ((io::cout << cd.name), ...); },
+                   td.describe());
+      }
+    }
+
   }
 }
+
+namespace stew
+{
+  struct person
+  {
+    std::string name;
+    std::string fname;
+  };
+
+  namespace dbf::db
+  {
+    template <>
+    struct table_descriptor<stew::person>
+    {
+      std::string name = "person";
+
+      std::tuple<column_descriptor<std::string>,
+                 column_descriptor<std::string>>
+      describe()
+      {
+        return {{"name"}, {"fname"}};
+      }
+    };
+  }
+}
+
 int main()
 {
-  namespace fs = boost::filesystem;
+  using namespace std::literals::string_literals;
 
-  stew::optional<person> op;
+  std::filesystem::path p = "lol:";
+  stew::dbf::db::schema_name sc = "lol";
 
-  stew::select(op, "/person/KHKJH2KNCB2J2J2NDNXL2I");
-  stew::update(op.value(), "/person/KHKJH2KNCB2J2J2NDNXL2I");
-  stew::insert(op.value(), "/person/KHKJH2KNCB2J2J2NDNXL2I");
-  stew::remove("/person/KHKJH2KNCB2J2J2NDNXL2I");
+  // std::optional<stew::person> op = stew::person();
 
-  auto size = fs::file_size(fs::path("/home/local/.bash_history"));
-  std::cout << std::format("size of bashrc : {}", size);
+  stew::dbf::db::create_schema(stew::dbf::db::schema_name("ldap"));
+  stew::dbf::db::connection conn = stew::dbf::db::connect(std::string("ldap"));
+
+  if (conn.opened())
+  {
+    stew::dbf::db::create_table<stew::person>(conn);
+  }
+  // la table ext créée
 
   return 0;
 }
