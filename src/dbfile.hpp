@@ -50,7 +50,10 @@ namespace stew::dbf::storage::mem
   struct root;
 
   template <typename T>
-  using child = std::variant<leaf<T>, root<T>>;
+  using node = root<T>;
+
+  template <typename T>
+  using child = std::variant<leaf<T>, node<T>>;
 
   template <typename T, typename O>
   constexpr bool instance_of(const child<O> &c)
@@ -77,77 +80,49 @@ namespace stew::dbf::storage::mem
     return root<T>{std::move(name)};
   }
 
-  template <typename T>
-  void append(child<T> &c, std::string_view dir)
+  template <typename T, typename... S>
+  void insert(child<T> &c, T &&data, const std::string &pth, S... s)
   {
-    if (instance_of<root<T>>(c))
+    if (instance_of<node<T>>(c))
     {
-      auto i = dir.find('/');
-
-      if (i != std::string_view::npos)
+      if (std::get<node<T>>(c)._childs.contains(pth))
       {
-        auto sub = dir.substr(0, i);
-
-        if (!sub.empty())
+        if constexpr (sizeof...(s) == 0)
         {
-          append(std::get<root<T>>(c)._childs[std::string(sub)] = root<T>{}, dir.substr(i));
+          if (instance_of<leaf<T>>(std::get<node<T>>(c)._childs[pth]))
+          {
+            std::get<leaf<T>>(std::get<node<T>>(c)._childs[pth])._data = std::move(data);
+          }
+        }
+        else
+        {
+          insert(std::get<node<T>>(c)._childs[pth], data, s...);
         }
       }
-      else if (!dir.empty())
+      else
       {
-        std::get<root<T>>(c)._childs[std::string(dir)] = root<T>{};
+        if constexpr (sizeof...(s) == 0)
+        {
+          std::get<node<T>>(c)._childs[pth] =
+              std::move(leaf<T>{._name = pth,
+                                ._data = std::move(data)});
+        }
+        else
+        {
+          std::get<node<T>>(c)._childs[pth] =
+              std::move(node<T>{._name = pth});
+          insert(std::get<node<T>>(c)._childs[pth], data, s...);
+        }
       }
     }
   }
 
-  template <typename T>
-  void append(child<T> &c, std::string_view dir, const T &data)
+  template <typename T, typename... S>
+  void insert(child<T> &c, const T &data, const std::string &pth, S... s)
   {
-    if (instance_of<root<T>>(c))
-    {
-      auto i = dir.find('/');
-
-      if (i != std::string_view::npos)
-      {
-        auto sub = dir.substr(0, i);
-
-        if (!sub.empty())
-        {
-          append(std::get<root<T>>(c)._childs[std::string(sub)] = root<T>{}, dir.substr(i), data);
-        }
-      }
-      else if (!dir.empty())
-      {
-        std::get<leaf<T>>(c)._childs[std::string(dir)] = leaf<T>{data};
-      }
-    }
+    T copy = data;
+    insert(c, std::move(copy), pth, s...);
   }
-
-  template <typename T>
-  void append(child<T> &c, std::string_view dir, T &&data)
-  {
-    if (instance_of<root<T>>(c))
-    {
-      auto i = dir.find('/');
-
-      if (i != std::string_view::npos)
-      {
-        auto sub = dir.substr(0, i);
-
-        if (!sub.empty())
-        {
-          append(std::get<root<T>>(c)._childs[std::string(sub)] = root<T>{}, dir.substr(i), data);
-        }
-      }
-      else if (!dir.empty())
-      {
-        std::get<leaf<T>>(c)._childs[std::string(dir)] = leaf<T>{std::move(data)};
-      }
-    }
-  }
-
-  // j'ai maintenant une structure en arbre dans lequel je vais pouvoir stocker
-  // quelque chose
 }
 
 namespace stew::dbf

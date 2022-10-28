@@ -165,8 +165,6 @@ namespace stew
   }
 }
 
-
-
 int main()
 {
   using namespace std::literals::string_literals;
@@ -177,15 +175,8 @@ int main()
   // std::optional<stew::person> op = stew::person();
 
   stew::dbf::storage::mem::child<int> r = stew::dbf::storage::mem::make_root<int>("ldap");
-  stew::dbf::storage::mem::append(r, "ldap/person/amdkqmzdk", 12);
+  stew::dbf::storage::mem::insert(r, 12, "ldap", "person", "amaidqjsl");
 
-  stew::dbf::db::create_schema(stew::dbf::db::schema_name("ldap"));
-  stew::dbf::db::connection conn = stew::dbf::db::connect(std::string("ldap"));
-
-  if (conn.opened())
-  {
-    stew::dbf::db::create_table<stew::person>(conn);
-  }
   // la table ext créée
 
   return 0;
