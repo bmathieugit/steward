@@ -8,6 +8,7 @@
 // namespace stew::dbf::storage::mem
 #include <map>
 #include <memory>
+#include <optional>
 #include <variant>
 #include <string_view>
 
@@ -254,6 +255,73 @@ namespace stew::dbf::storage::api
 
   template <typename T>
   using memory = basic_storage<stew::dbf::storage::mem::root<T>>;
+
+  // template <typename T>
+  // using fs = basic_storage<stew::dbf::storage::fs::dir<T>>;
+}
+
+namespace stew::dbf::query
+{
+  template <typename STORAGE, typename... S>
+  std::optional<typename STORAGE::stored_type> select(
+      stew::dbf::storage::api::basic_storage<STORAGE> &store,
+      const std::string &pth, const S &...s)
+  {
+    return std::nullopt;
+  }
+
+  template <typename STORAGE, typename... S>
+  bool insert(
+      stew::dbf::storage::api::basic_storage<STORAGE> &store,
+      const typename STORAGE::stored_type &data, const std::string &pth, const S &...s)
+  {
+    return false;
+  }
+
+  template <typename STORAGE, typename... S>
+  bool insert(
+      stew::dbf::storage::api::basic_storage<STORAGE> &store,
+      typename STORAGE::stored_type &&data, const std::string &pth, const S &...s)
+  {
+    return false;
+  }
+
+  template <typename STORAGE, typename... S>
+  bool update(
+      stew::dbf::storage::api::basic_storage<STORAGE> &store,
+      const typename STORAGE::stored_type &data, const std::string &pth, const S &...s)
+  {
+    return insert(store, data, pth, s...);
+  }
+
+  template <typename STORAGE, typename... S>
+  bool update(
+      stew::dbf::storage::api::basic_storage<STORAGE> &store,
+      typename STORAGE::stored_type &&data, const std::string &pth, const S &...s)
+  {
+    return insert(store, data, pth, s...);
+  }
+
+  template <typename STORAGE, typename... S>
+  bool remove(stew::dbf::storage::api::basic_storage<STORAGE> &store,
+              const std::string &pth, const S &...s)
+  {
+    return false;
+  }
+
+  template <typename STORAGE, typename... S>
+  std::size_t count(stew::dbf::storage::api::basic_storage<STORAGE> &store,
+                    const std::string &pth, const S &...s)
+  {
+    return 0;
+  }
+
+  template <typename STORAGE, typename... S>
+  bool exists(stew::dbf::storage::api::basic_storage<STORAGE> &store,
+              const std::string &pth, const S &...s)
+  {
+    return false;
+  }
 
 }
 

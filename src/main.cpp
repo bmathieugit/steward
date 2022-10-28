@@ -194,25 +194,25 @@ int main()
   // std::optional<stew::person> op = stew::person();
 
   stew::dbf::storage::mem::root<std::string> r = stew::dbf::storage::mem::make_root<std::string>("ldap");
-  std::cout << std::boolalpha << r.insert("coucou"s, "ldap", "toto", "person", "amaidqjsl");
-  std::cout << std::boolalpha << r.insert("hello"s, "ldap", "toto", "person", "amaidqjsl");
+  // std::cout << std::boolalpha << r.insert("coucou"s, "ldap", "toto", "person", "amaidqjsl");
+  // std::cout << std::boolalpha << r.insert("hello"s, "ldap", "toto", "person", "amaidqjsl");
 
-  // maintenant que j 'ai un systeme d'insertion dans un arbre en mémoire, jedois povuoir supprimer un élément.
-  // un premier essais de destruction pour vérifier qu'on ne supprime que ce qui existe
-  std::cout << std::boolalpha << r.remove("ldap", "toto", "person", "amaidqjsl_bad") << '\n';
-  // un second essais qui sera lui une réussite
-  std::cout << std::boolalpha << r.remove("ldap", "toto", "person", "amaidqjsl") << '\n';
+  // // maintenant que j 'ai un systeme d'insertion dans un arbre en mémoire, jedois povuoir supprimer un élément.
+  // // un premier essais de destruction pour vérifier qu'on ne supprime que ce qui existe
+  // std::cout << std::boolalpha << r.remove("ldap", "toto", "person", "amaidqjsl_bad") << '\n';
+  // // un second essais qui sera lui une réussite
+  // std::cout << std::boolalpha << r.remove("ldap", "toto", "person", "amaidqjsl") << '\n';
 
-  // maintenant que je peux supprimer et ajouter un élément au sein de la base de donnée, je vais
-  // essayer d'ajouter un élément dans un endroit ou il ne devrait pas être.
+  // // maintenant que je peux supprimer et ajouter un élément au sein de la base de donnée, je vais
+  // // essayer d'ajouter un élément dans un endroit ou il ne devrait pas être.
 
-  std::cout << std::boolalpha << r.insert("hello2"s, "ldap", "toto", "person") << '\n';
+  // std::cout << std::boolalpha << r.insert("hello2"s, "ldap", "toto", "person") << '\n';
 
-  // On va maintenant essayer d'inserer une seconde person dans le meme espace
-  std::cout << std::boolalpha << r.insert("hello2"s, "ldap", "toto", "person", "aziodj") << '\n';
+  // // On va maintenant essayer d'inserer une seconde person dans le meme espace
+  // std::cout << std::boolalpha << r.insert("hello2"s, "ldap", "toto", "person", "aziodj") << '\n';
 
-  // ici la lib storage::mem est donc opérationnelle.
-  // Maintenant on va créer une API permettant de s'abstraire du type de storage.
+  // // ici la lib storage::mem est donc opérationnelle.
+  // // Maintenant on va créer une API permettant de s'abstraire du type de storage.
 
   stew::dbf::storage::api::memory<std::string> mem("ldap");
   std::cout << std::boolalpha << mem.insert("martin"s, "people", "name");
@@ -221,7 +221,16 @@ int main()
   std::cout << std::boolalpha << mem.insert("martin"s, "people", "name4");
   std::cout << std::boolalpha << mem.insert("martin"s, "people", "name5");
 
-  // mem.insert("hello"s, "ldap/toto/person/aldkjqzd"_path);
+  // maintenant que j'ai une api minimale pour la couche storage, je peux passer à la mise en place
+  // de la couche supérieure. Il va s'agir d'une api de requetage.
+  // on y verra les fonctions suivante:  exists, select, insert, update, remove, count
+
+  std::optional<std::string> res = stew::dbf::query::select(mem, "people", "name");
+  bool res2 = stew::dbf::query::insert(mem, "martin"s, "people", "name2");
+  bool res3 = stew::dbf::query::update(mem, "martin"s, "people", "name2");
+  bool res4 = stew::dbf::query::remove(mem, "people", "name2");
+  std::size_t cnt = stew::dbf::query::count(mem, "people", "name2");
+  bool ex = stew::dbf::query::exists(mem, "people", "name2");
 
   return 0;
 }
