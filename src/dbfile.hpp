@@ -40,10 +40,55 @@ namespace stew::dbf::storage::mem
   constexpr int same_index_as = same_index_as_impl<T, V>();
 
   template <typename T>
-  struct leaf
+  class leaf
   {
     std::string _name;
     T _data;
+
+  public:
+    using stored_type = T;
+
+  public:
+    ~leaf() = default;
+    leaf() = default;
+    leaf(const std::string &name, const T &data)
+        : _name(name), _data(data) {}
+    leaf(const std::string &name, T &&data)
+        : _name(name), _data(data) {}
+    leaf(std::string &&name, const T &data)
+        : _name(name), _data(data) {}
+    leaf(std::string &&name, T &&data)
+        : _name(name), _data(data) {}
+    leaf(const leaf &) = default;
+    leaf(leaf &&) = default;
+    leaf &operator=(const leaf &) = default;
+    leaf &operator=(leaf &&) = default;
+
+  public:
+    const std::string &name() const
+    {
+      return _name;
+    }
+
+    const T &data() const
+    {
+      return _data;
+    }
+
+    T &data()
+    {
+      return _data;
+    }
+
+    void data(const T &d)
+    {
+      _data = d;
+    }
+
+    void data(T &&d)
+    {
+      _data = d;
+    }
   };
 
   template <typename T>
@@ -62,10 +107,99 @@ namespace stew::dbf::storage::mem
   }
 
   template <typename T>
-  struct root
+  class root
   {
     std::string _name;
     std::map<std::string, child<T>> _childs;
+
+  public:
+    using stored_type = T;
+
+  public:
+    ~root() = default;
+    root() = default;
+    root(const std::string &name) : _name(name) {}
+    root(std::string &&name) : _name(name) {}
+    root(const root &) = default;
+    root(root &&) = default;
+    root &operator=(const root &) = default;
+    root &operator=(root &&) = default;
+
+  public:
+    const std::string &name() const
+    {
+      return _name;
+    }
+
+    const auto &childs() const
+    {
+      return _childs;
+    }
+
+  public:
+    template <typename... S>
+    bool insert(T &&data, const std::string &pth, const S &...s)
+    {
+      if (_childs.contains(pth))
+      {
+        if constexpr (sizeof...(s) == 0)
+        {
+          if (instance_of<leaf<T>>(_childs[pth]))
+          {
+            std::get<leaf<T>>(_childs[pth]).data(data);
+            return true;
+          }
+        }
+        else
+        {
+          return std::get<node<T>>(_childs[pth]).insert(data, s...);
+        }
+      }
+      else
+      {
+        if constexpr (sizeof...(s) == 0)
+        {
+          _childs[pth] = leaf<T>(pth, data);
+          return true;
+        }
+        else
+        {
+          _childs[pth] = node<T>(pth);
+          return std::get<node<T>>(_childs[pth]).insert(data, s...);
+        }
+      }
+
+      return false;
+    }
+
+    template <typename... S>
+    bool insert(const T &data, const std::string &pth, S... s)
+    {
+      T copy = data;
+      return insert(std::move(copy), pth, s...);
+    }
+
+    template <typename... S>
+    bool remove(const std::string &pth, const S &...s)
+    {
+      if (_childs.contains(pth))
+      {
+        if constexpr (sizeof...(s) == 0)
+        {
+          _childs.erase(pth);
+          return true;
+        }
+        else
+        {
+          if (instance_of<root<T>>(_childs[pth]))
+          {
+            return std::get<root<T>>(_childs[pth]).remove(s...);
+          }
+        }
+      }
+
+      return false;
+    }
   };
 
   template <typename T>
@@ -79,155 +213,34 @@ namespace stew::dbf::storage::mem
   {
     return root<T>{std::move(name)};
   }
-
-  template <typename T, typename... S>
-  bool insert(child<T> &c, T &&data, const std::string &pth, const S &...s)
-  {
-    if (instance_of<node<T>>(c))
-    {
-      node<T> &n = std::get<node<T>>(c);
-
-      if (n._childs.contains(pth))
-      {
-        if constexpr (sizeof...(s) == 0)
-        {
-          if (instance_of<leaf<T>>(n._childs[pth]))
-          {
-            std::get<leaf<T>>(n._childs[pth])._data = data;
-            return true;
-          }
-        }
-        else
-        {
-          return insert(n._childs[pth], data, s...);
-        }
-      }
-      else
-      {
-        if constexpr (sizeof...(s) == 0)
-        {
-          n._childs[pth] = leaf<T>{._name = pth,
-                                   ._data = data};
-          return true;
-        }
-        else
-        {
-          n._childs[pth] = node<T>{._name = pth};
-          return insert(n._childs[pth], data, s...);
-        }
-      }
-    }
-
-    return false;
-  }
-
-  template <typename T, typename... S>
-  bool insert(child<T> &c, const T &data, const std::string &pth, S... s)
-  {
-    T copy = data;
-    return insert(c, std::move(copy), pth, s...);
-  }
-
-  template <typename T, typename... S>
-  bool remove(child<T> &c, const std::string &pth, const S &...s)
-  {
-    if (instance_of<node<T>>(c))
-    {
-      node<T> &n = std::get<node<T>>(c);
-
-      if (n._childs.contains(pth))
-      {
-        if constexpr (sizeof...(s) == 0)
-        {
-          n._childs.erase(pth);
-          return true;
-        }
-        else
-        {
-          return remove(n._childs[pth], s...);
-        }
-      }
-    }
-
-    return false;
-  }
-
 }
 
-namespace stew::dbf
+namespace stew::dbf::storage::api
 {
-  namespace fs
+  template <typename STORAGE>
+  class basic_storage
   {
-    enum class error
-    {
-      none,
-      file_not_found
-    };
+    STORAGE _storage;
 
-    template <typename T>
-    error select(std::optional<T> &op, std::string_view path)
-    {
-      namespace fs = std::filesystem;
+  public:
+    ~basic_storage() = default;
+    basic_storage() = default;
+    basic_storage(const basic_storage &) = default;
+    basic_storage(basic_storage &&) = default;
+    basic_storage &operator=(const basic_storage &) = default;
+    basic_storage &operator=(basic_storage &&) = default;
 
-      if (fs::exists(path))
-      {
-        return error::none;
-      }
-      else
-      {
-        return error::file_not_found;
-      }
+  public:
+    template <typename... S>
+    bool insert(const STORAGE::stored_type &data, const std::string &pth, const S &...s)
+    {
+      return true;
+      // return insert(_storage
     }
+  };
 
-    template <typename T>
-    error update(T &t, std::string_view path)
-    {
-      namespace fs = std::filesystem;
-
-      if (fs::exists(path))
-      {
-        return error::none;
-      }
-      else
-      {
-        return error::file_not_found;
-      }
-    }
-
-    template <typename T>
-    error insert(T &t, std::string_view path)
-    {
-      namespace fs = std::filesystem;
-
-      if (fs::exists(path))
-      {
-        return error::none;
-      }
-      else
-      {
-        return error::file_not_found;
-      }
-    }
-
-    error remove(std::string_view path)
-    {
-      namespace fs = std::filesystem;
-
-      if (fs::exists(path))
-      {
-        return error::none;
-      }
-      else
-      {
-        return error::file_not_found;
-      }
-    }
-  }
-
-  namespace query
-  {
-
-  }
+  template <typename T>
+  using memory = basic_storage<stew::dbf::storage::mem::root<T>>;
 
 }
 

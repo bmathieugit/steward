@@ -166,21 +166,21 @@ namespace stew
 }
 
 template <typename T>
-void printdb(const stew::dbf::storage::mem::child<T> &c)
+void printdb(const stew::dbf::storage::mem::node<T> &n)
 {
-  if (stew::dbf::storage::mem::instance_of<stew::dbf::storage::mem::node<T>>(c))
-  {
-    std::cout << std::get<stew::dbf::storage::mem::node<T>>(c)._name << '\n';
+  std::cout << n.name() << '\n';
 
-    for (const auto &[_, i] : std::get<stew::dbf::storage::mem::node<T>>(c)._childs)
-    {
-      printdb(i);
-    }
-  }
-  else
+  for (const auto &[_, i] : n.childs())
   {
-    std::cout << std::get<stew::dbf::storage::mem::leaf<T>>(c)._name
-              << " : " << std::get<stew::dbf::storage::mem::leaf<T>>(c)._data << '\n';
+    if (stew::dbf::storage::mem::instance_of<stew::dbf::storage::mem::node<T>>(i))
+    {
+      printdb(std::get<stew::dbf::storage::mem::node<T>>(i));
+    }
+    else
+    {
+      std::cout << std::get<stew::dbf::storage::mem::leaf<T>>(i).name()
+                << " : " << std::get<stew::dbf::storage::mem::leaf<T>>(i).data() << '\n';
+    }
   }
 }
 
@@ -193,29 +193,30 @@ int main()
 
   // std::optional<stew::person> op = stew::person();
 
-  stew::dbf::storage::mem::child<std::string> r = stew::dbf::storage::mem::make_root<std::string>("ldap");
-  stew::dbf::storage::mem::insert(r, "coucou"s, "ldap", "toto", "person", "amaidqjsl");
-  stew::dbf::storage::mem::insert(r, "hello"s, "ldap", "toto", "person", "amaidqjsl");
+  stew::dbf::storage::mem::root<std::string> r = stew::dbf::storage::mem::make_root<std::string>("ldap");
+  std::cout << std::boolalpha << r.insert("coucou"s, "ldap", "toto", "person", "amaidqjsl");
+  std::cout << std::boolalpha << r.insert("hello"s, "ldap", "toto", "person", "amaidqjsl");
 
-  printdb(r);
   // maintenant que j 'ai un systeme d'insertion dans un arbre en mémoire, jedois povuoir supprimer un élément.
   // un premier essais de destruction pour vérifier qu'on ne supprime que ce qui existe
-  std::cout << std::boolalpha << stew::dbf::storage::mem::remove(r, "ldap", "toto", "person", "amaidqjsl_bad") << '\n';
+  std::cout << std::boolalpha << r.remove("ldap", "toto", "person", "amaidqjsl_bad") << '\n';
   // un second essais qui sera lui une réussite
-  std::cout << std::boolalpha << stew::dbf::storage::mem::remove(r, "ldap", "toto", "person", "amaidqjsl") << '\n';
-  printdb(r);
+  std::cout << std::boolalpha << r.remove("ldap", "toto", "person", "amaidqjsl") << '\n';
 
- 
-  // maintenant que je peux supprimer et ajouter un élément au sein de la base de donnée, je vais 
+  // maintenant que je peux supprimer et ajouter un élément au sein de la base de donnée, je vais
   // essayer d'ajouter un élément dans un endroit ou il ne devrait pas être.
 
-  std::cout << std::boolalpha << stew::dbf::storage::mem::insert(r, "hello2"s, "ldap", "toto", "person") << '\n';
-  printdb(r);  
+  std::cout << std::boolalpha << r.insert("hello2"s, "ldap", "toto", "person") << '\n';
 
   // On va maintenant essayer d'inserer une seconde person dans le meme espace
-  std::cout << std::boolalpha << stew::dbf::storage::mem::insert(r, "hello2"s, "ldap", "toto", "person", "aziodj") << '\n';
-  printdb(r);  
+  std::cout << std::boolalpha << r.insert("hello2"s, "ldap", "toto", "person", "aziodj") << '\n';
 
+  // ici la lib storage::mem est donc opérationnelle.
+  // Maintenant on va créer une API permettant de s'abstraire du type de storage.
+
+  stew::dbf::storage::api::memory<std::string> mem{};
+
+  // mem.insert("hello"s, "ldap/toto/person/aldkjqzd"_path);
 
   return 0;
 }
