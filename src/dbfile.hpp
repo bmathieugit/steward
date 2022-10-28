@@ -81,40 +81,64 @@ namespace stew::dbf::storage::mem
   }
 
   template <typename T, typename... S>
-  void insert(child<T> &c, T &&data, const std::string &pth, S... s)
+  void insert(child<T> &c, T &&data, const std::string &pth, const S &...s)
   {
     if (instance_of<node<T>>(c))
     {
-      if (std::get<node<T>>(c)._childs.contains(pth))
+      node<T> &n = std::get<node<T>>(c);
+
+      if (n._childs.contains(pth))
       {
         if constexpr (sizeof...(s) == 0)
         {
-          if (instance_of<leaf<T>>(std::get<node<T>>(c)._childs[pth]))
+          if (instance_of<leaf<T>>(n._childs[pth]))
           {
-            std::get<leaf<T>>(std::get<node<T>>(c)._childs[pth])._data = std::move(data);
+            std::get<leaf<T>>(n._childs[pth])._data = data;
           }
         }
         else
         {
-          insert(std::get<node<T>>(c)._childs[pth], data, s...);
+          insert(n._childs[pth], data, s...);
         }
       }
       else
       {
         if constexpr (sizeof...(s) == 0)
         {
-          std::get<node<T>>(c)._childs[pth] =
-              std::move(leaf<T>{._name = pth,
-                                ._data = std::move(data)});
+          n._childs[pth] = leaf<T>{._name = pth,
+                                   ._data = data};
         }
         else
         {
-          std::get<node<T>>(c)._childs[pth] =
-              std::move(node<T>{._name = pth});
-          insert(std::get<node<T>>(c)._childs[pth], data, s...);
+          n._childs[pth] = node<T>{._name = pth};
+          insert(n._childs[pth], data, s...);
         }
       }
     }
+  }
+
+  template <typename T, typename... S>
+  bool remove(child<T> &c, const std::string &pth, const S &...s)
+  {
+    if (instance_of<node<T>>(c))
+    {
+      node<T> &n = std::get<node<T>>(c);
+
+      if (n._childs.contains(pth))
+      {
+        if constexpr (sizeof...(s) == 0)
+        {
+          n._childs.erase(pth);
+          return true;
+        }
+        else
+        {
+          return remove(n._childs[pth], s...);
+        }
+      }
+    }
+
+    return false;
   }
 
   template <typename T, typename... S>

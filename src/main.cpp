@@ -165,6 +165,25 @@ namespace stew
   }
 }
 
+template <typename T>
+void printdb(const stew::dbf::storage::mem::child<T> &c)
+{
+  if (stew::dbf::storage::mem::instance_of<stew::dbf::storage::mem::node<T>>(c))
+  {
+    std::cout << std::get<stew::dbf::storage::mem::node<T>>(c)._name << '\n';
+
+    for (const auto &[_, i] : std::get<stew::dbf::storage::mem::node<T>>(c)._childs)
+    {
+      printdb(i);
+    }
+  }
+  else
+  {
+    std::cout << std::get<stew::dbf::storage::mem::leaf<T>>(c)._name
+              << " : " << std::get<stew::dbf::storage::mem::leaf<T>>(c)._data;
+  }
+}
+
 int main()
 {
   using namespace std::literals::string_literals;
@@ -174,10 +193,24 @@ int main()
 
   // std::optional<stew::person> op = stew::person();
 
-  stew::dbf::storage::mem::child<int> r = stew::dbf::storage::mem::make_root<int>("ldap");
-  stew::dbf::storage::mem::insert(r, 12, "ldap", "person", "amaidqjsl");
+  stew::dbf::storage::mem::child<std::string> r = stew::dbf::storage::mem::make_root<std::string>("ldap");
+  stew::dbf::storage::mem::insert(r, "coucou"s, "ldap", "toto", "person", "amaidqjsl");
+  stew::dbf::storage::mem::insert(r, "hello"s, "ldap", "toto", "person", "amaidqjsl");
 
-  // la table ext créée
+  printdb(r);
+  // maintenant que j 'ai un systeme d'insertion dans un arbre en mémoire, jedois povuoir supprimer un élément. 
+
+  // un premier essais de destruction pour vérifier qu'on ne supprime que ce qui existe
+  std::cout << std::boolalpha <<  stew::dbf::storage::mem::remove(r, "ldap", "toto", "person", "amaidqjsl_bad") << '\n';
+
+  // un second essais qui sera lui une réussite
+  std::cout << std::boolalpha << stew::dbf::storage::mem::remove(r, "ldap", "toto", "person", "amaidqjsl") << '\n';
+
+  printdb(r);
+
+  std::cout << std::boolalpha << stew::dbf::storage::mem::remove(r, "ldap") << '\n';
+
+  printdb(r);
 
   return 0;
 }
