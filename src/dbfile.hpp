@@ -81,7 +81,7 @@ namespace stew::dbf::storage::mem
   }
 
   template <typename T, typename... S>
-  void insert(child<T> &c, T &&data, const std::string &pth, const S &...s)
+  bool insert(child<T> &c, T &&data, const std::string &pth, const S &...s)
   {
     if (instance_of<node<T>>(c))
     {
@@ -94,11 +94,12 @@ namespace stew::dbf::storage::mem
           if (instance_of<leaf<T>>(n._childs[pth]))
           {
             std::get<leaf<T>>(n._childs[pth])._data = data;
+            return true;
           }
         }
         else
         {
-          insert(n._childs[pth], data, s...);
+          return insert(n._childs[pth], data, s...);
         }
       }
       else
@@ -107,14 +108,24 @@ namespace stew::dbf::storage::mem
         {
           n._childs[pth] = leaf<T>{._name = pth,
                                    ._data = data};
+          return true;
         }
         else
         {
           n._childs[pth] = node<T>{._name = pth};
-          insert(n._childs[pth], data, s...);
+          return insert(n._childs[pth], data, s...);
         }
       }
     }
+
+    return false;
+  }
+
+  template <typename T, typename... S>
+  bool insert(child<T> &c, const T &data, const std::string &pth, S... s)
+  {
+    T copy = data;
+    return insert(c, std::move(copy), pth, s...);
   }
 
   template <typename T, typename... S>
@@ -141,12 +152,6 @@ namespace stew::dbf::storage::mem
     return false;
   }
 
-  template <typename T, typename... S>
-  void insert(child<T> &c, const T &data, const std::string &pth, S... s)
-  {
-    T copy = data;
-    insert(c, std::move(copy), pth, s...);
-  }
 }
 
 namespace stew::dbf

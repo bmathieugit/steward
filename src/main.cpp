@@ -180,7 +180,7 @@ void printdb(const stew::dbf::storage::mem::child<T> &c)
   else
   {
     std::cout << std::get<stew::dbf::storage::mem::leaf<T>>(c)._name
-              << " : " << std::get<stew::dbf::storage::mem::leaf<T>>(c)._data;
+              << " : " << std::get<stew::dbf::storage::mem::leaf<T>>(c)._data << '\n';
   }
 }
 
@@ -198,19 +198,24 @@ int main()
   stew::dbf::storage::mem::insert(r, "hello"s, "ldap", "toto", "person", "amaidqjsl");
 
   printdb(r);
-  // maintenant que j 'ai un systeme d'insertion dans un arbre en mémoire, jedois povuoir supprimer un élément. 
-
+  // maintenant que j 'ai un systeme d'insertion dans un arbre en mémoire, jedois povuoir supprimer un élément.
   // un premier essais de destruction pour vérifier qu'on ne supprime que ce qui existe
-  std::cout << std::boolalpha <<  stew::dbf::storage::mem::remove(r, "ldap", "toto", "person", "amaidqjsl_bad") << '\n';
-
+  std::cout << std::boolalpha << stew::dbf::storage::mem::remove(r, "ldap", "toto", "person", "amaidqjsl_bad") << '\n';
   // un second essais qui sera lui une réussite
   std::cout << std::boolalpha << stew::dbf::storage::mem::remove(r, "ldap", "toto", "person", "amaidqjsl") << '\n';
-
   printdb(r);
 
-  std::cout << std::boolalpha << stew::dbf::storage::mem::remove(r, "ldap") << '\n';
+ 
+  // maintenant que je peux supprimer et ajouter un élément au sein de la base de donnée, je vais 
+  // essayer d'ajouter un élément dans un endroit ou il ne devrait pas être.
 
-  printdb(r);
+  std::cout << std::boolalpha << stew::dbf::storage::mem::insert(r, "hello2"s, "ldap", "toto", "person") << '\n';
+  printdb(r);  
+
+  // On va maintenant essayer d'inserer une seconde person dans le meme espace
+  std::cout << std::boolalpha << stew::dbf::storage::mem::insert(r, "hello2"s, "ldap", "toto", "person", "aziodj") << '\n';
+  printdb(r);  
+
 
   return 0;
 }
