@@ -225,6 +225,8 @@ namespace stew::dbf::storage::api
   public:
     ~basic_storage() = default;
     basic_storage() = default;
+    basic_storage(const std::string &name) : _storage(name) {}
+    basic_storage(std::string &&name) : _storage(name) {}
     basic_storage(const basic_storage &) = default;
     basic_storage(basic_storage &&) = default;
     basic_storage &operator=(const basic_storage &) = default;
@@ -234,8 +236,19 @@ namespace stew::dbf::storage::api
     template <typename... S>
     bool insert(const STORAGE::stored_type &data, const std::string &pth, const S &...s)
     {
-      return true;
-      // return insert(_storage
+      return _storage.insert(data, pth, s...);
+    }
+
+    template <typename... S>
+    bool insert(STORAGE::stored_type &&data, const std::string &pth, const S &...s)
+    {
+      return _storage.insert(data, pth, s...);
+    }
+
+    template <typename... S>
+    bool remove(const std::string &pth, const S &...s)
+    {
+      return _storage.remove(pth, s...);
     }
   };
 

@@ -214,7 +214,12 @@ int main()
   // ici la lib storage::mem est donc opérationnelle.
   // Maintenant on va créer une API permettant de s'abstraire du type de storage.
 
-  stew::dbf::storage::api::memory<std::string> mem{};
+  stew::dbf::storage::api::memory<std::string> mem("ldap");
+  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name");
+  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name2");
+  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name3");
+  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name4");
+  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name5");
 
   // mem.insert("hello"s, "ldap/toto/person/aldkjqzd"_path);
 
