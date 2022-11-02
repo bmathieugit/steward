@@ -12,12 +12,8 @@
 #include <variant>
 #include <string_view>
 
-namespace stew::dbf::storage::mem
+namespace stew::variant
 {
-  // Ici il faut mettre en place un tree pour permettre de faire
-  // un stockage en mémoire d'une structure arborecente
-  // Chaque noeud aura un label qui donnera son nom dans l'arborecence
-
   template <typename T, typename V, std::size_t i = 0>
   constexpr std::size_t same_index_as_impl()
   {
@@ -39,7 +35,133 @@ namespace stew::dbf::storage::mem
 
   template <typename T, typename V>
   constexpr int same_index_as = same_index_as_impl<T, V>();
+}
 
+#include <list>
+#include <string>
+#include <variant>
+#include <vector>
+
+namespace stew::dbf::storage::format
+{
+  struct array_tag
+  {
+  };
+
+  using number = double;
+  using string = std::string;
+  using boolean = bool;
+  using none = std::monostate;
+
+  using data = std::variant<
+      none, number, string, boolean>;
+
+  class tree
+  {
+    std::map<std::string, data> _data;
+    std::map<std::string, std::size_t> _arrays;
+
+  public:
+    ~tree() = default;
+    tree() = default;
+    tree(const tree &) = default;
+    tree(tree &&) = default;
+    tree &operator=(const tree &) = default;
+    tree &operator=(tree &&) = default;
+
+  public:
+    void size_of(std::string &&pth, std::size_t size)
+    {
+      _arrays[pth] = size;
+    }
+
+    void size_of(const std::string &pth, std::size_t size)
+    {
+      size_of(std::move(pth), size);
+    }
+
+    const std::size_t size_of(const std::string &pth) const
+    {
+      return _arrays.contains(pth) ? _arrays.at(pth) : 0;
+    }
+
+  public:
+    template <typename T>
+    std::optional<T> get(const std::string &pth) const
+    {
+      if (_data.contains(pth))
+      {
+        return std::optional<T>(std::get<T>(_data.at(pth)));
+      }
+
+      return std::nullopt;
+    }
+
+    template <typename T>
+    void set(std::string &&pth, const T &obj)
+    {
+      _data[pth] = obj;
+    }
+
+    template <typename T>
+    void set(const std::string &pth, const T &obj)
+    {
+      set(std::move(pth), obj);
+    }
+  };
+
+  template <typename T>
+  T unmarshall(tree &tr)
+  {
+    T t;
+    unmarshall(tr, t, "");
+    return t;
+  }
+
+  template <typename T>
+  tree marshall(const T &obj)
+  {
+    tree tr;
+    marshall(tr, obj, "");
+    return tr;
+  }
+
+  template<typename T>
+  void marshall(tree& t, const std::vector<T>& v, std::string_view parent_path)
+  {
+    for (int i=0; i<v.size(); ++i)
+    {
+      marshall(t, v[i], std::string(parent_path) + "/" + std::to_string(i));
+    }
+  }
+
+  template<typename T>
+  void unmarshall(const tree& t, std::vector<T>& v, std::string_view parent_path)
+  {
+    auto size = t.size_of(std::string(parent_path));
+
+    for (int i = 0; i < size; ++i)
+    {
+      T tmp;
+      unmarshall(t, tmp, std::string(parent_path) + "/" + std::to_string(i));
+      v.push_back(tmp);
+    }
+  }
+
+  template<typename T>
+  void marshall(tree& t, const std::list<T>& l, std::string_view parent_path)
+  {
+    int i=0;
+    for (const auto& item : l)
+    {
+      marshall(t, l, std::string(parent_path) + "/" + std::to_string(i));
+      ++i;
+    }
+  }
+}
+
+namespace stew::dbf::storage::mem
+{
   template <typename T>
   class leaf
   {
@@ -93,7 +215,7 @@ namespace stew::dbf::storage::mem
   };
 
   template <typename T>
-  struct root;
+  class root;
 
   template <typename T>
   using node = root<T>;
@@ -104,7 +226,7 @@ namespace stew::dbf::storage::mem
   template <typename T, typename O>
   constexpr bool instance_of(const child<O> &c)
   {
-    return same_index_as<T, child<O>> == c.index();
+    return stew::variant::same_index_as<T, child<O>> == c.index();
   }
 
   template <typename T>
