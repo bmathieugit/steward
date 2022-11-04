@@ -21,39 +21,16 @@ struct person
 
 namespace stew::dbf::storage::fs::json
 {
-  template <typename T>
-  stream &operator<<(stream &sm, const std::list<T> &l)
-  {
-    std::size_t i = 0;
-    auto b = l.begin();
-    auto e = l.end();
+  
 
-    sm << '[';
-
-    while (b != e)
-    {
-      sm << *b;
-
-      if (i < l.size() - 1)
-      {
-        sm << ',';
-      }
-
-      ++i;
-      ++b;
-    }
-
-    return sm << ']';
-  }
-
-  stream &operator<<(stream &sm, const address &addr)
+  ostream &operator<<(ostream &sm, const address &addr)
   {
     return sm << obj(attr("street", addr._street),
                      attr("num", addr._num), 
                      attr("empty", addr._empty));
   }
 
-  stream &operator<<(stream &sm, const person &p)
+  ostream &operator<<(ostream &sm, const person &p)
   {
     return sm << obj(
                attr("name", p._name),
@@ -70,7 +47,7 @@ int main()
   p._name = "martin";
   p._firstnames = {"jhon", "luc", "william"};
   p._addresses = {{"mapple street", 12, true}, {"mapple street", 221, false}};
-  stew::dbf::storage::fs::json::stream json;
+  stew::dbf::storage::fs::json::ostream json;
 
   std::cout << (json << p).str();
 
