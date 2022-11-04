@@ -1,46 +1,11 @@
 #ifndef __stew_dbfile_hpp__
 #define __stew_dbfile_hpp__
 
-#include <filesystem>
-#include <string_view>
-#include <optional>
-
-// namespace stew::dbf::storage::mem
-#include <map>
-#include <memory>
-#include <optional>
-#include <variant>
-#include <string_view>
-
-namespace stew::variant
-{
-  template <typename T, typename V, std::size_t i = 0>
-  constexpr std::size_t same_index_as_impl()
-  {
-    static_assert(std::variant_size_v<V> > i, "Type not found in variant");
-
-    if constexpr (i == std::variant_size_v<V>)
-    {
-      return i;
-    }
-    else if constexpr (std::is_same_v<std::variant_alternative_t<i, V>, T>)
-    {
-      return i;
-    }
-    else
-    {
-      return same_index_as_impl<T, V, i + 1>();
-    }
-  }
-
-  template <typename T, typename V>
-  constexpr int same_index_as = same_index_as_impl<T, V>();
-}
-
 #include <any>
 #include <map>
 #include <string>
 #include <variant>
+#include <optional>
 
 namespace stew::dbf::storage::mem
 {
@@ -197,8 +162,83 @@ namespace stew::dbf::storage::mem
 
       return false;
     }
+
+    template <typename T, typename... S>
+    std::optional<T> get(const std::string &pth, const S &...)
+    {
+      return std::nullopt;
+    }
   };
 }
+
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <utility>
+
+namespace stew::dbf::storage::fs
+{
+  namespace json
+  {
+    template <typename T>
+    std::pair<std::string_view, const T &> attr(std::string_view l, const T &v)
+    {
+      return std::pair<std::string_view, const T &>(l, v);
+    }
+
+    std::string to_json(const bool &b)
+    {
+      return b ? "true" : "false";
+    }
+
+    std::string to_json(const double &n)
+    {
+      return std::to_string(n);
+    }
+
+    std::string to_json(const std::string &s)
+    {
+      return '"' + s + '"';
+    }
+
+    template <typename T>
+    std::string to_json(const std::vector<T> &v)
+    {
+      std::string s;
+      s.push_back('[');
+
+      for (const auto &i : v)
+      {
+        s.append(to_json(i));
+        s.push_back(',');
+      }
+
+      s.pop_back();
+      s.push_back(']');
+
+      return s;
+    }
+
+    template <typename H, typename... T>
+    std::string to_json(
+        std::pair<std::string_view, const H &> &&head,
+        std::pair<std::string_view, const T &> &&...tail)
+    {
+      std::string s;
+      s.push_back('{');
+      s.append(head.first);
+      s.push_back(':');
+      s.append(to_json(head.second));
+      ((s.push_back(','), s.append(tail.first), s.push_back(':'), s.append(to_json(tail.second))), ...);
+      s.push_back('}');
+      return s;
+    }
+  }
+}
+
+#include <optional>
+#include <string>
 
 namespace stew::dbf::storage::api
 {
@@ -218,7 +258,7 @@ namespace stew::dbf::storage::api
     basic_storage &operator=(basic_storage &&) = default;
 
   public:
-    template <typename T,typename... S>
+    template <typename T, typename... S>
     bool insert(const T &data, const std::string &pth, const S &...s)
     {
       return _storage.insert(data, pth, s...);
@@ -235,77 +275,20 @@ namespace stew::dbf::storage::api
     {
       return _storage.remove(pth, s...);
     }
+
+    template <typename T, typename... S>
+    std::optional<T> get(const std::string &pth, const S &...s)
+    {
+      return _storage.get(pth, s...);
+    }
   };
 
   using memory = basic_storage<stew::dbf::storage::mem::root>;
+  // using fsxml = basic_storage<stew::dbf::storage::fs::xml>;
+  // using fsjson = basic_storage<stew::db::storage::fs::json>;
 
   // template <typename T>
   // using fs = basic_storage<stew::dbf::storage::fs::dir<T>>;
-}
-
-namespace stew::dbf::query
-{
-  template <typename STORAGE, typename... S>
-  std::optional<typename STORAGE::stored_type> select(
-      stew::dbf::storage::api::basic_storage<STORAGE> &store,
-      const std::string &pth, const S &...s)
-  {
-    return std::nullopt;
-  }
-
-  template <typename STORAGE, typename... S>
-  bool insert(
-      stew::dbf::storage::api::basic_storage<STORAGE> &store,
-      const typename STORAGE::stored_type &data, const std::string &pth, const S &...s)
-  {
-    return false;
-  }
-
-  template <typename STORAGE, typename... S>
-  bool insert(
-      stew::dbf::storage::api::basic_storage<STORAGE> &store,
-      typename STORAGE::stored_type &&data, const std::string &pth, const S &...s)
-  {
-    return false;
-  }
-
-  template <typename STORAGE, typename... S>
-  bool update(
-      stew::dbf::storage::api::basic_storage<STORAGE> &store,
-      const typename STORAGE::stored_type &data, const std::string &pth, const S &...s)
-  {
-    return insert(store, data, pth, s...);
-  }
-
-  template <typename STORAGE, typename... S>
-  bool update(
-      stew::dbf::storage::api::basic_storage<STORAGE> &store,
-      typename STORAGE::stored_type &&data, const std::string &pth, const S &...s)
-  {
-    return insert(store, data, pth, s...);
-  }
-
-  template <typename STORAGE, typename... S>
-  bool remove(stew::dbf::storage::api::basic_storage<STORAGE> &store,
-              const std::string &pth, const S &...s)
-  {
-    return false;
-  }
-
-  template <typename STORAGE, typename... S>
-  std::size_t count(stew::dbf::storage::api::basic_storage<STORAGE> &store,
-                    const std::string &pth, const S &...s)
-  {
-    return 0;
-  }
-
-  template <typename STORAGE, typename... S>
-  bool exists(stew::dbf::storage::api::basic_storage<STORAGE> &store,
-              const std::string &pth, const S &...s)
-  {
-    return false;
-  }
-
 }
 
 #endif

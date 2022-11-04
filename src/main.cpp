@@ -1,26 +1,42 @@
 #include <dbfile.hpp>
 
 #include <string>
-#include <tuple>
-
-#include <filesystem>
+#include <vector>
 #include <iostream>
+#include <list>
 
-void printdb(const stew::dbf::storage::mem::root &r)
+
+struct person
 {
-  std::cout << r.name() << '\n';
+  std::string _name;
+  std::list<std::string> _firstnames;
+};
 
-  for (const auto &[_, i] : r.childs())
+namespace stew::dbf::storage::fs::json
+{
+  template <typename T>
+  std::string to_json(const std::list<T> &l)
   {
-    if (i.index() == 0)
+    std::string s;
+    s.push_back('[');
+
+    for (const auto &i : l)
     {
-      printdb(std::get<stew::dbf::storage::mem::root>(i));
+      s.append(to_json(i));
+      s.push_back(',');
     }
-    else
-    {
-      std::cout << std::get<stew::dbf::storage::mem::leaf>(i).name()
-                << " : " << std::any_cast<std::string>(std::get<stew::dbf::storage::mem::leaf>(i).data()) << '\n';
-    }
+
+    s.pop_back();
+    s.push_back(']');
+
+    return s;
+  }
+
+  std::string to_json(const person &p)
+  {
+    return to_json(
+        attr("name", p._name),
+        attr("firstnames", p._firstnames));
   }
 }
 
@@ -28,21 +44,11 @@ int main()
 {
   using namespace std::literals::string_literals;
 
-  stew::dbf::storage::mem::root r("ldap");
+  person p;
+  p._name = "martin";
+  p._firstnames = {"jhon", "luc", "william"};
 
-  stew::dbf::storage::api::memory mem("ldap");
-  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name");
-  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name2");
-  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name3");
-  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name4");
-  std::cout << std::boolalpha << mem.insert("martin"s, "people", "name5");
-
-  // std::optional<std::string> res = stew::dbf::query::select(mem, "people", "name");
-  // bool res2 = stew::dbf::query::insert(mem, "martin"s, "people", "name2");
-  // bool res3 = stew::dbf::query::update(mem, "martin"s, "people", "name2");
-  // bool res4 = stew::dbf::query::remove(mem, "people", "name2");
-  // std::size_t cnt = stew::dbf::query::count(mem, "people", "name2");
-  // bool ex = stew::dbf::query::exists(mem, "people", "name2");
+  std::cout << stew::dbf::storage::fs::json::to_json(p);
 
   return 0;
 }
