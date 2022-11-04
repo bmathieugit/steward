@@ -171,6 +171,7 @@ namespace stew::dbf::storage::mem
   };
 }
 
+#include <concepts>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -182,57 +183,143 @@ namespace stew::dbf::storage::fs
   namespace json
   {
     template <typename T>
-    std::pair<std::string_view, const T &> attr(std::string_view l, const T &v)
+    struct attribute
     {
-      return std::pair<std::string_view, const T &>(l, v);
+      std::string_view _label;
+      const T &_value;
+    };
+
+    template <typename... T>
+    struct object
+    {
+      std::tuple<attribute<T>...> _attrs;
+    };
+
+    template <typename T>
+    attribute<T> attr(std::string_view l, const T &v)
+    {
+      return attribute<T>{l, v};
     }
 
-    std::string to_json(const bool &b)
+    template <typename... T>
+    object<T...> obj(attribute<T> &&...attrs)
     {
-      return b ? "true" : "false";
+      return object<T...>{{attrs...}};
     }
 
-    std::string to_json(const double &n)
+    class stream
     {
-      return std::to_string(n);
+      std::string _s;
+
+    public:
+      ~stream() = default;
+      stream() = default;
+      stream(const stream &) = default;
+      stream(stream &&) = default;
+      stream &operator=(const stream &) = default;
+      stream &operator=(stream &&) = default;
+
+    public:
+      std::string str()
+      {
+        return _s;
+      }
+
+      void append(char c)
+      {
+        _s.push_back(c);
+      }
+
+      void append(std::string_view s)
+      {
+        _s.append(s.begin(), s.end());
+      }
+    };
+
+    stream &operator<<(stream &sm, char c)
+    {
+      sm.append(c);
+      return sm;
     }
 
-    std::string to_json(const std::string &s)
+    stream &operator<<(stream &sm, std::string_view s)
     {
-      return '"' + s + '"';
+      sm << '"';
+      sm.append(s);
+      sm << '"';
+      return sm;
+    }
+
+    stream &operator<<(stream &sm, const std::string &s)
+    {
+      return sm << static_cast<std::string_view>(s);
+    }
+
+    stream &operator<<(stream &sm, bool b)
+    {
+      using namespace std::string_view_literals;
+
+      sm.append(b ? "true"sv : "false"sv);
+      return sm;
+    }
+
+    template <std::floating_point T>
+    stream &operator<<(stream &sm, T n)
+    {
+      sm.append(std::to_string(n));
+      return sm;
+    }
+
+    template <std::integral T>
+    stream &operator<<(stream &sm, T n)
+    {
+      sm.append(std::to_string(n));
+      return sm;
     }
 
     template <typename T>
-    std::string to_json(const std::vector<T> &v)
+    stream &operator<<(stream &sm, const std::vector<T> &v)
     {
-      std::string s;
-      s.push_back('[');
+      sm << '[';
 
-      for (const auto &i : v)
+      for (std::size_t i = 0; i < v.size(); ++i)
       {
-        s.append(to_json(i));
-        s.push_back(',');
+        sm << v[i];
+
+        if (i < v.size() - 1)
+        {
+          sm << ',';
+        }
       }
 
-      s.pop_back();
-      s.push_back(']');
+      sm << ']';
 
-      return s;
+      return sm;
     }
 
-    template <typename H, typename... T>
-    std::string to_json(
-        std::pair<std::string_view, const H &> &&head,
-        std::pair<std::string_view, const T &> &&...tail)
+    template <typename T>
+    stream &operator<<(stream &sm, const attribute<T> &a)
     {
-      std::string s;
-      s.push_back('{');
-      s.append(head.first);
-      s.push_back(':');
-      s.append(to_json(head.second));
-      ((s.push_back(','), s.append(tail.first), s.push_back(':'), s.append(to_json(tail.second))), ...);
-      s.push_back('}');
-      return s;
+      sm.append(a._label);
+      return sm << ':' << a._value;
+    }
+
+    template <typename... T>
+    stream &operator<<(stream &sm, const object<T...> &o)
+    {
+      return std::apply(
+          [&sm](const attribute<T> &...attr) -> stream &
+          {
+            using namespace std::string_view_literals;
+
+            std::size_t i = 0;
+            std::size_t s = sizeof...(T);
+
+            sm << '{';
+            (((sm << attr), sm.append(i < s - 1 ? ","sv : ""sv), ++i), ...);
+            return sm << '}';
+          },
+          o._attrs);
     }
   }
 }
