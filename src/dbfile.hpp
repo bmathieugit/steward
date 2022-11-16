@@ -374,12 +374,13 @@ namespace stew::dbf::storage::fs::json
 
   class istream
   {
-    std::string_view _s;
+    std::string _s;
 
   public:
     ~istream() = default;
     istream() = default;
-    istream(std::string_view s) : _s(s) {}
+    istream(const std::string &s) : _s(s) {}
+    istream(std::string &&s) : _s(s) {}
     istream(const istream &) = default;
     istream(istream &&) = default;
     istream &operator=(const istream &) = default;
@@ -412,20 +413,25 @@ namespace stew::dbf::storage::fs::json
     }
   };
 
-  istream& operator>>(istream& sm, std::string& s)
+  istream &operator>>(istream &sm, char &c)
+  {
+    c = sm.getc();
+    return sm;
+  }
+
+  istream &operator>>(istream &sm, std::string &s)
   {
     if (sm.starts_with('"'))
     {
       sm.getc();
       char c;
-      
+
       while ((c = sm.getc()) != '"')
       {
         s.push_back(c);
       }
     }
   }
-
 
 }
 

@@ -21,8 +21,6 @@ struct person
 
 namespace stew::dbf::storage::fs::json
 {
-  
-
   ostream &operator<<(ostream &sm, const address &addr)
   {
     return sm << obj(attr("street", addr._street),
@@ -47,9 +45,11 @@ int main()
   p._name = "martin";
   p._firstnames = {"jhon", "luc", "william"};
   p._addresses = {{"mapple street", 12, true}, {"mapple street", 221, false}};
-  stew::dbf::storage::fs::json::ostream json;
+  stew::dbf::storage::fs::json::ostream ojson;
 
-  std::cout << (json << p).str();
+  std::cout << (ojson << p).str();
+
+  stew::dbf::storage::fs::json::istream ijson;
 
   return 0;
 }
