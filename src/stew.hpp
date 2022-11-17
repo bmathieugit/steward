@@ -1,6 +1,9 @@
 #ifndef __stew_hpp__
 #define __stew_hpp__
 
+#include <cstring>
+#include <cstdio>
+
 namespace stew
 {
   using size_t = unsigned long long;
@@ -58,6 +61,17 @@ namespace stew
     {
       _begin = b;
       _end = b + s;
+    }
+
+    basic_string_view(const C *c)
+        : basic_string_view(c, strlen(c))
+    {
+    }
+
+    template <size_t n>
+    basic_string_view(const C (&c)[n])
+        : basic_string_view(c, n)
+    {
     }
 
     basic_string_view() = default;
@@ -151,7 +165,7 @@ namespace stew
         return false;
       }
 
-      for (size_t i(0); i < _size - o._size; ++i)
+      for (size_t i(0); i < size() - o._size; ++i)
       {
         if (_begin[i] == o._begin[0])
         {
@@ -185,7 +199,7 @@ namespace stew
       return false;
     }
 
-    bool equals(const basic_string &o) const
+    bool equals(const basic_string_view &o) const
     {
       if (size() != o.size())
       {
@@ -209,19 +223,19 @@ namespace stew
       return empty();
     }
 
-    bool operator==(const basic_string &o) const
+    bool operator==(const basic_string_view &o) const
     {
       return equals(o);
     }
 
-    bool operator!=(const basic_string &o) const
+    bool operator!=(const basic_string_view &o) const
     {
       return !operator==(o);
     }
 
     C operator[](size_t i) const
     {
-      return _data[i];
+      return _begin[i];
     }
 
   public:
@@ -253,14 +267,6 @@ namespace stew
     size_t _size = 0;
     C *_data = nullptr;
 
-  private:
-    void init(size_t max)
-    {
-      _max = max == 0 ? 10 : max;
-      _size = 0;
-      _data = new C[_max];
-    }
-
   public:
     ~basic_string()
     {
@@ -275,8 +281,10 @@ namespace stew
     basic_string() = default;
 
     basic_string(size_t max)
+        : _max(max == 0 ? 10 : max),
+          _size(0),
+          _data(new C[_max])
     {
-      init(max);
     }
 
     template <typename I>
@@ -287,6 +295,8 @@ namespace stew
       {
         _data[i] = b[i];
       }
+
+      _size = _max;
     }
 
     basic_string(basic_string_view<C> o)
@@ -294,8 +304,17 @@ namespace stew
     {
     }
 
+    basic_string(const C *c)
+        : basic_string(basic_string_view<C>(c))
+    {
+    }
+
+    template <size_t n>
+    basic_string(const C (&c)[n])
+        : basic_string(basic_string_view(c)) {}
+
     basic_string(const basic_string &o)
-        : basic_string(basic_string_view<C>(o.begin(), o.end()))
+        : basic_string(o.begin(), o.end())
     {
     }
 
@@ -318,7 +337,7 @@ namespace stew
         {
           delete _data;
           _max = o._max;
-          _data = new[_max];
+          _data = new C[_max];
         }
 
         for (size_t i(0); i < _size; ++i)
