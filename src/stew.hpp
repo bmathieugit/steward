@@ -4,6 +4,26 @@
 namespace stew
 {
   using size_t = unsigned long long;
+ 
+  struct position 
+  {
+    size_t _pos = 0;
+
+    operator size_t() 
+    {
+      return _pos;
+    }
+  };
+
+  struct quantity 
+  {
+    size_t _qty = 0;
+
+    operator size_t ()
+    {
+      return _qty; 
+    }
+  };
 
   template <typename C>
   class basic_string_view
