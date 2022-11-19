@@ -25,6 +25,19 @@ namespace stew
     }
   };
 
+  // le but de cette classe est d'offrir 
+  // une vue sur une string avec un parcours
+  // cadré et d'une certaine longueur. 
+  template <typename C>
+  class basic_string_frame
+  {
+  private:
+    C* _begin = nullptr;
+    C* _end = nullptr;
+    C* _fbegin = nullptr;
+    C* _fend = nullptr;
+  };
+
   template <typename C>
   class basic_string_view
   {
