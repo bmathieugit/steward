@@ -7,39 +7,159 @@
 namespace stew
 {
   using size_t = unsigned long long;
- 
-  struct position 
+
+  template <typename C>
+  concept range = requires(C &c)
+  {
+    c.begin();
+    c.end();
+  };
+
+  template <typename I>
+  class frame
+  {
+  private:
+    I _begin;
+    I _end;
+
+  public:
+    ~frame() = default;
+    frame() = default;
+    frame(I b, I e) : _begin(b), _end(e) {}
+    frame(const frame &) = default;
+    frame(frame &&) = default;
+    frame &operator=(const frame &) = default;
+    frame &operator=(frame &&) = default;
+
+  public:
+    auto begin()
+    {
+      return _begin;
+    }
+
+    auto end()
+    {
+      return _end;
+    }
+
+    auto begin() const
+    {
+      return _begin;
+    }
+
+    auto end() const
+    {
+      return _end;
+    }
+  };
+
+  template <range R1, range R2>
+  constexpr bool equals(const R1 &r1, const R2 &r2)
+  {
+    auto b1 = r1.begin();
+    auto b2 = r2.begin();
+
+    auto e1 = r1.end();
+    auto e2 = r2.end();
+
+    while (b1 != e1 &&
+           b2 != e2 &&
+           *b1 == *b2)
+    {
+      ++b1;
+      ++b2;
+    }
+
+    return b1 == e1 && b2 == e2;
+  }
+
+  template <range R1, range R2>
+  constexpr bool starts_with(const R1 &r1, const R2 &r2)
+  {
+    auto b1 = r1.begin();
+    auto b2 = r2.begin();
+
+    auto e1 = r1.end();
+    auto e2 = r2.end();
+
+    while (b1 != e1 && b2 != e2 && *b1 == *b2)
+    {
+      ++b1;
+      ++b2;
+    }
+
+    return b2 == e2;
+  }
+
+  template <range R, typename T>
+  constexpr auto find(R &r, const T &t)
+  {
+    auto b = r.begin();
+    auto e = r.end();
+
+    while (b != e && *b != t)
+    {
+      ++b;
+    }
+
+    return b;
+  }
+
+  template <range R1, range R2>
+  constexpr auto find(R1 &r1, const R2 &r2)
+  {
+    auto b1 = r1.begin();
+    auto e1 = r1.end();
+
+    while (b1 != e1 && !starts_with(frame<decltype(b1)>(b1, e1), r2))
+    {
+      ++b1;
+    }
+
+    return b1;
+  }
+
+  template <range R, typename T>
+  constexpr bool contains(R &r, const T &t)
+  {
+    return find(r, t) != r.end();
+  }
+
+  template <range R1, range R2>
+  constexpr bool contains(const R1 &r1, const R2 &r2)
+  {
+    return find(r1, r2) != r1.end();
+  }
+
+  struct position
   {
     size_t _pos = 0;
 
-    operator size_t() 
+    operator size_t()
     {
       return _pos;
     }
   };
 
-  struct quantity 
+  constexpr position pos(size_t p) noexcept
+  {
+    return position{p};
+  }
+
+  struct quantity
   {
     size_t _qty = 0;
 
-    operator size_t ()
+    operator size_t()
     {
-      return _qty; 
+      return _qty;
     }
   };
 
-  // le but de cette classe est d'offrir 
-  // une vue sur une string avec un parcours
-  // cadré et d'une certaine longueur. 
-  template <typename C>
-  class basic_string_frame
+  constexpr quantity qty(size_t q) noexcept
   {
-  private:
-    C* _begin = nullptr;
-    C* _end = nullptr;
-    C* _fbegin = nullptr;
-    C* _fend = nullptr;
-  };
+    return quantity{q};
+  }
 
   template <typename C>
   class basic_string_view
@@ -68,12 +188,6 @@ namespace stew
     {
     }
 
-    template <size_t n>
-    basic_string_view(const C (&c)[n])
-        : basic_string_view(c, n)
-    {
-    }
-
     basic_string_view() = default;
     basic_string_view(const basic_string_view &) = default;
     basic_string_view(basic_string_view &&) = default;
@@ -81,32 +195,12 @@ namespace stew
     basic_string_view &operator=(basic_string_view &&) = default;
 
   public:
-    auto begin()
-    {
-      return _begin;
-    }
-
-    auto end()
-    {
-      return _end;
-    }
-
     auto begin() const
     {
       return _begin;
     }
 
     auto end() const
-    {
-      return _end;
-    }
-
-    auto cbegin() const
-    {
-      return _begin;
-    }
-
-    auto cend() const
     {
       return _end;
     }
@@ -122,105 +216,68 @@ namespace stew
       return size() == 0;
     }
 
-    auto starts_with(basic_string_view o) const
+    basic_string_view substr(position pos, quantity n) const
     {
-      if (size() < o.size() || empty() || o.empty())
-      {
-        return false;
-      }
+      const C *b = nullptr;
+      const C *e = nullptr;
+      auto s = size();
 
-      for (size_t i(0); i < o.size(); ++i)
+      if (pos <= s)
       {
-        if (_begin[i] != o._begin[i])
+        if (pos + n <= s)
         {
-          return false;
+          b = _begin + pos;
+          e = _end;
+        }
+        else
+        {
+          b = _begin + pos;
+          e = _begin + pos + n;
         }
       }
 
-      return true;
-    }
-
-    auto ends_with(basic_string_view o) const
-    {
-      if (size() < o.size() || empty() || o.empty())
-      {
-        return false;
-      }
-
-      for (size_t i(0); i < o.size(); ++i)
-      {
-        if (_begin[size() - o.size() + i] != o._begin[i])
-        {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    auto contains(basic_string_view o) const
-    {
-      if (size() < o.size() || o.empty() || empty())
-      {
-        return false;
-      }
-
-      for (size_t i(0); i < size() - o._size; ++i)
-      {
-        if (_begin[i] == o._begin[0])
-        {
-          for (size_t j(0); j < o.size(); ++j)
-          {
-            if (_begin[i + j] != o._begin[j])
-            {
-              break;
-            }
-            else if (j == o.size())
-            {
-              return true;
-            }
-          }
-        }
-      }
-
-      return false;
-    }
-
-    auto contains(C c) const
-    {
-      for (auto &i : *this)
-      {
-        if (i == c)
-        {
-          return true;
-        }
-      }
-
-      return false;
+      return basic_string_view(b, e);
     }
 
     bool equals(const basic_string_view &o) const
     {
-      if (size() != o.size())
-      {
-        return false;
-      }
+      return stew::equals(*this, o);
+    }
 
-      for (size_t i(0); i < size(); ++i)
-      {
-        if (_begin[i] != o._begin[i])
-        {
-          return false;
-        }
-      }
+    auto find(basic_string_view o) const
+    {
+      return stew::find(*this, o);
+    }
 
-      return true;
+    auto find(const C *c) const
+    {
+      return stew::find(*this, basic_string_view(c));
+    }
+
+    auto find(C c) const
+    {
+      return stew::find(*this, c);
+    }
+
+    auto starts_with(const basic_string_view &o) const
+    {
+      return stew::starts_with(*this, o);
+    }
+
+    auto contains(const basic_string_view &o) const
+    {
+      return stew::contains(*this, o);
+    }
+
+    auto contains(C c) const
+    {
+      return stew::contains(*this, c);
     }
 
   public:
     operator bool() const
     {
-      return empty();
+      return !empty();
     }
 
     bool operator==(const basic_string_view &o) const
@@ -236,23 +293,6 @@ namespace stew
     C operator[](size_t i) const
     {
       return _begin[i];
-    }
-
-  public:
-    basic_string_view substr(size_t pos, size_t n) const
-    {
-      if (pos >= size())
-      {
-        return basic_string_view();
-      }
-      else if (pos + n >= size())
-      {
-        return basic_string_view(_begin + pos, _end);
-      }
-      else
-      {
-        return basic_string_view(_begin + pos, _begin + pos + n);
-      }
     }
   };
 
@@ -308,10 +348,6 @@ namespace stew
         : basic_string(basic_string_view<C>(c))
     {
     }
-
-    template <size_t n>
-    basic_string(const C (&c)[n])
-        : basic_string(basic_string_view(c)) {}
 
     basic_string(const basic_string &o)
         : basic_string(o.begin(), o.end())
@@ -388,16 +424,6 @@ namespace stew
       return _data + _size;
     }
 
-    auto cbegin() const
-    {
-      return _data;
-    }
-
-    auto cend() const
-    {
-      return _data + _size;
-    }
-
   public:
     auto size() const
     {
@@ -416,31 +442,22 @@ namespace stew
 
     auto starts_with(const basic_string &o) const
     {
-      return basic_string_view<C>(begin(), end())
-          .starts_with(basic_string_view<C>(o.begin(), o.end()));
-    }
-
-    auto ends_with(const basic_string &o) const
-    {
-      return basic_string_view<C>(begin(), end())
-          .ends_with(basic_string_view<C>(o.begin(), o.end()));
+      return stew::starts_with(*this, o);
     }
 
     auto contains(const basic_string &o) const
     {
-      return basic_string_view<C>(begin(), end())
-          .containss(basic_string_view<C>(o.begin(), o.end()));
+      return stew::contains(*this, o);
     }
 
     auto contains(C c) const
     {
-      return basic_string_view<C>(begin(), end()).contains(c);
+      return stew::contains(*this, c);
     }
 
     bool equals(const basic_string &o) const
     {
-      return basic_string_view<C>(begin(), end())
-          .equals(basic_string_view<C>(o.begin(), o.end()));
+      return stew::equals(*this, o);
     }
 
   public:
@@ -464,28 +481,17 @@ namespace stew
       ++_size;
     }
 
+    void push_back(basic_string_view<C> o)
+    {
+      for (auto c : o)
+      {
+        push_back(c);
+      }
+    }
+
     void push_back(const basic_string &o)
     {
-      if (_size == _max)
-      {
-        C *tmp = _data;
-        _max = _max * 2 + o._size;
-        _data = new C[_max];
-
-        for (size_t i(0); i < _size; ++i)
-        {
-          _data[i] = tmp[i];
-        }
-
-        delete tmp;
-      }
-
-      for (size_t i(0); i < o._size; ++i)
-      {
-        _data[_size + i] = o._data[i];
-      }
-
-      _size = _size + o._size;
+      push_back(static_cast<basic_string_view<C>>(o));
     }
 
     basic_string substr(size_t pos, size_t n) const
@@ -501,43 +507,17 @@ namespace stew
 
     operator bool() const
     {
-      return empty();
+      return !empty();
     }
 
-    bool operator==(const basic_string &o) const
+    bool operator==(basic_string_view<C> o) const
     {
       return equals(o);
     }
 
-    bool operator!=(const basic_string &o) const
+    bool operator!=(basic_string_view<C> o) const
     {
       return !operator==(o);
-    }
-
-    basic_string operator+(const basic_string &o) const
-    {
-      basic_string n(*this);
-      n.push_back(o);
-      return n;
-    }
-
-    basic_string operator+(C c) const
-    {
-      basic_string n(*this);
-      n.push_back(c);
-      return n;
-    }
-
-    basic_string &operator+=(const basic_string &o)
-    {
-      push_back(o);
-      return *this;
-    }
-
-    basic_string &operator+=(C c)
-    {
-      push_back(c);
-      return *this;
     }
 
     C &operator[](size_t i)
@@ -553,6 +533,163 @@ namespace stew
 
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
+
+  template <typename T>
+  class formatter;
+
+  template<typename O>
+  class format_output;
+
+  namespace fmt
+  {
+    template <typename C, typename H, typename... T>
+    void format_impl(basic_string_view<C> fmt, basic_string<C> &s, const H &h, const T &...t)
+    {
+      auto i = fmt.find("{}");
+
+      formatter<basic_string_view<C>>::to(s, basic_string_view<C>(fmt.begin(), i));
+
+      if (i != fmt.end())
+      {
+        formatter<H>::to(s, h);
+
+        basic_string_view<C> tail(i + 2, fmt.end());
+
+        if constexpr (sizeof...(t) > 0)
+        {
+          format_impl(tail, s, t...);
+        }
+        else
+        {
+          formatter<basic_string_view<C>>::to(s, tail);
+        }
+      }
+    }
+
+    template <typename C, typename... A>
+    basic_string<C> format(basic_string_view<C> fmt, const A &...a)
+    {
+      basic_string<C> s(fmt.size());
+
+      if constexpr (sizeof...(a) > 0)
+      {
+        format_impl(fmt, s, a...);
+      }
+      else
+      {
+        formatter<basic_string_view<C>>::to(s, fmt);
+      }
+
+      return s;
+    }
+  }
+
+  template <typename C>
+  class formatter<basic_string<C>>
+  {
+  public:
+    static void to(basic_string<C> &os, const basic_string<C> &o)
+    {
+      os.push_back(o);
+    }
+  };
+
+
+  template <typename C>
+  class formatter<basic_string_view<C>>
+  {
+  public:
+    static void to(basic_string<C> &os, const basic_string_view<C> &o)
+    {
+      os.push_back(o);
+    }
+  };
+
+  template <>
+  class formatter<char>
+  {
+  public:
+    static void to(basic_string<char> &os, const char &o)
+    {
+      os.push_back(o);
+    }
+  };
+
+  template <typename... A>
+  string format(string_view fmt, const A &...a)
+  {
+    return fmt::format(fmt, a...);
+  }
+
+  template <typename... A>
+  wstring format(wstring_view fmt, const A &...a)
+  {
+    return fmt::format(fmt, a...);
+  }
+
+  template <typename C>
+  class basic_fostream
+  {
+  private:
+    std::FILE *_out = nullptr;
+
+  public:
+    ~basic_fostream()
+    {
+      if (_out != nullptr)
+      {
+        std::fclose(_out);
+        _out = nullptr;
+      }
+    }
+
+    basic_fostream() = default;
+
+    basic_fostream(const C *path)
+        : _out(std::fopen(path, "w"))
+    {
+    }
+
+    basic_fostream(std::FILE *o)
+        : _out(o)
+    {
+    }
+
+    basic_fostream(const basic_fostream &) = delete;
+    basic_fostream(basic_fostream &&) = default;
+    basic_fostream &operator=(const basic_fostream &) = delete;
+    basic_fostream &operator=(basic_fostream &) = default;
+
+  public:
+    void write(basic_string_view<C> s)
+    {
+      std::fwrite(s.begin(), sizeof(C), s.size(), _out);
+    }
+
+    void flush()
+    {
+      std::fflush(_out);
+    }
+
+    void close()
+    {
+      std::fclose(_out);
+      _out = nullptr;
+    }
+
+  public:
+    template <typename... T>
+    void printf(basic_string_view<C> fmt, const T &...t)
+    {
+      
+    }
+  };
+
+  using fostream = basic_fostream<char>;
+  using wfostream = basic_fostream<wchar_t>;
+
+  fostream cout(stdout);
+  fostream cerr(stderr);
 }
 
 #endif
