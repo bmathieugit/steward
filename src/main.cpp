@@ -43,7 +43,7 @@ int main()
 
   person bob{"Dilan", "Bob"};
 
-  cout.write(format(" hello {} tu es le {} eme {}!\n", bob, 2u, true));
+  cout.write(format(" hello {} tu es le {} eme {}!\n{}", bob, 2u, true, "bool"));
 
   return 0;
 }

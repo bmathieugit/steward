@@ -638,13 +638,24 @@ namespace stew
   {
     return fmt::format(fmt, a...);
   }
+  
+  template <character C>
+  class formatter<C>
+  {
+  public:
+    template <format_output<C> O>
+    static void to(O &os, C o)
+    {
+      os.push_back(o);
+    }
+  };
 
   template <character C>
   class formatter<basic_string<C>>
   {
   public:
     template <format_output<C> O>
-    static void to(O &os, const basic_string<C> &o)
+    static void to(O &os, basic_string_view<C> o)
     {
       os.push_back(o);
     }
@@ -661,16 +672,18 @@ namespace stew
     }
   };
 
-  template <character C>
-  class formatter<C>
+  template <size_t n, character C>
+  class formatter<C[n]>
   {
   public:
     template <format_output<C> O>
-    static void to(O &os, C o)
+    static void to(O &os, basic_string_view<C> o)
     {
       os.push_back(o);
     }
   };
+
+
 
   template <signed_integral I>
   class formatter<I>
