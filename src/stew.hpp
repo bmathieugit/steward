@@ -8,6 +8,45 @@ namespace stew
 {
   using size_t = unsigned long long;
 
+  template <typename T, typename U>
+  struct is_same
+  {
+    static constexpr bool value = false;
+  };
+
+  template <typename T>
+  struct is_same<T, T>
+  {
+    static constexpr bool value = true;
+  };
+
+  template <typename T, typename U>
+  constexpr bool is_same_v = is_same<T, U>::value;
+
+  template <typename T, typename U>
+  concept same_as = is_same_v<T, U>;
+
+  template <typename T, typename... U>
+  concept same_one_of = (same_as<T, U> || ...);
+
+  template <typename T>
+  concept character = same_one_of<T, char, wchar_t>;
+
+  template <typename T>
+  concept signed_integral =
+      same_one_of<T, short, int, long, long long>;
+
+  template <typename T>
+  concept unsigned_integral =
+      same_one_of<T, unsigned short,
+                  unsigned int,
+                  unsigned long,
+                  unsigned long long>;
+
+  template <typename T>
+  concept integral =
+      signed_integral<T> || unsigned_integral<T>;
+
   template <typename C>
   concept range = requires(C &c)
   {
@@ -161,7 +200,7 @@ namespace stew
     return quantity{q};
   }
 
-  template <typename C>
+  template <character C>
   class basic_string_view
   {
   private:
@@ -299,7 +338,7 @@ namespace stew
   using string_view = basic_string_view<char>;
   using wstring_view = basic_string_view<wchar_t>;
 
-  template <typename C>
+  template <character C>
   class basic_string
   {
   private:
@@ -537,13 +576,17 @@ namespace stew
   template <typename T>
   class formatter;
 
-  template<typename O>
-  class format_output;
+  template <typename O, typename C>
+  concept format_output = character<C> && requires(O &o, C c, const basic_string<C> &s)
+  {
+    o.push_back(c);
+    o.push_back(s);
+  };
 
   namespace fmt
   {
-    template <typename C, typename H, typename... T>
-    void format_impl(basic_string_view<C> fmt, basic_string<C> &s, const H &h, const T &...t)
+    template <character C, format_output<C> O, typename H, typename... T>
+    void format_impl(basic_string_view<C> fmt, O &s, const H &h, const T &...t)
     {
       auto i = fmt.find("{}");
 
@@ -566,7 +609,7 @@ namespace stew
       }
     }
 
-    template <typename C, typename... A>
+    template <character C, typename... A>
     basic_string<C> format(basic_string_view<C> fmt, const A &...a)
     {
       basic_string<C> s(fmt.size());
@@ -584,37 +627,6 @@ namespace stew
     }
   }
 
-  template <typename C>
-  class formatter<basic_string<C>>
-  {
-  public:
-    static void to(basic_string<C> &os, const basic_string<C> &o)
-    {
-      os.push_back(o);
-    }
-  };
-
-
-  template <typename C>
-  class formatter<basic_string_view<C>>
-  {
-  public:
-    static void to(basic_string<C> &os, const basic_string_view<C> &o)
-    {
-      os.push_back(o);
-    }
-  };
-
-  template <>
-  class formatter<char>
-  {
-  public:
-    static void to(basic_string<char> &os, const char &o)
-    {
-      os.push_back(o);
-    }
-  };
-
   template <typename... A>
   string format(string_view fmt, const A &...a)
   {
@@ -627,7 +639,141 @@ namespace stew
     return fmt::format(fmt, a...);
   }
 
-  template <typename C>
+  template <character C>
+  class formatter<basic_string<C>>
+  {
+  public:
+    template <format_output<C> O>
+    static void to(O &os, const basic_string<C> &o)
+    {
+      os.push_back(o);
+    }
+  };
+
+  template <character C>
+  class formatter<basic_string_view<C>>
+  {
+  public:
+    template <format_output<C> O>
+    static void to(O &os, basic_string_view<C> o)
+    {
+      os.push_back(o);
+    }
+  };
+
+  template <character C>
+  class formatter<C>
+  {
+  public:
+    template <format_output<C> O>
+    static void to(O &os, C o)
+    {
+      os.push_back(o);
+    }
+  };
+
+  template <signed_integral I>
+  class formatter<I>
+  {
+  public:
+    template <format_output<char> O>
+    static void to(O &o, I i)
+    {
+      class StackArray
+      {
+        char data[40];
+        int i = -1;
+
+      public:
+        void push(char c) noexcept { data[++i] = c; }
+        char pop() noexcept { return data[i--]; }
+        bool empty() noexcept { return i == -1; }
+      };
+
+      bool neg = i < 0;
+
+      I tmp = neg ? -i : i;
+
+      StackArray tbuff;
+
+      if (tmp == 0)
+      {
+        formatter<char>::to(o, '0');
+      }
+      else
+      {
+        while (tmp != 0)
+        {
+          tbuff.push("0123456789"[tmp % 10]);
+          tmp /= 10;
+        }
+      }
+
+      if (neg)
+      {
+        formatter<char>::to(o, '-');
+      }
+
+      while (!tbuff.empty())
+      {
+        formatter<char>::to(o, tbuff.pop());
+      }
+    }
+  };
+
+  template <unsigned_integral I>
+  class formatter<I>
+  {
+  public:
+    template <format_output<char> O>
+    static void to(O &o, I i)
+    {
+      class StackArray
+      {
+        char data[40];
+        int i = -1;
+
+      public:
+        void push(char c) noexcept { data[++i] = c; }
+        char pop() noexcept { return data[i--]; }
+        bool empty() noexcept { return i == -1; }
+      };
+
+      StackArray tbuff;
+      auto tmp = i;
+
+      if (tmp == 0)
+      {
+        formatter<char>::to(o, '0');
+      }
+      else
+      {
+        while (tmp != 0)
+        {
+          tbuff.push("0123456789"[tmp % 10]);
+          tmp /= 10;
+        }
+      }
+
+      while (!tbuff.empty())
+      {
+        formatter<char>::to(o, tbuff.pop());
+      }
+    }
+  };
+
+  template <>
+  class formatter<bool>
+  {
+  public:
+    template <format_output<char> O>
+    static void to(O &o, bool b)
+    {
+      formatter<basic_string_view<char>>::to(o, b ? "true" : "false");
+    }
+  };
+
+  template <character C>
   class basic_fostream
   {
   private:
@@ -681,7 +827,6 @@ namespace stew
     template <typename... T>
     void printf(basic_string_view<C> fmt, const T &...t)
     {
-      
     }
   };
 
