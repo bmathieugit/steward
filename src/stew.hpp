@@ -6,7 +6,7 @@
 
 namespace stew
 {
-  using size_t = unsigned long long;
+  using size_t = unsigned long;
 
   template <typename T, typename U>
   struct is_same
@@ -255,29 +255,6 @@ namespace stew
       return size() == 0;
     }
 
-    basic_string_view substr(position pos, quantity n) const
-    {
-      const C *b = nullptr;
-      const C *e = nullptr;
-      auto s = size();
-
-      if (pos <= s)
-      {
-        if (pos + n <= s)
-        {
-          b = _begin + pos;
-          e = _end;
-        }
-        else
-        {
-          b = _begin + pos;
-          e = _begin + pos + n;
-        }
-      }
-
-      return basic_string_view(b, e);
-    }
-
     bool equals(const basic_string_view &o) const
     {
       return stew::equals(*this, o);
@@ -358,6 +335,19 @@ namespace stew
 
   using string_view = basic_string_view<char>;
   using wstring_view = basic_string_view<wchar_t>;
+
+  
+  string_view operator "" _sv(const char* s, size_t n)
+  {
+    return string_view(s, n);
+  }
+  
+
+  wstring_view operator "" _sv(const wchar_t* s, size_t n)
+  {
+    return wstring_view(s, n);
+  }
+  
 
   template <character C>
   class basic_string
@@ -521,7 +511,7 @@ namespace stew
     }
 
   public:
-    void push_back(C c)
+    void push_one(C c)
     {
       if (_size == _max)
       {
@@ -541,22 +531,12 @@ namespace stew
       ++_size;
     }
 
-    void push_back(basic_string_view<C> o)
+    void push_all(basic_string_view<C> o)
     {
       for (auto c : o)
       {
         push_back(c);
       }
-    }
-
-    void push_back(const basic_string &o)
-    {
-      push_back(static_cast<basic_string_view<C>>(o));
-    }
-
-    basic_string substr(size_t pos, size_t n) const
-    {
-      return basic_string(basic_string_view<C>(begin(), end()).substr(pos, n));
     }
 
   public:
@@ -598,20 +578,20 @@ namespace stew
   class formatter;
 
   template <typename O>
-  concept format_output = requires(O &o, char c, const basic_string<char> &s)
+  concept ostream = requires(O &o, char c, const basic_string<char> &s)
   {
-    o.push_back(c);
-    o.push_back(s);
+    o.push_one(c);
+    o.push_all(s);
   }
   || requires(O &o, wchar_t c, const basic_string<wchar_t> &s)
   {
-    o.push_back(c);
-    o.push_back(s);
+    o.push_one(c);
+    o.push_all(s);
   };
 
   namespace fmt
   {
-    template <format_output O, character C, typename A>
+    template <ostream O, character C, typename A>
     basic_string_view<C> format_one_to(O &o, basic_string_view<C> &fmt, const A &a)
     {
       auto [found, bef, aft] = fmt.around("{}");
@@ -625,7 +605,7 @@ namespace stew
       return aft;
     }
 
-    template <format_output O, character C, typename... A>
+    template <ostream O, character C, typename... A>
     void format_to(O &o, basic_string_view<C> fmt, const A &...a)
     {
       ((fmt = format_one_to(o, fmt, a)), ...);
@@ -633,13 +613,13 @@ namespace stew
     }
   }
 
-  template <format_output O, typename... A>
+  template <ostream O, typename... A>
   void format_to(O &o, string_view fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
   }
 
-  template <format_output O, typename... A>
+  template <ostream O, typename... A>
   void format_to(O &o, wstring_view fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
@@ -649,10 +629,10 @@ namespace stew
   class formatter<C>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &os, C o)
     {
-      os.push_back(o);
+      os.push_one(o);
     }
   };
 
@@ -660,10 +640,10 @@ namespace stew
   class formatter<basic_string<C>>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &os, basic_string_view<C> o)
     {
-      os.push_back(o);
+      os.push_all(o);
     }
   };
 
@@ -671,10 +651,10 @@ namespace stew
   class formatter<basic_string_view<C>>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &os, basic_string_view<C> o)
     {
-      os.push_back(o);
+      os.push_all(o);
     }
   };
 
@@ -682,10 +662,10 @@ namespace stew
   class formatter<C[n]>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &os, basic_string_view<C> o)
     {
-      os.push_back(o);
+      os.push_all(o);
     }
   };
 
@@ -693,7 +673,7 @@ namespace stew
   class formatter<I>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &o, I i)
     {
       class StackArray
@@ -742,7 +722,7 @@ namespace stew
   class formatter<I>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &o, I i)
     {
       class StackArray
@@ -783,7 +763,7 @@ namespace stew
   class formatter<bool>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &o, bool b)
     {
       formatter<basic_string_view<char>>::to(o, b ? "true" : "false");
@@ -824,14 +804,14 @@ namespace stew
     basic_fostream &operator=(basic_fostream &) = default;
 
   public:
-    void push_back(basic_string_view<C> s)
-    {
-      std::fwrite(s.begin(), sizeof(C), s.size(), _out);
-    }
-
-    void push_back(C c)
+    void push_one(C c)
     {
       std::putc(c, _out);
+    }
+
+    void push_all(basic_string_view<C> s)
+    {
+      std::fwrite(s.begin(), sizeof(C), s.size(), _out);
     }
 
     void flush()
@@ -856,7 +836,7 @@ namespace stew
     void printfln(basic_string_view<C> fmt, const T &...t)
     {
       printf(fmt, t...);
-      push_back('\n');
+      push_one('\n');
     }
   };
 

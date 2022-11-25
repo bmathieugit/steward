@@ -20,7 +20,7 @@ namespace stew
   class formatter<person>
   {
   public:
-    template <format_output O>
+    template <ostream O>
     static void to(O &o, const person &p)
     {
       formatter<string>::to(o, p.name);
@@ -29,12 +29,13 @@ namespace stew
   };
 }
 
+#include <sstream>
+
 int main()
 {
   using namespace stew;
-  string_view fmt = "Bonjour {}, tu as {}, {} chiens et {} enfants.";
-  cout.printfln(fmt, "Bob", "10 ans", 2, 3);
-
+  
+  cout.printfln("Bonjour {}, tu as {}, {} chiens et {} enfants.", "Bob", "10 ans", 2, 3);
 
   return 0;
 }
