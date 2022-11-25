@@ -313,6 +313,27 @@ namespace stew
       return stew::contains(*this, c);
     }
 
+    struct around_pair
+    {
+      bool _found;
+      basic_string_view _bef;
+      basic_string_view _aft;
+    };
+
+    around_pair around(basic_string_view sep)
+    {
+      auto pos = find(sep);
+
+      if (pos != _end)
+      {
+        return {true, {_begin, pos}, {pos + 2, _end}};
+      }
+      else
+      {
+        return {false, {_begin, _begin}, {_begin, _end}};
+      }
+    }
+
   public:
     operator bool() const
     {
@@ -576,8 +597,13 @@ namespace stew
   template <typename T>
   class formatter;
 
-  template <typename O, typename C>
-  concept format_output = character<C> && requires(O &o, C c, const basic_string<C> &s)
+  template <typename O>
+  concept format_output = requires(O &o, char c, const basic_string<char> &s)
+  {
+    o.push_back(c);
+    o.push_back(s);
+  }
+  || requires(O &o, wchar_t c, const basic_string<wchar_t> &s)
   {
     o.push_back(c);
     o.push_back(s);
@@ -585,65 +611,45 @@ namespace stew
 
   namespace fmt
   {
-    template <character C, format_output<C> O, typename H, typename... T>
-    void format_impl(basic_string_view<C> fmt, O &s, const H &h, const T &...t)
+    template <format_output O, character C, typename A>
+    basic_string_view<C> format_one_to(O &o, basic_string_view<C> &fmt, const A &a)
     {
-      auto i = fmt.find("{}");
+      auto [found, bef, aft] = fmt.around("{}");
 
-      formatter<basic_string_view<C>>::to(s, basic_string_view<C>(fmt.begin(), i));
-
-      if (i != fmt.end())
+      if (found)
       {
-        formatter<H>::to(s, h);
-
-        basic_string_view<C> tail(i + 2, fmt.end());
-
-        if constexpr (sizeof...(t) > 0)
-        {
-          format_impl(tail, s, t...);
-        }
-        else
-        {
-          formatter<basic_string_view<C>>::to(s, tail);
-        }
+        formatter<basic_string_view<C>>::to(o, bef);
+        formatter<A>::to(o, a);
       }
+
+      return aft;
     }
 
-    template <character C, typename... A>
-    basic_string<C> format(basic_string_view<C> fmt, const A &...a)
+    template <format_output O, character C, typename... A>
+    void format_to(O &o, basic_string_view<C> fmt, const A &...a)
     {
-      basic_string<C> s(fmt.size());
-
-      if constexpr (sizeof...(a) > 0)
-      {
-        format_impl(fmt, s, a...);
-      }
-      else
-      {
-        formatter<basic_string_view<C>>::to(s, fmt);
-      }
-
-      return s;
+      ((fmt = format_one_to(o, fmt, a)), ...);
+      formatter<basic_string_view<C>>::to(o, fmt);
     }
   }
 
-  template <typename... A>
-  string format(string_view fmt, const A &...a)
+  template <format_output O, typename... A>
+  void format_to(O &o, string_view fmt, const A &...a)
   {
-    return fmt::format(fmt, a...);
+    fmt::format_to(o, fmt, a...);
   }
 
-  template <typename... A>
-  wstring format(wstring_view fmt, const A &...a)
+  template <format_output O, typename... A>
+  void format_to(O &o, wstring_view fmt, const A &...a)
   {
-    return fmt::format(fmt, a...);
+    fmt::format_to(o, fmt, a...);
   }
-  
+
   template <character C>
   class formatter<C>
   {
   public:
-    template <format_output<C> O>
+    template <format_output O>
     static void to(O &os, C o)
     {
       os.push_back(o);
@@ -654,7 +660,7 @@ namespace stew
   class formatter<basic_string<C>>
   {
   public:
-    template <format_output<C> O>
+    template <format_output O>
     static void to(O &os, basic_string_view<C> o)
     {
       os.push_back(o);
@@ -665,7 +671,7 @@ namespace stew
   class formatter<basic_string_view<C>>
   {
   public:
-    template <format_output<C> O>
+    template <format_output O>
     static void to(O &os, basic_string_view<C> o)
     {
       os.push_back(o);
@@ -676,20 +682,18 @@ namespace stew
   class formatter<C[n]>
   {
   public:
-    template <format_output<C> O>
+    template <format_output O>
     static void to(O &os, basic_string_view<C> o)
     {
       os.push_back(o);
     }
   };
 
-
-
   template <signed_integral I>
   class formatter<I>
   {
   public:
-    template <format_output<char> O>
+    template <format_output O>
     static void to(O &o, I i)
     {
       class StackArray
@@ -738,7 +742,7 @@ namespace stew
   class formatter<I>
   {
   public:
-    template <format_output<char> O>
+    template <format_output O>
     static void to(O &o, I i)
     {
       class StackArray
@@ -779,7 +783,7 @@ namespace stew
   class formatter<bool>
   {
   public:
-    template <format_output<char> O>
+    template <format_output O>
     static void to(O &o, bool b)
     {
       formatter<basic_string_view<char>>::to(o, b ? "true" : "false");
@@ -820,9 +824,14 @@ namespace stew
     basic_fostream &operator=(basic_fostream &) = default;
 
   public:
-    void write(basic_string_view<C> s)
+    void push_back(basic_string_view<C> s)
     {
       std::fwrite(s.begin(), sizeof(C), s.size(), _out);
+    }
+
+    void push_back(C c)
+    {
+      std::putc(c, _out);
     }
 
     void flush()
@@ -840,6 +849,14 @@ namespace stew
     template <typename... T>
     void printf(basic_string_view<C> fmt, const T &...t)
     {
+      format_to(*this, fmt, t...);
+    }
+
+    template <typename... T>
+    void printfln(basic_string_view<C> fmt, const T &...t)
+    {
+      printf(fmt, t...);
+      push_back('\n');
     }
   };
 

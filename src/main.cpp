@@ -20,30 +20,21 @@ namespace stew
   class formatter<person>
   {
   public:
-    static void to(string &os, const person &p)
+    template <format_output O>
+    static void to(O &o, const person &p)
     {
-      formatter<string>::to(os, p.name);
-      formatter<string>::to(os, p.fname);
+      formatter<string>::to(o, p.name);
+      formatter<string>::to(o, p.fname);
     }
   };
-}
-
-namespace stew
-{
-  
-
 }
 
 int main()
 {
   using namespace stew;
+  string_view fmt = "Bonjour {}, tu as {}, {} chiens et {} enfants.";
+  cout.printfln(fmt, "Bob", "10 ans", 2, 3);
 
-  string s("prout");
-  string_view sv("prout");
-
-  person bob{"Dilan", "Bob"};
-
-  cout.write(format(" hello {} tu es le {} eme {}!\n{}", bob, 2u, true, "bool"));
 
   return 0;
 }
