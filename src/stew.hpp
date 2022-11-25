@@ -336,18 +336,15 @@ namespace stew
   using string_view = basic_string_view<char>;
   using wstring_view = basic_string_view<wchar_t>;
 
-  
-  string_view operator "" _sv(const char* s, size_t n)
+  string_view operator"" _sv(const char *s, size_t n)
   {
     return string_view(s, n);
   }
-  
 
-  wstring_view operator "" _sv(const wchar_t* s, size_t n)
+  wstring_view operator"" _sv(const wchar_t *s, size_t n)
   {
     return wstring_view(s, n);
   }
-  
 
   template <character C>
   class basic_string
@@ -845,6 +842,32 @@ namespace stew
 
   fostream cout(stdout);
   fostream cerr(stderr);
+
+  template <typename T0, typename... Tn>
+  consteval size_t sizeofmax()
+  {
+    if constexpr (sizeof...(Tn) == 0)
+    {
+      return sizeof(T0);
+    }
+    else
+    {
+      if (sizeof(T0) > sizeofmax<Tn...>())
+      {
+        return sizeof(T0);
+      }
+      else
+      {
+        return sizeofmax<Tn...>();
+      }
+    }
+  }
+
+  template <typename... T>
+  class variant
+  {
+    
+  };
 }
 
 #endif
