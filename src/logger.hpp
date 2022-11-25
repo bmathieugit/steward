@@ -2,16 +2,10 @@
 #define __stew_logger_hpp__
 
 #include <array>
-#include <iostream>
-#include <string_view>
+#include <stew.hpp>
 
 namespace stew::logger
 {
-  void flog(std::ostream& o, const auto&... args)
-  {
-    ((o << ... << args) << '\n');
-  }
-
   enum class level : int
   {
     trace = 0,
@@ -22,98 +16,123 @@ namespace stew::logger
     fatal = 5,
     stew = 6
   };
+}
 
-  template <std::size_t n>
-  using level_table =
-      std::array<std::string_view, n>;
-
-  void flog(std::ostream &o, level l, const auto &...args)
+namespace stew
+{
+  template <>
+  class formatter<logger::level>
   {
-    constexpr level_table<8> ltable = {
-        "trace", "debug", "info",
-        "warn", "error", "fatal",
-        "steward"};
-    o << ltable[static_cast<int>(l)] << " : ";
-    (o << ... << args);
-    o << '\n';
+  public:
+    template <ostream O>
+    static void to(O &o, logger::level l)
+    {
+      string_view ltable[7] = {
+          "trace", "debug", "info",
+          "warn", "error", "fatal",
+          "steward"};
+
+      formatter<string_view>::to(o, ltable[(int)l]);
+    }
+  };
+}
+
+namespace stew::logger
+{
+
+  template <ostream O, typename... T>
+  void flog(O &o, level l, string_view &mess, const T &...t)
+  {
+    format_to(o, "[{}] : ", l);
+
+    if constexpr (sizeof...(T) > 0)
+    {
+      format_to(o, mess, t...);
+    }
+    else
+    {
+      o.push_all(mess);
+    }
+
+    o.push_one('\n');
   }
 
-  void ftrace(std::ostream &o, const auto &...args)
+  template <ostream O>
+  void ftrace(O &o, string_view mess, const auto &...args)
   {
-    flog(o, level::trace, args...);
+    flog(o, level::trace, mess, args...);
   }
 
-  void fdebug(std::ostream &o,
-              const auto &...args)
+  template <ostream O>
+  void fdebug(O &o, string_view mess, const auto &...args)
   {
-    flog(o, level::debug, args...);
+    flog(o, level::debug, mess, args...);
   }
 
-  void finfo(std::ostream &o,
-             const auto &...args)
+  template <ostream O>
+  void finfo(O &o, string_view mess, const auto &...args)
   {
-    flog(o, level::info, args...);
+    flog(o, level::info, mess, args...);
   }
 
-  void fwarn(std::ostream &o,
-             const auto &...args)
+  template <ostream O>
+  void fwarn(O &o, string_view mess, const auto &...args)
   {
-    flog(o, level::warn, args...);
+    flog(o, level::warn, mess, args...);
   }
 
-  void ferror(std::ostream &o,
-              const auto &...args)
+  template <ostream O>
+  void ferror(O &o, string_view mess, const auto &...args)
   {
-    flog(o, level::error, args...);
+    flog(o, level::error, mess, args...);
   }
 
-  void ffatal(std::ostream &o,
-              const auto &...args)
+  template <ostream O>
+  void ffatal(O &o, string_view mess, const auto &...args)
   {
-    flog(o, level::fatal, args...);
+    flog(o, level::fatal, mess, args...);
   }
 
-  void fstew(std::ostream &o,
-             const auto &...args)
+  template <ostream O>
+  void fstew(O &o, string_view mess, const auto &...args)
   {
-    flog(o, level::stew, args...);
+    flog(o, level::stew, mess, args...);
   }
 
-  void trace(const auto &...args)
+  void trace(string_view mess, const auto &...args)
   {
-    ftrace(std::cout, args...);
+    ftrace(cout, mess, args...);
   }
 
-  void debug(const auto &...args)
+  void debug(string_view mess, const auto &...args)
   {
-    fdebug(std::cout, args...);
+    fdebug(cout, mess, args...);
   }
 
-  void info(const auto &...args)
+  void info(string_view mess, const auto &...args)
   {
-    finfo(std::cout, args...);
+    finfo(cout, mess, args...);
   }
 
-  void warn(const auto &...args)
+  void warn(string_view mess, const auto &...args)
   {
-    fwarn(std::cout, args...);
+    fwarn(cout, mess, args...);
   }
 
-  void error(const auto &...args)
+  void error(string_view mess, const auto &...args)
   {
-    ferror(std::cout, args...);
+    ferror(cout, mess, args...);
   }
 
-  void fatal(const auto &...args)
+  void fatal(string_view mess, const auto &...args)
   {
-    ffatal(std::cout, args...);
+    ffatal(cout, mess, args...);
   }
 
-  void stew(const auto &...args)
+  void stew(string_view mess, const auto &...args)
   {
-    fstew(std::cout, args...);
+    fstew(cout, mess, args...);
   }
-
 }
 
 #endif

@@ -1,12 +1,8 @@
 // #include <dbfile.hpp>
 
-// #include <string>
-// #include <vector>
-// #include <iostream>
-// #include <list>
 
 #include <stew.hpp>
-//#include <iostream>
+#include <logger.hpp>
 
 struct person
 {
@@ -34,8 +30,8 @@ namespace stew
 int main()
 {
   using namespace stew;
-  
-  cout.printfln("Bonjour {}, tu as {}, {} chiens et {} enfants.", "Bob", "10 ans", 2, 3);
+
+  logger::debug("Bonjour {}, tu as {}, {} chiens et {} enfants.", "Bob", "10 ans", 2, 3);
 
   return 0;
 }
