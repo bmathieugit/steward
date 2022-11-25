@@ -208,30 +208,30 @@ namespace stew
     const C *_end = nullptr;
 
   public:
-    ~basic_string_view() = default;
+    constexpr ~basic_string_view() = default;
 
-    basic_string_view(const C *b, const C *e)
+    constexpr basic_string_view(const C *b, const C *e)
     {
       _begin = b;
       _end = e;
     }
 
-    basic_string_view(const C *b, size_t s)
+    constexpr basic_string_view(const C *b, size_t s)
     {
       _begin = b;
       _end = b + s;
     }
 
-    basic_string_view(const C *c)
+    constexpr basic_string_view(const C *c)
         : basic_string_view(c, strlen(c))
     {
     }
 
-    basic_string_view() = default;
-    basic_string_view(const basic_string_view &) = default;
-    basic_string_view(basic_string_view &&) = default;
-    basic_string_view &operator=(const basic_string_view &) = default;
-    basic_string_view &operator=(basic_string_view &&) = default;
+    constexpr basic_string_view() = default;
+    constexpr basic_string_view(const basic_string_view &) = default;
+    constexpr basic_string_view(basic_string_view &&) = default;
+    constexpr basic_string_view &operator=(const basic_string_view &) = default;
+    constexpr basic_string_view &operator=(basic_string_view &&) = default;
 
   public:
     auto begin() const

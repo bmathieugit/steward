@@ -1,7 +1,6 @@
 #ifndef __stew_logger_hpp__
 #define __stew_logger_hpp__
 
-#include <array>
 #include <stew.hpp>
 
 namespace stew::logger
@@ -27,7 +26,7 @@ namespace stew
     template <ostream O>
     static void to(O &o, logger::level l)
     {
-      string_view ltable[7] = {
+      constexpr string_view ltable[7] = {
           "trace", "debug", "info",
           "warn", "error", "fatal",
           "steward"};
