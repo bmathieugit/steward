@@ -3,10 +3,139 @@
 
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <unistd.h>
 
 namespace stew
 {
   using size_t = unsigned long;
+
+  ////////////////
+  /// METAPROG ///
+  ////////////////
+
+  template <typename T0, typename... Tn>
+  consteval size_t sizeofmax()
+  {
+    if constexpr (sizeof...(Tn) == 0)
+    {
+      return sizeof(T0);
+    }
+    else
+    {
+      if (sizeof(T0) > sizeofmax<Tn...>())
+      {
+        return sizeof(T0);
+      }
+      else
+      {
+        return sizeofmax<Tn...>();
+      }
+    }
+  }
+
+  namespace impl
+  {
+    template <size_t I, typename H, typename... T>
+    struct indexof
+    {
+      static_assert(sizeof...(T) > 0, "indexof : search type not in types pack");
+    };
+
+    template <size_t I, typename H, typename T0, typename... Tn>
+    struct indexof<I, H, T0, Tn...>
+    {
+      static constexpr size_t value = indexof<I + 1, H, Tn...>::value;
+    };
+
+    template <size_t I, typename T, typename... Tn>
+    struct indexof<I, T, T, Tn...>
+    {
+      static constexpr size_t value = I;
+    };
+  }
+
+  template <typename H, typename... T>
+  constexpr size_t indexof = impl::indexof<0, H, T...>::value;
+
+  namespace impl
+  {
+    template <size_t I, class T0, class... Tn>
+    struct typeat
+    {
+      using type = typeat<I - 1, Tn...>;
+    };
+
+    template <class T0, class... Tn>
+    struct typeat<0, T0, Tn...>
+    {
+      using type = T0;
+    };
+  }
+
+  template <size_t I, class... T>
+  using typeat = typename impl::typeat<I, T...>::type;
+
+  namespace impl
+  {
+    template <typename T>
+    struct rm_ref
+    {
+      using type = T;
+    };
+
+    template <typename T>
+    struct rm_ref<T &>
+    {
+      using type = T;
+    };
+
+    template <typename T>
+    struct rm_ref<T &&>
+    {
+      using type = T;
+    };
+
+    template <class T>
+    struct rm_const
+    {
+      using type = T;
+    };
+
+    template <class T>
+    struct rm_const<const T>
+    {
+      using type = T;
+    };
+
+    template <class T>
+    struct rm_volatile
+    {
+      using type = T;
+    };
+
+    template <class T>
+    struct rm_volatile<volatile T>
+    {
+      using type = T;
+    };
+  }
+
+  template <class T>
+  using rm_const = typename impl::rm_const<T>::type;
+
+  template <class T>
+  using rm_volatile = typename impl::rm_volatile<T>::type;
+
+  template <class T>
+  using rm_ref = typename impl::rm_ref<T>::type;
+
+  template <class T>
+  using rm_cvref = rm_const<rm_volatile<rm_ref<T>>>;
 
   template <typename T, typename U>
   struct is_same
@@ -46,6 +175,10 @@ namespace stew
   template <typename T>
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
+
+  /////////////////
+  /// ALGORITHM ///
+  /////////////////
 
   template <typename C>
   concept range = requires(C &c)
@@ -130,6 +263,15 @@ namespace stew
     return b2 == e2;
   }
 
+  template <range R, class T>
+  constexpr bool starts_with(const R &r, const T &t)
+  {
+    auto b = r.begin();
+    auto e = r.end();
+
+    return b != e && *b == t;
+  }
+
   template <range R, typename T>
   constexpr auto find(R &r, const T &t)
   {
@@ -170,35 +312,23 @@ namespace stew
     return find(r1, r2) != r1.end();
   }
 
-  struct position
+  template <class R, class P>
+  constexpr bool all_of(const R &r, P &&p)
   {
-    size_t _pos = 0;
-
-    operator size_t()
+    for (const auto &i : r)
     {
-      return _pos;
+      if (!p(i))
+      {
+        return false;
+      }
     }
-  };
 
-  constexpr position pos(size_t p) noexcept
-  {
-    return position{p};
+    return true;
   }
 
-  struct quantity
-  {
-    size_t _qty = 0;
-
-    operator size_t()
-    {
-      return _qty;
-    }
-  };
-
-  constexpr quantity qty(size_t q) noexcept
-  {
-    return quantity{q};
-  }
+  ///////////////////
+  /// STRING_VIEW ///
+  ///////////////////
 
   template <character C>
   class basic_string_view
@@ -345,6 +475,10 @@ namespace stew
   {
     return wstring_view(s, n);
   }
+
+  //////////////
+  /// STRING ///
+  //////////////
 
   template <character C>
   class basic_string
@@ -532,7 +666,7 @@ namespace stew
     {
       for (auto c : o)
       {
-        push_back(c);
+        push_one(c);
       }
     }
 
@@ -570,6 +704,10 @@ namespace stew
 
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
+
+  //////////////
+  /// FORMAT ///
+  //////////////
 
   template <typename T>
   class formatter;
@@ -767,6 +905,10 @@ namespace stew
     }
   };
 
+  //////////////
+  /// STREAM ///
+  //////////////
+
   template <character C>
   class basic_fostream
   {
@@ -843,31 +985,142 @@ namespace stew
   fostream cout(stdout);
   fostream cerr(stderr);
 
-  template <typename T0, typename... Tn>
-  consteval size_t sizeofmax()
-  {
-    if constexpr (sizeof...(Tn) == 0)
-    {
-      return sizeof(T0);
-    }
-    else
-    {
-      if (sizeof(T0) > sizeofmax<Tn...>())
-      {
-        return sizeof(T0);
-      }
-      else
-      {
-        return sizeofmax<Tn...>();
-      }
-    }
-  }
+  //////////////////
+  /// FILESYSTEM ///
+  //////////////////
 
-  template <typename... T>
-  class variant
+  namespace fs
   {
-    
-  };
+    enum class permission : size_t
+    {
+      rwx = 7,
+      rw = 6,
+      rx = 5,
+      r = 4,
+      wx = 3,
+      w = 2,
+      x = 1,
+      n = 0
+    };
+
+    using perm = permission;
+
+    struct mode
+    {
+      perm _user = perm::n;
+      perm _group = perm::n;
+      perm _other = perm::n;
+
+
+      size_t to_literal()
+      {
+        size_t dec = 100 * (size_t)_user +
+                     10 * (size_t)_group +
+                     (size_t)_other;
+        string s;
+        format_to(s, "{}\0", dec);
+        char * p;
+        return std::strtoul(s.begin(), nullptr, 8);
+      }
+    };
+
+    template <typename FS>
+    class directory
+    {
+    private:
+      char _path[512];
+      mode _mode;
+
+    public:
+      ~directory() = default;
+      directory() = default;
+      directory(string_view path,
+                const mode &m = {perm::rwx, perm::rx, perm::rx})
+      {
+        __check(path);
+        _mode = m;
+      }
+
+      directory(const directory &) = default;
+      directory(directory &&) = default;
+      directory &operator=(const directory &) = default;
+      directory &operator=(directory &&) = default;
+
+    public:
+      bool create()
+      {
+        if (!exists())
+        {
+          return ::mkdir(_path, _mode.to_literal()) == 0;
+        }
+
+        return false;
+      }
+
+      bool remove()
+      {
+        if (exists())
+        {
+          return ::remove(_path) == 0;
+        }
+
+        return false;
+      }
+
+      bool exists()
+      {
+        struct stat st;
+        return ::stat(_path, &st) == 0;
+      }
+
+      bool rename(string_view nname)
+      {
+        if (nname.size() < 512)
+        {
+          char buffer[512];
+          char *pbuff = buffer;
+
+          for (char c : nname)
+          {
+            *pbuff = c;
+            ++pbuff;
+          }
+
+          *pbuff = '\0';
+          return ::rename(_path, buffer) == 0;
+        }
+
+        return false;
+      }
+
+    private:
+      string_view __check(string_view path)
+      {
+        if (!path.empty() && path.size() < 512)
+        {
+          if (all_of(
+                  path, [](const char c)
+                  { return ('0' <= c && c <= '9') ||
+                           ('a' <= c && c <= 'z') ||
+                           ('A' <= c && c <= 'Z') ||
+                           c == '.' || c == '_' || c == '-' || c == '/'; }))
+          {
+            char *path_p = _path;
+
+            for (char c : path)
+            {
+              *path_p = c;
+              ++path_p;
+            }
+
+            *path_p = '\0';
+          }
+        }
+
+        return string_view();
+      }
+    };
+  }
 }
 
 #endif
