@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <dirent.h>
 #include <unistd.h>
 
 namespace stew
@@ -1011,7 +1012,6 @@ namespace stew
       perm _group = perm::n;
       perm _other = perm::n;
 
-
       size_t to_literal()
       {
         size_t dec = 100 * (size_t)_user +
@@ -1019,7 +1019,7 @@ namespace stew
                      (size_t)_other;
         string s;
         format_to(s, "{}\0", dec);
-        char * p;
+        char *p;
         return std::strtoul(s.begin(), nullptr, 8);
       }
     };
@@ -1087,10 +1087,54 @@ namespace stew
           }
 
           *pbuff = '\0';
-          return ::rename(_path, buffer) == 0;
+
+          if (::rename(_path, buffer) == 0)
+          {
+            for (size_t i = 0; i < 512; ++i)
+            {
+              _path[i] = buffer[i];
+            }
+
+            return true;
+          }
         }
 
         return false;
+      }
+
+      bool permissions(mode m)
+      {
+        _mode = m;
+        return ::chmod(_path, _mode.to_literal()) == 0;
+      }
+
+      void listdirs()
+      {
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(".");
+        if (d)
+        {
+          while ((dir = readdir(d)) != NULL)
+          {
+            string_view name(dir->d_name);
+
+            if (name == "." || name == "..")
+            {
+              continue;
+            }
+
+            if (dir->d_type == DT_DIR)
+            {
+              cout.printfln("dossier : {}", dir->d_name);
+            }
+            else if (dir->d_type == DT_REG)
+            {
+              cout.printfln("file : {}", dir->d_name);
+            }
+          }
+          closedir(d);
+        }
       }
 
     private:

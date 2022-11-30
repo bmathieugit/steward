@@ -12,7 +12,6 @@ int main()
   cout.printfln("tmp removed ? {}", tmp.remove());
   cout.printfln("tmp created ? {}", tmp.create());
   cout.printfln("tmp renamed ? {}", tmp.rename("tmp2"));
-  cout.printfln("mode : {}", fs::mode{fs::perm::rwx, fs::perm::rx, fs::perm::r}.to_literal());
-
+  tmp.listdirs();
   return 0;
 }
