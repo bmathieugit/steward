@@ -1,15 +1,7 @@
 #ifndef __stew_hpp__
 #define __stew_hpp__
 
-#include <cstring>
-#include <cstdio>
-#include <cstdlib>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <dirent.h>
-#include <unistd.h>
+#include <clibs.hpp>
 
 namespace stew
 {
@@ -176,6 +168,76 @@ namespace stew
   template <typename T>
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
+
+  //////////////
+  /// RESULT ///
+  //////////////
+
+  template <class S, class E>
+  class result
+  {
+  private:
+    union
+    {
+      S _success;
+      E _error;
+    };
+
+    bool _who;
+
+  public:
+    ~result() = default;
+    result() = delete;
+    result(const S &s) : _success(s), _who(true) {}
+    result(S &&s) : _success(s), _who(true) {}
+    result(const E &e) : _error(e), _who(false) {}
+    result(E &&e) : _error(e), _who(false) {}
+    result(const result &) = default;
+    result(result &&) = default;
+    result &operator=(const result &) = default;
+    result &operator=(result &&) = default;
+
+  public:
+    const S &success() const &
+    {
+      return _success;
+    }
+
+    S &&success() &&
+    {
+      return _success;
+    }
+
+    S &success() &
+    {
+      return _success;
+    }
+
+    const E &error() const &
+    {
+      return _error;
+    }
+
+    E &&error() &&
+    {
+      return _error;
+    }
+
+    E &error() &
+    {
+      return _error;
+    }
+
+  public:
+    operator bool() const
+    {
+      return _who;
+    }
+  };
+
+  struct basic_success
+  {
+  };
 
   /////////////////
   /// ALGORITHM ///
@@ -914,14 +976,14 @@ namespace stew
   class basic_fostream
   {
   private:
-    std::FILE *_out = nullptr;
+    FILE *_out = nullptr;
 
   public:
     ~basic_fostream()
     {
       if (_out != nullptr)
       {
-        std::fclose(_out);
+        fclose(_out);
         _out = nullptr;
       }
     }
@@ -929,11 +991,11 @@ namespace stew
     basic_fostream() = default;
 
     basic_fostream(const C *path)
-        : _out(std::fopen(path, "w"))
+        : _out(fopen(path, "w"))
     {
     }
 
-    basic_fostream(std::FILE *o)
+    basic_fostream(FILE *o)
         : _out(o)
     {
     }
@@ -946,22 +1008,22 @@ namespace stew
   public:
     void push_one(C c)
     {
-      std::putc(c, _out);
+      putc(c, _out);
     }
 
     void push_all(basic_string_view<C> s)
     {
-      std::fwrite(s.begin(), sizeof(C), s.size(), _out);
+      fwrite(s.begin(), sizeof(C), s.size(), _out);
     }
 
     void flush()
     {
-      std::fflush(_out);
+      fflush(_out);
     }
 
     void close()
     {
-      std::fclose(_out);
+      fclose(_out);
       _out = nullptr;
     }
 
@@ -992,6 +1054,42 @@ namespace stew
 
   namespace fs
   {
+    struct ferror
+    {
+    };
+
+    result<basic_success, ferror> fremove(string_view fpath)
+    {
+      char buffer[512];
+      stew::c::strncpy(buffer, fpath.begin(), fpath.size());
+
+      if (stew::c::remove(buffer) == 0)
+      {
+        return basic_success();
+      }
+      else
+      {
+        return ferror();
+      }
+    }
+
+    result<basic_success, ferror> frename(string_view fold, string_view fnew)
+    {
+      char obuffer[512];
+      char nbuffer[512];
+      stew::c::strncpy(obuffer, fold.begin(), fold.size());
+      stew::c::strncpy(nbuffer, fnew.begin(), fnew.size());
+
+      if (stew::c::rename(obuffer, nbuffer) == 0)
+      {
+        return basic_success();
+      }
+      else
+      {
+        return ferror();
+      }
+    }
+
     enum class permission : size_t
     {
       rwx = 7,
@@ -1019,10 +1117,39 @@ namespace stew
                      (size_t)_other;
         string s;
         format_to(s, "{}\0", dec);
-        char *p;
-        return std::strtoul(s.begin(), nullptr, 8);
+        return strtoul(s.begin(), nullptr, 8);
       }
     };
+
+    result<basic_success, ferror> fmkdir(string_view path, mode m)
+    {
+      char buffer[512];
+      stew::c::strncpy(buffer, path.begin(), path.size());
+
+      if (stew::c::mkdir(buffer, m.to_literal()) == 0)
+      {
+        return basic_success();
+      }
+      else
+      {
+        return ferror();
+      }
+    }
+
+    result<basic_success, ferror> fchmod(string_view path, mode m)
+    {
+      char buffer[512];
+      stew::c::strncpy(buffer, path.begin(), path.size());
+
+      if (stew::c::chmod(buffer, m.to_literal()))
+      {
+        return basic_success();
+      }
+      else
+      {
+        return ferror();
+      }
+    }
 
     template <typename FS>
     class directory
@@ -1051,7 +1178,7 @@ namespace stew
       {
         if (!exists())
         {
-          return ::mkdir(_path, _mode.to_literal()) == 0;
+          return fmkdir(_path, _mode);
         }
 
         return false;
@@ -1061,7 +1188,7 @@ namespace stew
       {
         if (exists())
         {
-          return ::remove(_path) == 0;
+          return fremove(_path);
         }
 
         return false;
@@ -1078,23 +1205,11 @@ namespace stew
         if (nname.size() < 512)
         {
           char buffer[512];
-          char *pbuff = buffer;
+          stew::c::strncpy(buffer, nname.begin(), nname.size());
 
-          for (char c : nname)
+          if (frename(_path, buffer))
           {
-            *pbuff = c;
-            ++pbuff;
-          }
-
-          *pbuff = '\0';
-
-          if (::rename(_path, buffer) == 0)
-          {
-            for (size_t i = 0; i < 512; ++i)
-            {
-              _path[i] = buffer[i];
-            }
-
+            stew::c::strncpy(_path, nname.begin(), nname.size());
             return true;
           }
         }
@@ -1105,7 +1220,7 @@ namespace stew
       bool permissions(mode m)
       {
         _mode = m;
-        return ::chmod(_path, _mode.to_literal()) == 0;
+        return fchmod(_path, _mode);
       }
 
       void listdirs()
@@ -1133,21 +1248,27 @@ namespace stew
               cout.printfln("file : {}", dir->d_name);
             }
           }
+
           closedir(d);
         }
       }
 
     private:
+      static bool __ispathchar(char c)
+      {
+        return isdigit(c) ||
+               isalpha(c) ||
+               c == '.' ||
+               c == '_' ||
+               c == '-' ||
+               c == '/';
+      }
+
       string_view __check(string_view path)
       {
         if (!path.empty() && path.size() < 512)
         {
-          if (all_of(
-                  path, [](const char c)
-                  { return ('0' <= c && c <= '9') ||
-                           ('a' <= c && c <= 'z') ||
-                           ('A' <= c && c <= 'Z') ||
-                           c == '.' || c == '_' || c == '-' || c == '/'; }))
+          if (all_of(path, __ispathchar))
           {
             char *path_p = _path;
 
