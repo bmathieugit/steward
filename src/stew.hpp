@@ -437,6 +437,11 @@ namespace stew
       return _end;
     }
 
+    auto data() const
+    {
+      return _begin;
+    }
+
   public:
     auto size() const
     {
@@ -1104,7 +1109,7 @@ namespace stew
     {
       {
         p.path()
-        } -> same_as<const string &>;
+        } -> same_as<string_view>;
 
       {
         p.perms()
@@ -1129,7 +1134,7 @@ namespace stew
       directory &operator=(directory &&) = default;
 
     public:
-      const string &path() const
+      string_view path() const
       {
         return _path;
       }
@@ -1139,6 +1144,14 @@ namespace stew
         return _mode;
       }
     };
+
+    namespace literatals
+    {
+      directory<void> operator"" _dp(const char *s, size_t n)
+      {
+        return directory<void>(string_view(s, n));
+      }
+    }
 
     template <class FS>
     class file
@@ -1159,7 +1172,7 @@ namespace stew
       file &operator=(file &&) = default;
 
     public:
-      const string &path() const
+      string_view path() const
       {
         return _path;
       }
@@ -1169,6 +1182,60 @@ namespace stew
         return _mode;
       }
     };
+
+    namespace literatals
+    {
+      file<void> operator"" _fp(const char *s, size_t n)
+      {
+        return file<void>(string_view(s, n));
+      }
+    }
+
+    template <path P>
+    class cpath
+    {
+    private:
+      string_view _path;
+      mode _mode;
+
+    public:
+      ~cpath() = default;
+      cpath() = default;
+      cpath(string_view p, mode m = {perm::rwx, perm::rx, perm::rx}) : _path(p), _mode(m) {}
+      cpath(const cpath &) = default;
+      cpath(cpath &&) = default;
+      cpath &operator=(const cpath &) = default;
+      cpath &operator=(cpath &&) = default;
+
+    public:
+      operator P() const
+      {
+        return P(_path, _mode);
+      }
+
+      string_view path() const
+      {
+        return _path;
+      }
+
+      const mode& perms() const
+      {
+        return _mode;
+      }
+    };
+
+    namespace literatals
+    {
+      cpath<file<void>> operator"" _cfp(const char *s, size_t n)
+      {
+        return cpath<file<void>>(string_view(s, n));
+      }
+
+      cpath<directory<void>> operator"" _cdp(const char *s, size_t n)
+      {
+        return cpath<directory<void>>(string_view(s, n));
+      }
+    }
 
     namespace impl
     {
@@ -1184,6 +1251,12 @@ namespace stew
         static constexpr bool value = true;
       };
 
+      template<typename FS>
+      struct path_file<cpath<file<FS>>>
+      {
+        static constexpr bool value = true;
+      };
+
       template <typename T>
       struct path_directory
       {
@@ -1192,6 +1265,12 @@ namespace stew
 
       template <typename FS>
       struct path_directory<directory<FS>>
+      {
+        static constexpr bool value = true;
+      };
+
+      template<typename FS>
+      struct path_file<cpath<directory<FS>>>
       {
         static constexpr bool value = true;
       };
