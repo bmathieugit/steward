@@ -5,13 +5,15 @@
 int main()
 {
   using namespace stew;
-  fs::directory<void> tmp("tmp");
+  fs::file<void> tmp("tmp");
+  fs::file<void> tmp2("tmp2");
 
-  tmp.create();
-  cout.printfln("tmp exists ? {}", tmp.exists());
-  cout.printfln("tmp removed ? {}", tmp.remove());
-  cout.printfln("tmp created ? {}", tmp.create());
-  cout.printfln("tmp renamed ? {}", tmp.rename("tmp2"));
-  tmp.listdirs();
+  cout.printfln("tmp existing ? {}", (bool)fs::fexists(tmp));
+  cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
+  cout.printfln("tmp readable ? {}", (bool)fs::freadable(tmp));
+  cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp));
+  cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
+  cout.printfln("tmp renamed ? {}", (bool)fs::frename(tmp, tmp2));
+  // tmp.listdirs();
   return 0;
 }

@@ -547,9 +547,9 @@ namespace stew
   class basic_string
   {
   private:
-    size_t _max = 0;
-    size_t _size = 0;
-    C *_data = nullptr;
+    size_t _max;
+    size_t _size;
+    C *_data;
 
   public:
     ~basic_string()
@@ -557,19 +557,21 @@ namespace stew
       if (_data != nullptr)
       {
         delete _data;
+        _data = nullptr;
         _size = 0;
         _max = 0;
       }
     }
 
-    basic_string() = default;
-
     basic_string(size_t max)
-        : _max(max == 0 ? 10 : max),
+        : _max(max < 10 ? 10 : max),
           _size(0),
           _data(new C[_max])
     {
+      _data[0] = '\0';
     }
+
+    basic_string() : basic_string(10) {}
 
     template <typename I>
     basic_string(I b, I e)
@@ -626,6 +628,7 @@ namespace stew
         }
 
         _size = o._size;
+        _data[_size] = '\0';
       }
 
       return *this;
@@ -666,6 +669,16 @@ namespace stew
     auto end() const
     {
       return _data + _size;
+    }
+
+    auto data() const
+    {
+      return _data;
+    }
+
+    auto data()
+    {
+      return _data;
     }
 
   public:
@@ -723,6 +736,7 @@ namespace stew
 
       _data[_size] = c;
       ++_size;
+      _data[_size] = '\0';
     }
 
     void push_all(basic_string_view<C> o)
@@ -1054,64 +1068,28 @@ namespace stew
 
   namespace fs
   {
-    struct ferror
-    {
-    };
-
-    result<basic_success, ferror> fremove(string_view fpath)
-    {
-      char buffer[512];
-      stew::c::strncpy(buffer, fpath.begin(), fpath.size());
-
-      if (stew::c::remove(buffer) == 0)
-      {
-        return basic_success();
-      }
-      else
-      {
-        return ferror();
-      }
-    }
-
-    result<basic_success, ferror> frename(string_view fold, string_view fnew)
-    {
-      char obuffer[512];
-      char nbuffer[512];
-      stew::c::strncpy(obuffer, fold.begin(), fold.size());
-      stew::c::strncpy(nbuffer, fnew.begin(), fnew.size());
-
-      if (stew::c::rename(obuffer, nbuffer) == 0)
-      {
-        return basic_success();
-      }
-      else
-      {
-        return ferror();
-      }
-    }
-
     enum class permission : size_t
     {
-      rwx = 7,
-      rw = 6,
-      rx = 5,
-      r = 4,
-      wx = 3,
-      w = 2,
-      x = 1,
-      n = 0
+      rwx = R_OK | W_OK | X_OK,
+      rw = R_OK | W_OK,
+      rx = R_OK | X_OK,
+      r = R_OK,
+      wx = W_OK | X_OK,
+      w = W_OK,
+      x = X_OK,
+      f = F_OK
     };
 
     using perm = permission;
 
     struct mode
     {
-      perm _user = perm::n;
-      perm _group = perm::n;
-      perm _other = perm::n;
+      perm _user = perm::f;
+      perm _group = perm::f;
+      perm _other = perm::f;
 
-      size_t to_literal()
-      {
+      size_t to_literal() const
+      { // FIXME: Improve this function !!!!
         size_t dec = 100 * (size_t)_user +
                      10 * (size_t)_group +
                      (size_t)_other;
@@ -1121,170 +1099,197 @@ namespace stew
       }
     };
 
-    result<basic_success, ferror> fmkdir(string_view path, mode m)
+    template <typename P>
+    concept path = requires(const P &p)
     {
-      char buffer[512];
-      stew::c::strncpy(buffer, path.begin(), path.size());
+      {
+        p.path()
+        } -> same_as<const string &>;
 
-      if (stew::c::mkdir(buffer, m.to_literal()) == 0)
       {
-        return basic_success();
-      }
-      else
-      {
-        return ferror();
-      }
-    }
-
-    result<basic_success, ferror> fchmod(string_view path, mode m)
-    {
-      char buffer[512];
-      stew::c::strncpy(buffer, path.begin(), path.size());
-
-      if (stew::c::chmod(buffer, m.to_literal()))
-      {
-        return basic_success();
-      }
-      else
-      {
-        return ferror();
-      }
-    }
+        p.perms()
+        } -> same_as<const mode &>;
+    };
 
     template <typename FS>
     class directory
     {
     private:
-      char _path[512];
+      string _path;
       mode _mode;
 
     public:
       ~directory() = default;
-      directory() = default;
-      directory(string_view path,
-                const mode &m = {perm::rwx, perm::rx, perm::rx})
-      {
-        __check(path);
-        _mode = m;
-      }
-
+      directory() = delete;
+      directory(string_view path, mode m = {perm::rwx, perm::rx, perm::rx})
+          : _path(path), _mode(m) {}
       directory(const directory &) = default;
       directory(directory &&) = default;
       directory &operator=(const directory &) = default;
       directory &operator=(directory &&) = default;
 
     public:
-      bool create()
+      const string &path() const
       {
-        if (!exists())
-        {
-          return fmkdir(_path, _mode);
-        }
-
-        return false;
+        return _path;
       }
 
-      bool remove()
+      const mode &perms() const
       {
-        if (exists())
-        {
-          return fremove(_path);
-        }
-
-        return false;
-      }
-
-      bool exists()
-      {
-        struct stat st;
-        return ::stat(_path, &st) == 0;
-      }
-
-      bool rename(string_view nname)
-      {
-        if (nname.size() < 512)
-        {
-          char buffer[512];
-          stew::c::strncpy(buffer, nname.begin(), nname.size());
-
-          if (frename(_path, buffer))
-          {
-            stew::c::strncpy(_path, nname.begin(), nname.size());
-            return true;
-          }
-        }
-
-        return false;
-      }
-
-      bool permissions(mode m)
-      {
-        _mode = m;
-        return fchmod(_path, _mode);
-      }
-
-      void listdirs()
-      {
-        DIR *d;
-        struct dirent *dir;
-        d = opendir(".");
-        if (d)
-        {
-          while ((dir = readdir(d)) != NULL)
-          {
-            string_view name(dir->d_name);
-
-            if (name == "." || name == "..")
-            {
-              continue;
-            }
-
-            if (dir->d_type == DT_DIR)
-            {
-              cout.printfln("dossier : {}", dir->d_name);
-            }
-            else if (dir->d_type == DT_REG)
-            {
-              cout.printfln("file : {}", dir->d_name);
-            }
-          }
-
-          closedir(d);
-        }
-      }
-
-    private:
-      static bool __ispathchar(char c)
-      {
-        return isdigit(c) ||
-               isalpha(c) ||
-               c == '.' ||
-               c == '_' ||
-               c == '-' ||
-               c == '/';
-      }
-
-      string_view __check(string_view path)
-      {
-        if (!path.empty() && path.size() < 512)
-        {
-          if (all_of(path, __ispathchar))
-          {
-            char *path_p = _path;
-
-            for (char c : path)
-            {
-              *path_p = c;
-              ++path_p;
-            }
-
-            *path_p = '\0';
-          }
-        }
-
-        return string_view();
+        return _mode;
       }
     };
+
+    template <class FS>
+    class file
+    {
+    private:
+      string _path;
+
+      mode _mode;
+
+    public:
+      ~file() = default;
+      file() = delete;
+      file(string_view path, mode m = {perm::rwx, perm::rx, perm::rx})
+          : _path(path), _mode(m) {}
+      file(const file &) = default;
+      file(file &&) = default;
+      file &operator=(const file &) = default;
+      file &operator=(file &&) = default;
+
+    public:
+      const string &path() const
+      {
+        return _path;
+      }
+
+      const mode &perms() const
+      {
+        return _mode;
+      }
+    };
+
+    namespace impl
+    {
+      template <typename T>
+      struct path_file
+      {
+        static constexpr bool value = false;
+      };
+
+      template <typename FS>
+      struct path_file<file<FS>>
+      {
+        static constexpr bool value = true;
+      };
+
+      template <typename T>
+      struct path_directory
+      {
+        static constexpr bool value = false;
+      };
+
+      template <typename FS>
+      struct path_directory<directory<FS>>
+      {
+        static constexpr bool value = true;
+      };
+    }
+
+    template <class T>
+    concept path_file = impl::path_file<T>::value;
+
+    template <class T>
+    concept path_directory = impl::path_directory<T>::value;
+
+    struct ferror
+    {
+    };
+
+    template <path P>
+    bool fexists(const P &p)
+    {
+      return stew::c::access(p.path().data(), (int)perm::f) == 0;
+    }
+
+    template <path P>
+    bool freadable(const P &p)
+    {
+      return stew::c::access(p.path().data(), (int)perm::r) == 0;
+    }
+
+    template <path P>
+    bool fwritable(const P &p)
+    {
+      return stew::c::access(p.path().data(), (int)perm::w) == 0;
+    }
+
+    template <path P>
+    bool fexecutable(const P &p)
+    {
+      return stew::c::access(p.path().data(), (int)perm::x) == 0;
+    }
+
+    template <path P>
+    result<basic_success, ferror> fremove(const P &p)
+    {
+      if (stew::c::remove(p.path().data()) == 0)
+      {
+        return basic_success();
+      }
+      else
+      {
+        return ferror();
+      }
+    }
+
+    template <path P>
+    result<basic_success, ferror> frename(const P &pold, const P &pnew)
+    {
+      if (stew::c::rename(pold.path().data(), pnew.path().data()) == 0)
+      {
+        return basic_success();
+      }
+      else
+      {
+        return ferror();
+      }
+    }
+
+    template <path P>
+    result<basic_success, ferror> fcreate(const P &p)
+    {
+      if constexpr (path_directory<P>)
+      {
+        if (stew::c::mkdir(p.path().data(), p.perms().to_literal()) == 0)
+        {
+          return basic_success();
+        }
+      }
+      else if (path_file<P>)
+      {
+        if (stew::c::touch(p.path().data(), p.perms().to_literal()) == 0)
+        {
+          return basic_success();
+        }
+      }
+
+      return ferror();
+    }
+
+    template <path P>
+    result<basic_success, ferror> fchmod(const P &p, mode m)
+    {
+      if (stew::c::chmod(p.path().data(), m.to_literal()))
+      {
+        return basic_success();
+      }
+      else
+      {
+        return ferror();
+      }
+    }
   }
 }
 

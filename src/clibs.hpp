@@ -5,19 +5,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <dirent.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <fcntl.h>
 
 namespace stew::c
 {
   /////////////
   /// IOLIB ///
   /////////////
-
+  using ::access;
   using ::chmod;
   using ::closedir;
   using ::fclose;
@@ -32,6 +34,19 @@ namespace stew::c
   using ::rename;
   using ::remove;
   using ::mkdir;
+
+  int touch(const char *filename, int mode) 
+  {
+    int fd = open(filename, mode);
+
+    if (fd == -1) 
+    {
+      return 0;
+    }
+
+    close(fd);
+    return errno;
+  }
 
   /////////////////
   /// STRINGLIB ///
@@ -53,6 +68,7 @@ namespace stew::c
 
   using ::strcpy;
   using ::strncpy;
+
 
 
 }
