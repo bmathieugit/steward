@@ -46,8 +46,8 @@ namespace stew::c
   using ::rename;
 
   int touch(const char *filename, int mode)
-  {
-    int fd = open(filename, O_CREAT | S_IRUSR | S_IWUSR);
+  {    
+    int fd = open(filename, O_CREAT, mode);
 
     if (fd == 0)
     {

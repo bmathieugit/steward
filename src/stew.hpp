@@ -1277,20 +1277,14 @@ namespace stew
       {
         if (stew::c::mkdir(p.path().data(), p.perms().to_literal()) == 0)
         {
-          if (fchmod(p, p.perms()))
-          {
-            return basic_success();
-          }
+          return basic_success();
         }
       }
       else if (path_file<P>)
       {
         if (stew::c::touch(p.path().data(), p.perms().to_literal()) == 0)
         {
-          if (fchmod(p, p.perms()))
-          {
-            return basic_success();
-          }
+          return basic_success();
         }
       }
 
