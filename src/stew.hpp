@@ -1094,13 +1094,8 @@ namespace stew
       perm _other = perm::f;
 
       size_t to_literal() const
-      { // FIXME: Improve this function !!!!
-        size_t dec = 100 * (size_t)_user +
-                     10 * (size_t)_group +
-                     (size_t)_other;
-        string s;
-        format_to(s, "{}\0", dec);
-        return strtoul(s.begin(), nullptr, 8);
+      {
+        return (size_t)_user << 6 | (size_t)_group << 3 | (size_t)_other;
       }
     };
 
@@ -1129,7 +1124,7 @@ namespace stew
       directory &operator=(directory &&) = default;
 
     public:
-      const string& path() const
+      const string &path() const
       {
         return _path;
       }
@@ -1167,7 +1162,7 @@ namespace stew
       file &operator=(file &&) = default;
 
     public:
-      const string& path() const
+      const string &path() const
       {
         return _path;
       }
@@ -1186,6 +1181,12 @@ namespace stew
       }
     }
 
+    template <class FS>
+    class tempfile
+    {
+      // TODO: faire
+    };
+
     template <path P>
     class cpath
     {
@@ -1203,7 +1204,7 @@ namespace stew
       cpath &operator=(cpath &&) = default;
 
     public:
-      const string_view& path() const
+      const string_view &path() const
       {
         return _path;
       }
