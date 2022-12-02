@@ -1107,13 +1107,8 @@ namespace stew
     template <typename P>
     concept path = requires(const P &p)
     {
-      {
-        p.path()
-        } -> same_as<string_view>;
-
-      {
-        p.perms()
-        } -> same_as<const mode &>;
+      p.path();
+      p.perms();
     };
 
     template <typename FS>
@@ -1134,7 +1129,7 @@ namespace stew
       directory &operator=(directory &&) = default;
 
     public:
-      string_view path() const
+      const string& path() const
       {
         return _path;
       }
@@ -1172,7 +1167,7 @@ namespace stew
       file &operator=(file &&) = default;
 
     public:
-      string_view path() const
+      const string& path() const
       {
         return _path;
       }
@@ -1208,17 +1203,12 @@ namespace stew
       cpath &operator=(cpath &&) = default;
 
     public:
-      operator P() const
-      {
-        return P(_path, _mode);
-      }
-
-      string_view path() const
+      const string_view& path() const
       {
         return _path;
       }
 
-      const mode& perms() const
+      const mode &perms() const
       {
         return _mode;
       }
@@ -1251,7 +1241,7 @@ namespace stew
         static constexpr bool value = true;
       };
 
-      template<typename FS>
+      template <typename FS>
       struct path_file<cpath<file<FS>>>
       {
         static constexpr bool value = true;
@@ -1269,8 +1259,8 @@ namespace stew
         static constexpr bool value = true;
       };
 
-      template<typename FS>
-      struct path_file<cpath<directory<FS>>>
+      template <typename FS>
+      struct path_directory<cpath<directory<FS>>>
       {
         static constexpr bool value = true;
       };
