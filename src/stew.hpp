@@ -1184,7 +1184,29 @@ namespace stew
     template <class FS>
     class tempfile
     {
-      // TODO: faire
+      string _path;
+      mode _mode;
+
+    public:
+      ~tempfile() = default;
+      tempfile() = default;
+      tempfile(string_view path, mode m = {perm::rwx, perm::rx, perm::rx})
+          : _path(path), _mode(m) {}
+      tempfile(const tempfile &) = default;
+      tempfile(tempfile &&) = default;
+      tempfile &operator=(const tempfile &) = default;
+      tempfile &operator=(tempfile &&) = default;
+
+    public:
+      const string &path() const
+      {
+        return _path;
+      }
+
+      const mode &perms() const
+      {
+        return _mode;
+      }
     };
 
     template <path P>
@@ -1350,12 +1372,16 @@ namespace stew
           return basic_success();
         }
       }
-      else if (path_file<P>)
+      else if constexpr (path_file<P>)
       {
         if (stew::c::touch(p.path().data(), p.perms().to_literal()) == 0)
         {
           return basic_success();
         }
+      } 
+      else if constexpr (path_tempfile<P>
+      {
+        // TODO: faire ce bout de code par la création d'une fonction de création d'un fichier temporaire.
       }
 
       return ferror();
