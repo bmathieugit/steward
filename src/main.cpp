@@ -14,6 +14,7 @@ int main()
   cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp));
   cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
   cout.printfln("tmp renamed ? {}", (bool)fs::frename(tmp, tmp2));
+  // cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp2));
   // tmp.listdirs();
   return 0;
 }

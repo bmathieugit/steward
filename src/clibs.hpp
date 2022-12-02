@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <pwd.h>
+#include <grp.h>
 
 namespace stew::c
 {
@@ -21,31 +23,39 @@ namespace stew::c
   /////////////
   using ::access;
   using ::chmod;
+  using ::chown;
   using ::closedir;
+  using ::DIR;
   using ::fclose;
   using ::fflush;
   using ::FILE;
   using ::fopen;
   using ::fputc;
   using ::fwrite;
+  using ::getgid;
+  using ::getgrgid;
+  using ::getgrnam;
+  using ::getpwnam;
+  using ::getpwuid;
+  using ::getuid;
+  using ::mkdir;
   using ::opendir;
   using ::putc;
   using ::readdir;
-  using ::rename;
   using ::remove;
-  using ::mkdir;
+  using ::rename;
 
-  int touch(const char *filename, int mode) 
+  int touch(const char *filename, int mode)
   {
-    int fd = open(filename, mode);
+    int fd = open(filename, O_CREAT | S_IRUSR | S_IWUSR);
 
-    if (fd == -1) 
+    if (fd == 0)
     {
-      return 0;
+      return errno;
     }
 
     close(fd);
-    return errno;
+    return 0;
   }
 
   /////////////////
@@ -68,8 +78,6 @@ namespace stew::c
 
   using ::strcpy;
   using ::strncpy;
-
-
 
 }
 

@@ -1258,30 +1258,9 @@ namespace stew
     }
 
     template <path P>
-    result<basic_success, ferror> fcreate(const P &p)
-    {
-      if constexpr (path_directory<P>)
-      {
-        if (stew::c::mkdir(p.path().data(), p.perms().to_literal()) == 0)
-        {
-          return basic_success();
-        }
-      }
-      else if (path_file<P>)
-      {
-        if (stew::c::touch(p.path().data(), p.perms().to_literal()) == 0)
-        {
-          return basic_success();
-        }
-      }
-
-      return ferror();
-    }
-
-    template <path P>
     result<basic_success, ferror> fchmod(const P &p, mode m)
     {
-      if (stew::c::chmod(p.path().data(), m.to_literal()))
+      if (stew::c::chmod(p.path().data(), m.to_literal()) == 0)
       {
         return basic_success();
       }
@@ -1289,6 +1268,33 @@ namespace stew
       {
         return ferror();
       }
+    }
+
+    template <path P>
+    result<basic_success, ferror> fcreate(const P &p)
+    {
+      if constexpr (path_directory<P>)
+      {
+        if (stew::c::mkdir(p.path().data(), p.perms().to_literal()) == 0)
+        {
+          if (fchmod(p, p.perms()))
+          {
+            return basic_success();
+          }
+        }
+      }
+      else if (path_file<P>)
+      {
+        if (stew::c::touch(p.path().data(), p.perms().to_literal()) == 0)
+        {
+          if (fchmod(p, p.perms()))
+          {
+            return basic_success();
+          }
+        }
+      }
+
+      return ferror();
     }
   }
 }
