@@ -1087,15 +1087,39 @@ namespace stew
 
     using perm = permission;
 
-    struct mode
+    class mode
     {
+    private:
       perm _user = perm::f;
       perm _group = perm::f;
       perm _other = perm::f;
 
-      size_t _literal = static_cast<size_t>(_user) << 6 |
-                        static_cast<size_t>(_group) << 3 |
-                        static_cast<size_t>(_other);
+      size_t _literal = to_literal();
+
+    public:
+      ~mode() = default;
+      mode() = default;
+      mode(perm u, perm g, perm o)
+          : _user(u), _group(g),
+            _other(o), _literal(to_literal()) {}
+      mode(const mode &) = default;
+      mode(mode &&) = default;
+      mode &operator=(const mode &) = default;
+      mode &operator=(mode &&) = default;
+
+    public:
+      operator size_t() const
+      {
+        return _literal;
+      }
+
+    private:
+      size_t to_literal()
+      {
+        return static_cast<size_t>(_user) << 6 |
+               static_cast<size_t>(_group) << 3 |
+               static_cast<size_t>(_other);
+      }
     };
 
     template <typename P>
@@ -1180,34 +1204,6 @@ namespace stew
       }
     }
 
-    template <class FS>
-    class tempfile
-    {
-      string _path;
-      mode _mode;
-
-    public:
-      ~tempfile() = default;
-      tempfile() = default;
-      tempfile(string_view path, mode m = {perm::rwx, perm::rx, perm::rx})
-          : _path(path), _mode(m) {}
-      tempfile(const tempfile &) = default;
-      tempfile(tempfile &&) = default;
-      tempfile &operator=(const tempfile &) = default;
-      tempfile &operator=(tempfile &&) = default;
-
-    public:
-      const string &path() const
-      {
-        return _path;
-      }
-
-      const mode &perms() const
-      {
-        return _mode;
-      }
-    };
-
     template <path P>
     class cpath
     {
@@ -1286,24 +1282,6 @@ namespace stew
       {
         static constexpr bool value = true;
       };
-
-      template <typename T>
-      struct path_tempfile
-      {
-        static constexpr bool value = false;
-      };
-
-      template <typename FS>
-      struct path_tempfile<tempfile<FS>>
-      {
-        static constexpr bool value = true;
-      };
-
-      template <typename FS>
-      struct path_tempfile<cpath<tempfile<FS>>>
-      {
-        static constexpr bool value = true;
-      };
     }
 
     template <class T>
@@ -1311,9 +1289,6 @@ namespace stew
 
     template <class T>
     concept path_directory = impl::path_directory<T>::value;
-
-    template <class T>
-    concept path_tempfile = impl::path_tempfile<T>::value;
 
     struct ferror
     {
@@ -1341,6 +1316,35 @@ namespace stew
     bool fexecutable(const P &p)
     {
       return stew::c::access(p.path().data(), (int)perm::x) == 0;
+    }
+
+    // ---------------------------------------------------------
+    //
+    // fcreate : create a file corresponding to the path specification.
+    //
+    // ---------------------------------------------------------
+
+    template <path P>
+    result<basic_success, ferror> fcreate(const P &p)
+    {
+      if constexpr (path_directory<P>)
+      {
+        auto res = stew::c::mkdir(p.path().data(), static_cast<size_t>(p.perms()));
+
+        if (res == 0 || res == EEXIST)
+        {
+          return basic_success();
+        }
+      }
+      else if constexpr (path_file<P>)
+      {
+        if (stew::c::touch(p.path().data(), static_cast<size_t>(p.perms())) == 0)
+        {
+          return basic_success();
+        }
+      }
+
+      return ferror();
     }
 
     template <path P>
@@ -1372,7 +1376,7 @@ namespace stew
     template <path P>
     result<basic_success, ferror> fchmod(const P &p, mode m)
     {
-      if (stew::c::chmod(p.path().data(), m._literal) == 0)
+      if (stew::c::chmod(p.path().data(), static_cast<size_t>(m)) == 0)
       {
         return basic_success();
       }
@@ -1382,30 +1386,6 @@ namespace stew
       }
     }
 
-    template <path P>
-    result<basic_success, ferror> fcreate(const P &p)
-    {
-      if constexpr (path_directory<P>)
-      {
-        if (stew::c::mkdir(p.path().data(), p.perms()._literal) == 0)
-        {
-          return basic_success();
-        }
-      }
-      else if constexpr (path_file<P>)
-      {
-        if (stew::c::touch(p.path().data(), p.perms()._literal) == 0)
-        {
-          return basic_success();
-        }
-      }
-      else if constexpr (path_tempfile<P>)
-      {
-        // TODO: faire ce bout de code par la création d'une fonction de création d'un fichier temporaire.
-      }
-
-      return ferror();
-    }
   }
 }
 
