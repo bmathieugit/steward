@@ -389,6 +389,102 @@ namespace stew
     return true;
   }
 
+  // ---------------------------------
+  //
+  // VECTOR
+  //
+  // A vector is a contigous resizable container
+  // ---------------------------------
+
+  template <class T, bool resizable>
+  class basic_vector
+  {
+  private:
+    T *_data = nullptr;
+    size_t _size = 0;
+    size_t _max = 0;
+
+  public:
+    ~basic_vector()
+    {
+      if (_data != nullptr)
+      {
+        delete[] _data;
+        _data = nullptr;
+        _size = 0;
+        _max = 0;
+      }
+    }
+
+    basic_vector() = default;
+
+    basic_vector(size_t max)
+        : _size{0}, _max{max}, _data{new T[_max]};
+
+    basic_vector(const basic_vector &o)
+        : _size{o.size}, _max{o._max}, _data{new T[_max]}
+    {
+      for (size_t i{0}; i < o._size; ++i)
+      {
+        _data[i] = o._data[i];
+      }
+    }
+
+    basic_vector(basic_vector &&o)
+        : _data{o._data}, _size{o._size}, _max{o._max}
+    {
+      o._data = nullptr;
+      o._size = 0;
+      o._max = 0;
+    }
+
+    basic_vector &operator=(const basic_vector &o)
+    {
+      if (this != &o)
+      {
+        if constexpr (resizable)
+        {
+          // TODO: augmenter la taille du vector si celui-ci est plus petits que le vector o à copier.
+        }
+        else
+        {
+          _size = o._size < _size ? o._size : _size;
+
+          for (size_t i{0}; i < _size; ++i)
+          {
+            _data[i] = o._data[i];
+          }
+        }
+      }
+
+      return *this;
+    }
+
+    basic_vector &operator=(basic_vector &&o)
+    {
+      if constexpr (resizable)
+      {
+        if (this != &o)
+        {
+          
+          _size = o._size;
+        }
+      }
+      else
+      {
+        // TODO: que faire quand de taille fixe ?
+      }
+
+      return *this;
+    }
+  };
+
+  template <class T>
+  using vector = basic_vector<T, true>;
+
+  template <class T>
+  using fixed_vector = basic_vector<T, false>;
+
   ///////////////////
   /// STRING_VIEW ///
   ///////////////////
@@ -1338,7 +1434,9 @@ namespace stew
       }
       else if constexpr (path_file<P>)
       {
-        if (stew::c::touch(p.path().data(), static_cast<size_t>(p.perms())) == 0)
+        auto res = stew::c::touch(p.path().data(), static_cast<size_t>(p.perms()));
+
+        if (res == 0 || res == EEXIST)
         {
           return basic_success();
         }
@@ -1350,7 +1448,7 @@ namespace stew
     template <path P>
     result<basic_success, ferror> fremove(const P &p)
     {
-      if (stew::c::remove(p.path().data()) == 0)
+      if (stew::c::remo ve(p.path().data()) == 0)
       {
         return basic_success();
       }
