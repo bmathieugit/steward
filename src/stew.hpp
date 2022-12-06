@@ -1093,10 +1093,9 @@ namespace stew
       perm _group = perm::f;
       perm _other = perm::f;
 
-      size_t to_literal() const
-      {
-        return (size_t)_user << 6 | (size_t)_group << 3 | (size_t)_other;
-      }
+      size_t _literal = static_cast<size_t>(_user) << 6 |
+                        static_cast<size_t>(_group) << 3 |
+                        static_cast<size_t>(_other);
     };
 
     template <typename P>
@@ -1287,6 +1286,24 @@ namespace stew
       {
         static constexpr bool value = true;
       };
+
+      template <typename T>
+      struct path_tempfile
+      {
+        static constexpr bool value = false;
+      };
+
+      template <typename FS>
+      struct path_tempfile<tempfile<FS>>
+      {
+        static constexpr bool value = true;
+      };
+
+      template <typename FS>
+      struct path_tempfile<cpath<tempfile<FS>>>
+      {
+        static constexpr bool value = true;
+      };
     }
 
     template <class T>
@@ -1294,6 +1311,9 @@ namespace stew
 
     template <class T>
     concept path_directory = impl::path_directory<T>::value;
+
+    template <class T>
+    concept path_tempfile = impl::path_tempfile<T>::value;
 
     struct ferror
     {
@@ -1352,7 +1372,7 @@ namespace stew
     template <path P>
     result<basic_success, ferror> fchmod(const P &p, mode m)
     {
-      if (stew::c::chmod(p.path().data(), m.to_literal()) == 0)
+      if (stew::c::chmod(p.path().data(), m._literal) == 0)
       {
         return basic_success();
       }
@@ -1367,19 +1387,19 @@ namespace stew
     {
       if constexpr (path_directory<P>)
       {
-        if (stew::c::mkdir(p.path().data(), p.perms().to_literal()) == 0)
+        if (stew::c::mkdir(p.path().data(), p.perms()._literal) == 0)
         {
           return basic_success();
         }
       }
       else if constexpr (path_file<P>)
       {
-        if (stew::c::touch(p.path().data(), p.perms().to_literal()) == 0)
+        if (stew::c::touch(p.path().data(), p.perms()._literal) == 0)
         {
           return basic_success();
         }
-      } 
-      else if constexpr (path_tempfile<P>
+      }
+      else if constexpr (path_tempfile<P>)
       {
         // TODO: faire ce bout de code par la création d'une fonction de création d'un fichier temporaire.
       }
