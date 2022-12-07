@@ -176,20 +176,6 @@ namespace stew
     return static_cast<rm_ref<T> &&>(t);
   }
 
-  // -----------------------------
-  //
-  // SWAP Functions
-  //
-  // -----------------------------
-
-  template <class T>
-  void swap(T &t1, T &t2)
-  {
-    T tmp = move(t1);
-    t1 = move(t2);
-    t2 = move(tmp);
-  }
-
   //////////////
   /// RESULT ///
   //////////////
@@ -311,21 +297,28 @@ namespace stew
   template <range R1, range R2>
   constexpr bool equals(const R1 &r1, const R2 &r2)
   {
-    auto b1 = r1.begin();
-    auto b2 = r2.begin();
-
-    auto e1 = r1.end();
-    auto e2 = r2.end();
-
-    while (b1 != e1 &&
-           b2 != e2 &&
-           *b1 == *b2)
+    if (&r1 == &r2)
     {
-      ++b1;
-      ++b2;
+      return true;
     }
+    else
+    {
+      auto b1 = r1.begin();
+      auto b2 = r2.begin();
 
-    return b1 == e1 && b2 == e2;
+      auto e1 = r1.end();
+      auto e2 = r2.end();
+
+      while (b1 != e1 &&
+             b2 != e2 &&
+             *b1 == *b2)
+      {
+        ++b1;
+        ++b2;
+      }
+
+      return b1 == e1 && b2 == e2;
+    }
   }
 
   template <range R1, range R2>
@@ -337,7 +330,9 @@ namespace stew
     auto e1 = r1.end();
     auto e2 = r2.end();
 
-    while (b1 != e1 && b2 != e2 && *b1 == *b2)
+    while (b1 != e1 &&
+           b2 != e2 &&
+           *b1 == *b2)
     {
       ++b1;
       ++b2;
@@ -411,9 +406,8 @@ namespace stew
 
   // ---------------------------------
   //
-  // VECTOR
+  // Vector containers
   //
-  // A vector is a contigous resizable container
   // ---------------------------------
 
   template <class T, unsigned_integral S = size_t>
@@ -543,7 +537,7 @@ namespace stew
 
     operator bool() const
     {
-      return empty();
+      return !empty();
     }
 
   public:
@@ -574,17 +568,23 @@ namespace stew
     }
   };
 
+  template <class T1, class S1, class T2, class S2>
+  bool operator==(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
+  {
+    return equals(fv1, fv2);
+  }
+
+  template <class T1, class S1, class T2, class S2>
+  bool operator!=(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
+  {
+    return !(fv1 == fv2);
+  }
+
   template <class T, unsigned_integral S = size_t>
   class vector
   {
   private:
     fixed_vector<T, S> _data;
-
-  public:
-    void swap(vector &o)
-    {
-      _data.swap(o._data);
-    }
 
   public:
     ~vector() = default;
@@ -667,7 +667,7 @@ namespace stew
     void push_back(T &&t)
     {
       if (_data.full())
-      { 
+      {
         fixed_vector<T, S> tmp(move(_data));
         _data = fixed_vector<T, S>(tmp.size() * 2);
 
@@ -686,6 +686,18 @@ namespace stew
     }
   };
 
+  template <class T1, class S1, class T2, class S2>
+  bool operator==(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
+  {
+    return equals(fv1, fv2);
+  }
+
+  template <class T1, class S1, class T2, class S2>
+  bool operator!=(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
+  {
+    return !(fv1 == fv2);
+  }
+
   ///////////////////
   /// STRING_VIEW ///
   ///////////////////
@@ -698,30 +710,30 @@ namespace stew
     const C *_end = nullptr;
 
   public:
-    constexpr ~basic_string_view() = default;
+    ~basic_string_view() = default;
 
-    constexpr basic_string_view(const C *b, const C *e)
+    basic_string_view(const C *b, const C *e)
     {
       _begin = b;
       _end = e;
     }
 
-    constexpr basic_string_view(const C *b, size_t s)
+     basic_string_view(const C *b, size_t s)
     {
       _begin = b;
       _end = b + s;
     }
 
-    constexpr basic_string_view(const C *c)
+     basic_string_view(const C *c)
         : basic_string_view(c, strlen(c))
     {
     }
 
-    constexpr basic_string_view() = default;
-    constexpr basic_string_view(const basic_string_view &) = default;
-    constexpr basic_string_view(basic_string_view &&) = default;
-    constexpr basic_string_view &operator=(const basic_string_view &) = default;
-    constexpr basic_string_view &operator=(basic_string_view &&) = default;
+     basic_string_view() = default;
+     basic_string_view(const basic_string_view &) = default;
+     basic_string_view(basic_string_view &&) = default;
+     basic_string_view &operator=(const basic_string_view &) = default;
+     basic_string_view &operator=(basic_string_view &&) = default;
 
   public:
     auto begin() const
