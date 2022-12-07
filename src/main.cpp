@@ -8,26 +8,35 @@ int main()
   using namespace stew;
   using namespace stew::fs::literatals;
 
-  auto tmp = "tmp"_cfp;
-  auto tmp2 = "tmp2"_cfp;
+  // auto tmp = "tmp"_cfp;
+  // auto tmp2 = "tmp2"_cfp;
 
-  cout.printfln("tmp existing ? {}", (bool)fs::fexists(tmp));
-  cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
-  cout.printfln("tmp readable ? {}", (bool)fs::freadable(tmp));
-  cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp));
-  cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
-  cout.printfln("tmp renamed ? {}", (bool)fs::frename(tmp, tmp2));
-  cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp2));
+  // cout.printfln("tmp existing ? {}", (bool)fs::fexists(tmp));
+  // cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
+  // cout.printfln("tmp readable ? {}", (bool)fs::freadable(tmp));
+  // cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp));
+  // cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
+  // cout.printfln("tmp renamed ? {}", (bool)fs::frename(tmp, tmp2));
+  // cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp2));
 
-  vector<int> fv{10};
+  // vector<int> fv{10};
 
-  for (size_t i{0}; i < 100; ++i)
-  {
-    fv.push_back(i);
-  }
+  // for (size_t i{0}; i < 100; ++i)
+  // {
+  //   fv.push_back(i);
+  // }
 
-  cout.printfln("equals {}", fv == fv);
+  // cout.printfln("equals {}", fv == fv);
+  
+  
+  fstring o(20);
+  format_to(o, "{}", 12);
+  format_to(o, "{}", 12);
+  format_to(o, "{}", 12);
+  format_to(o, "{}", 12);
+
+  format_to(o, "{} {}", 12, 23);
 
   array<int, 4> is = {0, 1, 2, 3};
-  return fv.size() - 100;
+  return is.size() - 4;
 }
