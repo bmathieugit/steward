@@ -27,15 +27,11 @@ int main()
   // }
 
   // cout.printfln("equals {}", fv == fv);
-  
-  
-  fstring o(20);
-  format_to(o, "{}", 12);
-  format_to(o, "{}", 12);
-  format_to(o, "{}", 12);
-  format_to(o, "{}", 12);
 
+  fstring o(500);
   format_to(o, "{} {}", 12, 23);
+
+  cout.printfln("{}", o);
 
   array<int, 4> is = {0, 1, 2, 3};
   return is.size() - 4;
