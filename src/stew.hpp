@@ -2,6 +2,7 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
+#include <string>
 
 namespace stew
 {
@@ -169,6 +170,26 @@ namespace stew
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
 
+  template <class T>
+  rm_ref<T> &&move(T &&t)
+  {
+    return static_cast<rm_ref<T> &&>(t);
+  }
+
+  // -----------------------------
+  //
+  // SWAP Functions
+  //
+  // -----------------------------
+
+  template <class T>
+  void swap(T &t1, T &t2)
+  {
+    T tmp = move(t1);
+    t1 = move(t2);
+    t2 = move(tmp);
+  }
+
   //////////////
   /// RESULT ///
   //////////////
@@ -244,11 +265,10 @@ namespace stew
   /////////////////
 
   template <typename C>
-  concept range = requires(C &c)
-  {
-    c.begin();
-    c.end();
-  };
+  concept range = requires(C &c) {
+                    c.begin();
+                    c.end();
+                  };
 
   template <typename I>
   class frame
@@ -396,94 +416,275 @@ namespace stew
   // A vector is a contigous resizable container
   // ---------------------------------
 
-  template <class T, bool resizable>
-  class basic_vector
+  template <class T, unsigned_integral S = size_t>
+  class fixed_vector
   {
   private:
-    T *_data = nullptr;
-    size_t _size = 0;
-    size_t _max = 0;
+    S _size{0};
+    S _max{0};
+    T *_data{nullptr};
 
   public:
-    ~basic_vector()
+    ~fixed_vector()
     {
-      if (_data != nullptr)
-      {
-        delete[] _data;
-        _data = nullptr;
-        _size = 0;
-        _max = 0;
-      }
+      _size = 0;
+      _max = 0;
+      delete[] _data;
+      _data = nullptr;
     }
 
-    basic_vector() = default;
+    fixed_vector() = default;
 
-    basic_vector(size_t max)
-        : _size{0}, _max{max}, _data{new T[_max]};
+    fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]} {}
 
-    basic_vector(const basic_vector &o)
-        : _size{o.size}, _max{o._max}, _data{new T[_max]}
+    fixed_vector(const fixed_vector &o)
+        : fixed_vector(o._max)
     {
-      for (size_t i{0}; i < o._size; ++i)
+      for (S i{0}; i < _size; ++i)
       {
         _data[i] = o._data[i];
       }
+
+      _size = o._size;
     }
 
-    basic_vector(basic_vector &&o)
-        : _data{o._data}, _size{o._size}, _max{o._max}
+    fixed_vector(fixed_vector &&o)
+        : _size{o._size}, _max{o._max}, _data{o._data}
     {
-      o._data = nullptr;
       o._size = 0;
       o._max = 0;
+      o._data = nullptr;
     }
 
-    basic_vector &operator=(const basic_vector &o)
+    fixed_vector &operator=(const fixed_vector &o)
     {
       if (this != &o)
       {
-        if constexpr (resizable)
-        {
-          // TODO: augmenter la taille du vector si celui-ci est plus petits que le vector o à copier.
-        }
-        else
-        {
-          _size = o._size < _size ? o._size : _size;
+        _size = o._size;
+        _max = o._max;
+        _data = new T[_max];
 
-          for (size_t i{0}; i < _size; ++i)
-          {
-            _data[i] = o._data[i];
-          }
+        for (S i{0}; i < _size; ++i)
+        {
+          _data[i] = o._data[i];
         }
       }
 
       return *this;
     }
 
-    basic_vector &operator=(basic_vector &&o)
+    fixed_vector &operator=(fixed_vector &&o)
     {
-      if constexpr (resizable)
+      if (this != &o)
       {
-        if (this != &o)
-        {
-          
-          _size = o._size;
-        }
-      }
-      else
-      {
-        // TODO: que faire quand de taille fixe ?
+        _size = o._size;
+        _max = o._max;
+        _data = o._data;
+
+        o._size = 0;
+        o._max = 0;
+        o._data = nullptr;
       }
 
       return *this;
+    }
+
+  public:
+    auto begin()
+    {
+      return _data;
+    }
+
+    auto end()
+    {
+      return _data + _size;
+    }
+
+    auto begin() const
+    {
+      return _data;
+    }
+
+    auto end() const
+    {
+      return _data + _size;
+    }
+
+    T &operator[](S i)
+    {
+      return _data[i];
+    }
+
+    const T &operator[](S i) const
+    {
+      return _data[i];
+    }
+
+  public:
+    bool empty() const
+    {
+      return _size == 0;
+    }
+
+    bool full() const
+    {
+      return _size == _max;
+    }
+
+    auto size() const
+    {
+      return _size;
+    }
+
+    auto cap() const
+    {
+      return _max;
+    }
+
+    operator bool() const
+    {
+      return empty();
+    }
+
+  public:
+    void push_back(const T &t)
+    {
+      if (!full())
+      {
+        _data[_size] = t;
+        _size += 1;
+      }
+    }
+
+    void push_back(T &&t)
+    {
+      if (!full())
+      {
+        _data[_size] = move(t);
+        _size += 1;
+      }
+    }
+
+    void pop_back()
+    {
+      if (_size != 0)
+      {
+        _size -= 1;
+      }
     }
   };
 
-  template <class T>
-  using vector = basic_vector<T, true>;
+  template <class T, unsigned_integral S = size_t>
+  class vector
+  {
+  private:
+    fixed_vector<T, S> _data;
 
-  template <class T>
-  using fixed_vector = basic_vector<T, false>;
+  public:
+    void swap(vector &o)
+    {
+      _data.swap(o._data);
+    }
+
+  public:
+    ~vector() = default;
+    vector() = default;
+    vector(S max) : _data{max} {}
+    vector(const vector &) = default;
+    vector(vector &) = default;
+    vector &operator=(const vector &) = default;
+    vector &operator=(vector &&) = default;
+
+  public:
+    auto begin()
+    {
+      return _data.begin();
+    }
+
+    auto end()
+    {
+      return _data.end();
+    }
+
+    auto begin() const
+    {
+      return _data.begin();
+    }
+
+    auto end() const
+    {
+      return _data.end();
+    }
+
+    T &operator[](S i)
+    {
+      return _data[i];
+    }
+
+    const T &operator[](S i) const
+    {
+      return _data[i];
+    }
+
+  public:
+    auto empty() const
+    {
+      return _data.empty();
+    }
+
+    auto full() const
+    {
+      return _data.full();
+    }
+
+    auto size() const
+    {
+      return _data.size();
+    }
+
+    operator bool() const
+    {
+      return static_cast<bool>(_data);
+    }
+
+  public:
+    void push_back(const T &t)
+    {
+      if (_data.full())
+      {
+        fixed_vector<T, S> tmp(move(_data));
+        _data = fixed_vector<T, S>(tmp.size() * 2);
+
+        for (T &i : move(tmp))
+        {
+          _data.push_back(move(i));
+        }
+      }
+
+      _data.push_back(t);
+    }
+
+    void push_back(T &&t)
+    {
+      if (_data.full())
+      { 
+        fixed_vector<T, S> tmp(move(_data));
+        _data = fixed_vector<T, S>(tmp.size() * 2);
+
+        for (T &i : move(tmp))
+        {
+          _data.push_back(move(i));
+        }
+      }
+
+      _data.push_back(move(t));
+    }
+
+    void pop_back()
+    {
+      _data.pop_back();
+    }
+  };
 
   ///////////////////
   /// STRING_VIEW ///
@@ -891,16 +1092,13 @@ namespace stew
   class formatter;
 
   template <typename O>
-  concept ostream = requires(O &o, char c, const basic_string<char> &s)
-  {
-    o.push_one(c);
-    o.push_all(s);
-  }
-  || requires(O &o, wchar_t c, const basic_string<wchar_t> &s)
-  {
-    o.push_one(c);
-    o.push_all(s);
-  };
+  concept ostream = requires(O &o, char c, const basic_string<char> &s) {
+                      o.push_one(c);
+                      o.push_all(s);
+                    } || requires(O &o, wchar_t c, const basic_string<wchar_t> &s) {
+                           o.push_one(c);
+                           o.push_all(s);
+                         };
 
   namespace fmt
   {
@@ -1219,11 +1417,10 @@ namespace stew
     };
 
     template <typename P>
-    concept path = requires(const P &p)
-    {
-      p.path();
-      p.perms();
-    };
+    concept path = requires(const P &p) {
+                     p.path();
+                     p.perms();
+                   };
 
     template <typename FS>
     class directory
@@ -1448,7 +1645,7 @@ namespace stew
     template <path P>
     result<basic_success, ferror> fremove(const P &p)
     {
-      if (stew::c::remo ve(p.path().data()) == 0)
+      if (stew::c::remove(p.path().data()) == 0)
       {
         return basic_success();
       }
