@@ -28,9 +28,6 @@ int main()
 
   cout.printfln("equals {}", fv == fv);
 
-  string s = "coucou";
-  string s2 = "coucou";
-  string s3 = "coucou3";
-  
+  array<int, 4> is = {0, 1, 2, 3};
   return fv.size() - 100;
 }

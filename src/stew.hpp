@@ -176,9 +176,11 @@ namespace stew
     return static_cast<rm_ref<T> &&>(t);
   }
 
-  //////////////
-  /// RESULT ///
-  //////////////
+  //-----------------------------------
+  //
+  // Result
+  //
+  //-----------------------------------
 
   template <class S, class E>
   class result
@@ -406,6 +408,83 @@ namespace stew
 
   // ---------------------------------
   //
+  // Array container
+  //
+  // ---------------------------------
+
+  template <class T, size_t N>
+  struct array
+  {
+    T _data[N];
+
+  public:
+    constexpr auto size() const
+    {
+      return N;
+    }
+
+    constexpr auto begin()
+    {
+      return _data;
+    }
+
+    constexpr auto end()
+    {
+      return _data + N;
+    }
+
+    constexpr auto begin() const
+    {
+      return _data;
+    }
+
+    constexpr auto end() const
+    {
+      return _data + N;
+    }
+
+    constexpr T &operator[](size_t i)
+    {
+      return _data[i];
+    }
+
+    constexpr const T &operator[](size_t i) const
+    {
+      return _data[i];
+    }
+  };
+
+  template <typename T, size_t N>
+  class stack_array
+  {
+  private:
+    array<T, N> _data;
+    int _idx = -1;
+
+  public:
+    constexpr void push(const T &c)
+    {
+      _data[++_idx] = c;
+    }
+
+    constexpr void push(T &&c)
+    {
+      _data[++_idx] = move(c);
+    }
+
+    constexpr T &&pop()
+    {
+      return _data[_idx--];
+    }
+
+    constexpr bool empty() const
+    {
+      return _idx == -1;
+    }
+  };
+
+  // ---------------------------------
+  //
   // Vector containers
   //
   // ---------------------------------
@@ -419,7 +498,7 @@ namespace stew
     T *_data{nullptr};
 
   public:
-    ~fixed_vector()
+    constexpr ~fixed_vector()
     {
       _size = 0;
       _max = 0;
@@ -427,11 +506,11 @@ namespace stew
       _data = nullptr;
     }
 
-    fixed_vector() = default;
+    constexpr fixed_vector() = default;
 
-    fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]} {}
+    constexpr fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]} {}
 
-    fixed_vector(const fixed_vector &o)
+    constexpr fixed_vector(const fixed_vector &o)
         : fixed_vector(o._max)
     {
       for (S i{0}; i < _size; ++i)
@@ -442,7 +521,7 @@ namespace stew
       _size = o._size;
     }
 
-    fixed_vector(fixed_vector &&o)
+    constexpr fixed_vector(fixed_vector &&o)
         : _size{o._size}, _max{o._max}, _data{o._data}
     {
       o._size = 0;
@@ -450,7 +529,7 @@ namespace stew
       o._data = nullptr;
     }
 
-    fixed_vector &operator=(const fixed_vector &o)
+    constexpr fixed_vector &operator=(const fixed_vector &o)
     {
       if (this != &o)
       {
@@ -467,7 +546,7 @@ namespace stew
       return *this;
     }
 
-    fixed_vector &operator=(fixed_vector &&o)
+    constexpr fixed_vector &operator=(fixed_vector &&o)
     {
       if (this != &o)
       {
@@ -484,64 +563,64 @@ namespace stew
     }
 
   public:
-    auto begin()
+    constexpr auto begin()
     {
       return _data;
     }
 
-    auto end()
+    constexpr auto end()
     {
       return _data + _size;
     }
 
-    auto begin() const
+    constexpr auto begin() const
     {
       return _data;
     }
 
-    auto end() const
+    constexpr auto end() const
     {
       return _data + _size;
     }
 
-    T &operator[](S i)
+    constexpr T &operator[](S i)
     {
       return _data[i];
     }
 
-    const T &operator[](S i) const
+    constexpr const T &operator[](S i) const
     {
       return _data[i];
     }
 
   public:
-    bool empty() const
+    constexpr bool empty() const
     {
       return _size == 0;
     }
 
-    bool full() const
+    constexpr bool full() const
     {
       return _size == _max;
     }
 
-    auto size() const
+    constexpr auto size() const
     {
       return _size;
     }
 
-    auto cap() const
+    constexpr auto cap() const
     {
       return _max;
     }
 
-    operator bool() const
+    constexpr operator bool() const
     {
       return !empty();
     }
 
   public:
-    void push_back(const T &t)
+    constexpr void push_back(const T &t)
     {
       if (!full())
       {
@@ -550,7 +629,7 @@ namespace stew
       }
     }
 
-    void push_back(T &&t)
+    constexpr void push_back(T &&t)
     {
       if (!full())
       {
@@ -559,7 +638,7 @@ namespace stew
       }
     }
 
-    void pop_back()
+    constexpr void pop_back()
     {
       if (_size != 0)
       {
@@ -569,13 +648,13 @@ namespace stew
   };
 
   template <class T1, class S1, class T2, class S2>
-  bool operator==(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
+  constexpr bool operator==(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
   {
     return equals(fv1, fv2);
   }
 
   template <class T1, class S1, class T2, class S2>
-  bool operator!=(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
+  constexpr bool operator!=(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
   {
     return !(fv1 == fv2);
   }
@@ -587,73 +666,73 @@ namespace stew
     fixed_vector<T, S> _data;
 
   public:
-    ~vector() = default;
-    vector() = default;
-    vector(S max) : _data{max} {}
-    vector(const vector &) = default;
-    vector(vector &) = default;
-    vector &operator=(const vector &) = default;
-    vector &operator=(vector &&) = default;
+    constexpr ~vector() = default;
+    constexpr vector() = default;
+    constexpr vector(S max) : _data{max} {}
+    constexpr vector(const vector &) = default;
+    constexpr vector(vector &) = default;
+    constexpr vector &operator=(const vector &) = default;
+    constexpr vector &operator=(vector &&) = default;
 
   public:
-    auto begin()
+    constexpr auto begin()
     {
       return _data.begin();
     }
 
-    auto end()
+    constexpr auto end()
     {
       return _data.end();
     }
 
-    auto begin() const
+    constexpr auto begin() const
     {
       return _data.begin();
     }
 
-    auto end() const
+    constexpr auto end() const
     {
       return _data.end();
     }
 
-    T &operator[](S i)
+    constexpr T &operator[](S i)
     {
       return _data[i];
     }
 
-    const T &operator[](S i) const
+    constexpr const T &operator[](S i) const
     {
       return _data[i];
     }
 
   public:
-    auto empty() const
+    constexpr auto empty() const
     {
       return _data.empty();
     }
 
-    auto full() const
+    constexpr auto full() const
     {
       return _data.full();
     }
 
-    auto size() const
+    constexpr auto size() const
     {
       return _data.size();
     }
 
-    auto cap() const
+    constexpr auto cap() const
     {
       return _data.cpa();
     }
 
-    operator bool() const
+    constexpr operator bool() const
     {
       return static_cast<bool>(_data);
     }
 
   public:
-    void push_back(const T &t)
+    constexpr void push_back(const T &t)
     {
       if (_data.full())
       {
@@ -669,7 +748,7 @@ namespace stew
       _data.push_back(t);
     }
 
-    void push_back(T &&t)
+    constexpr void push_back(T &&t)
     {
       if (_data.full())
       {
@@ -685,20 +764,20 @@ namespace stew
       _data.push_back(move(t));
     }
 
-    void pop_back()
+    constexpr void pop_back()
     {
       _data.pop_back();
     }
   };
 
   template <class T1, class S1, class T2, class S2>
-  bool operator==(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
+  constexpr bool operator==(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
   {
     return equals(fv1, fv2);
   }
 
   template <class T1, class S1, class T2, class S2>
-  bool operator!=(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
+  constexpr bool operator!=(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
   {
     return !(fv1 == fv2);
   }
@@ -717,95 +796,95 @@ namespace stew
     const C *_end = nullptr;
 
   public:
-    ~basic_string_view() = default;
+    constexpr ~basic_string_view() = default;
 
-    basic_string_view(const C *b, const C *e)
+    constexpr basic_string_view(const C *b, const C *e)
     {
       _begin = b;
       _end = e;
     }
 
-    basic_string_view(const C *b, size_t s)
+    constexpr basic_string_view(const C *b, size_t s)
     {
       _begin = b;
       _end = b + s;
     }
 
-    basic_string_view(const C *c)
+    constexpr basic_string_view(const C *c)
         : basic_string_view(c, strlen(c))
     {
     }
 
     template <size_t N>
-    basic_string_view(const C (&s)[N])
+    constexpr basic_string_view(const C (&s)[N])
         : basic_string_view(s, N)
     {
     }
 
-    basic_string_view() = default;
-    basic_string_view(const basic_string_view &) = default;
-    basic_string_view(basic_string_view &&) = default;
-    basic_string_view &operator=(const basic_string_view &) = default;
-    basic_string_view &operator=(basic_string_view &&) = default;
+    constexpr basic_string_view() = default;
+    constexpr basic_string_view(const basic_string_view &) = default;
+    constexpr basic_string_view(basic_string_view &&) = default;
+    constexpr basic_string_view &operator=(const basic_string_view &) = default;
+    constexpr basic_string_view &operator=(basic_string_view &&) = default;
 
   public:
-    auto begin() const
+    constexpr auto begin() const
     {
       return _begin;
     }
 
-    auto end() const
+    constexpr auto end() const
     {
       return _end;
     }
 
-    auto data() const
+    constexpr auto data() const
     {
       return _begin;
     }
 
   public:
-    auto size() const
+    constexpr auto size() const
     {
       return _begin == nullptr ? 0 : _end - _begin;
     }
 
-    auto empty() const
+    constexpr auto empty() const
     {
       return size() == 0;
     }
 
-    bool equals(const basic_string_view &o) const
+    constexpr bool equals(const basic_string_view &o) const
     {
       return stew::equals(*this, o);
     }
 
-    auto find(basic_string_view o) const
+    constexpr auto find(basic_string_view o) const
     {
       return stew::find(*this, o);
     }
 
-    auto find(const C *c) const
+    constexpr auto find(const C *c) const
     {
       return stew::find(*this, basic_string_view(c));
     }
 
-    auto find(C c) const
+    constexpr auto find(C c) const
     {
       return stew::find(*this, c);
     }
 
-    auto starts_with(const basic_string_view &o) const
+    constexpr auto starts_with(const basic_string_view &o) const
     {
       return stew::starts_with(*this, o);
     }
 
-    auto contains(const basic_string_view &o) const
+    constexpr auto contains(const basic_string_view &o) const
     {
       return stew::contains(*this, o);
     }
 
-    auto contains(C c) const
+    constexpr auto contains(C c) const
     {
       return stew::contains(*this, c);
     }
@@ -817,7 +896,7 @@ namespace stew
       basic_string_view _aft;
     };
 
-    around_pair around(basic_string_view sep)
+    constexpr around_pair around(basic_string_view sep)
     {
       auto pos = find(sep);
 
@@ -832,22 +911,22 @@ namespace stew
     }
 
   public:
-    operator bool() const
+    constexpr operator bool() const
     {
       return !empty();
     }
 
-    bool operator==(const basic_string_view &o) const
+    constexpr bool operator==(const basic_string_view &o) const
     {
       return equals(o);
     }
 
-    bool operator!=(const basic_string_view &o) const
+    constexpr bool operator!=(const basic_string_view &o) const
     {
       return !operator==(o);
     }
 
-    C operator[](size_t i) const
+    constexpr C operator[](size_t i) const
     {
       return _begin[i];
     }
@@ -856,12 +935,12 @@ namespace stew
   using string_view = basic_string_view<char>;
   using wstring_view = basic_string_view<wchar_t>;
 
-  string_view operator"" _sv(const char *s, size_t n)
+  constexpr string_view operator"" _sv(const char *s, size_t n)
   {
     return string_view(s, n);
   }
 
-  wstring_view operator"" _sv(const wchar_t *s, size_t n)
+  constexpr wstring_view operator"" _sv(const wchar_t *s, size_t n)
   {
     return wstring_view(s, n);
   }
@@ -879,16 +958,16 @@ namespace stew
     vector<C> _data;
 
   public:
-    ~basic_string() = default;
+    constexpr ~basic_string() = default;
 
-    basic_string(size_t max) : _data(max + 1)
+    constexpr basic_string(size_t max) : _data(max + 1)
     {
       _data[_data.size()] = '\0';
     }
 
-    basic_string() : basic_string(10) {}
+    constexpr basic_string() : basic_string(10) {}
 
-    basic_string(basic_string_view<C> o)
+    constexpr basic_string(basic_string_view<C> o)
         : basic_string(o.size() + 1)
     {
       for (C c : o)
@@ -899,92 +978,92 @@ namespace stew
       _data[_data.size()] = '\0';
     }
 
-    basic_string(const C *c)
+    constexpr basic_string(const C *c)
         : basic_string(basic_string_view<C>(c))
     {
     }
 
     template <size_t N>
-    basic_string(const char (&s)[N])
+    constexpr basic_string(const char (&s)[N])
         : basic_string(basic_string_view<C>(s))
     {
     }
 
-    basic_string(const basic_string &o) = default;
-    basic_string(basic_string &&o) = default;
-    basic_string &operator=(const basic_string &o) = default;
-    basic_string &operator=(basic_string &&o) = default;
+    constexpr basic_string(const basic_string &o) = default;
+    constexpr basic_string(basic_string &&o) = default;
+    constexpr basic_string &operator=(const basic_string &o) = default;
+    constexpr basic_string &operator=(basic_string &&o) = default;
 
   public:
-    auto begin()
+    constexpr auto begin()
     {
       return _data.begin();
     }
 
-    auto end()
+    constexpr auto end()
     {
       return _data.begin() + _data.size() - 1;
     }
 
-    auto begin() const
+    constexpr auto begin() const
     {
       return _data;
     }
 
-    auto end() const
+    constexpr auto end() const
     {
       return _data.begin() + _data.size() - 1;
     }
 
   public:
-    auto size() const
+    constexpr auto size() const
     {
       return _data.size() - 1;
     }
 
-    auto capacity() const
+    constexpr auto capacity() const
     {
       return _data.cap() - 1;
     }
 
-    auto empty() const
+    constexpr auto empty() const
     {
       return _data.empty();
     }
 
-    auto full() const
+    constexpr auto full() const
     {
       return (size() - 1) == capacity();
     }
 
-    auto starts_with(const basic_string &o) const
+    constexpr auto starts_with(const basic_string &o) const
     {
       return stew::starts_with(*this, o);
     }
 
-    auto contains(const basic_string &o) const
+    constexpr auto contains(const basic_string &o) const
     {
       return stew::contains(*this, o);
     }
 
-    auto contains(C c) const
+    constexpr auto contains(C c) const
     {
       return stew::contains(*this, c);
     }
 
-    bool equals(const basic_string &o) const
+    constexpr bool equals(const basic_string &o) const
     {
       return stew::equals(*this, o);
     }
 
   public:
-    void push_back(C c)
+    constexpr void push_back(C c)
     {
       _data.push_back(c);
       _data[_data.size()] = '\0';
     }
 
-    void push_back(basic_string_view<C> o)
+    constexpr void push_back(basic_string_view<C> o)
     {
       for (C c : o)
       {
@@ -994,39 +1073,39 @@ namespace stew
       _data[_data.size()] = '\0';
     }
 
-    void pop_back()
+    constexpr void pop_back()
     {
       _data.pop_back();
       _data[_data.size()] = '\0';
     }
 
   public:
-    operator basic_string_view<C>() const
+    constexpr operator basic_string_view<C>() const
     {
       return basic_string_view<C>(begin(), end());
     }
 
-    operator bool() const
+    constexpr operator bool() const
     {
       return !empty();
     }
 
-    bool operator==(basic_string_view<C> o) const
+    constexpr bool operator==(basic_string_view<C> o) const
     {
       return equals(o);
     }
 
-    bool operator!=(basic_string_view<C> o) const
+    constexpr bool operator!=(basic_string_view<C> o) const
     {
       return !operator==(o);
     }
 
-    C &operator[](size_t i)
+    constexpr C &operator[](size_t i)
     {
       return _data[i];
     }
 
-    C operator[](size_t i) const
+    constexpr C operator[](size_t i) const
     {
       return _data[i];
     }
@@ -1056,7 +1135,7 @@ namespace stew
   namespace fmt
   {
     template <ostream O, character C, typename A>
-    basic_string_view<C> format_one_to(O &o, basic_string_view<C> &fmt, const A &a)
+    constexpr basic_string_view<C> format_one_to(O &o, basic_string_view<C> &fmt, const A &a)
     {
       auto [found, bef, aft] = fmt.around("{}");
 
@@ -1070,7 +1149,7 @@ namespace stew
     }
 
     template <ostream O, character C, typename... A>
-    void format_to(O &o, basic_string_view<C> fmt, const A &...a)
+    constexpr void format_to(O &o, basic_string_view<C> fmt, const A &...a)
     {
       ((fmt = format_one_to(o, fmt, a)), ...);
       formatter<basic_string_view<C>>::to(o, fmt);
@@ -1078,13 +1157,13 @@ namespace stew
   }
 
   template <ostream O, typename... A>
-  void format_to(O &o, string_view fmt, const A &...a)
+  constexpr void format_to(O &o, string_view fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
   }
 
   template <ostream O, typename... A>
-  void format_to(O &o, wstring_view fmt, const A &...a)
+  constexpr void format_to(O &o, wstring_view fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
   }
@@ -1094,7 +1173,7 @@ namespace stew
   {
   public:
     template <ostream O>
-    static void to(O &os, C o)
+    constexpr static void to(O &os, C o)
     {
       os.push_one(o);
     }
@@ -1105,7 +1184,7 @@ namespace stew
   {
   public:
     template <ostream O>
-    static void to(O &os, basic_string_view<C> o)
+    constexpr static void to(O &os, basic_string_view<C> o)
     {
       os.push_all(o);
     }
@@ -1116,7 +1195,7 @@ namespace stew
   {
   public:
     template <ostream O>
-    static void to(O &os, basic_string_view<C> o)
+    constexpr static void to(O &os, basic_string_view<C> o)
     {
       os.push_all(o);
     }
@@ -1127,7 +1206,7 @@ namespace stew
   {
   public:
     template <ostream O>
-    static void to(O &os, basic_string_view<C> o)
+    constexpr static void to(O &os, basic_string_view<C> o)
     {
       os.push_all(o);
     }
@@ -1138,24 +1217,13 @@ namespace stew
   {
   public:
     template <ostream O>
-    static void to(O &o, I i)
+    constexpr static void to(O &o, I i)
     {
-      class StackArray
-      {
-        char data[40];
-        int i = -1;
-
-      public:
-        void push(char c) noexcept { data[++i] = c; }
-        char pop() noexcept { return data[i--]; }
-        bool empty() noexcept { return i == -1; }
-      };
-
       bool neg = i < 0;
 
       I tmp = neg ? -i : i;
 
-      StackArray tbuff;
+      stack_array<char, 40> tbuff;
 
       if (tmp == 0)
       {
@@ -1187,20 +1255,10 @@ namespace stew
   {
   public:
     template <ostream O>
-    static void to(O &o, I i)
+    constexpr static void to(O &o, I i)
     {
-      class StackArray
-      {
-        char data[40];
-        int i = -1;
 
-      public:
-        void push(char c) noexcept { data[++i] = c; }
-        char pop() noexcept { return data[i--]; }
-        bool empty() noexcept { return i == -1; }
-      };
-
-      StackArray tbuff;
+      stack_array<char, 40> tbuff;
       auto tmp = i;
 
       if (tmp == 0)
@@ -1228,7 +1286,7 @@ namespace stew
   {
   public:
     template <ostream O>
-    static void to(O &o, bool b)
+    constexpr static void to(O &o, bool b)
     {
       formatter<basic_string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
     }
