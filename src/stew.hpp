@@ -642,6 +642,11 @@ namespace stew
       return _data.size();
     }
 
+    auto cap() const
+    {
+      return _data.cpa();
+    }
+
     operator bool() const
     {
       return static_cast<bool>(_data);
@@ -698,9 +703,11 @@ namespace stew
     return !(fv1 == fv2);
   }
 
-  ///////////////////
-  /// STRING_VIEW ///
-  ///////////////////
+  //--------------------------
+  //
+  // String view
+  //
+  //--------------------------
 
   template <character C>
   class basic_string_view
@@ -718,22 +725,28 @@ namespace stew
       _end = e;
     }
 
-     basic_string_view(const C *b, size_t s)
+    basic_string_view(const C *b, size_t s)
     {
       _begin = b;
       _end = b + s;
     }
 
-     basic_string_view(const C *c)
+    basic_string_view(const C *c)
         : basic_string_view(c, strlen(c))
     {
     }
 
-     basic_string_view() = default;
-     basic_string_view(const basic_string_view &) = default;
-     basic_string_view(basic_string_view &&) = default;
-     basic_string_view &operator=(const basic_string_view &) = default;
-     basic_string_view &operator=(basic_string_view &&) = default;
+    template <size_t N>
+    basic_string_view(const C (&s)[N])
+        : basic_string_view(s, N)
+    {
+    }
+
+    basic_string_view() = default;
+    basic_string_view(const basic_string_view &) = default;
+    basic_string_view(basic_string_view &&) = default;
+    basic_string_view &operator=(const basic_string_view &) = default;
+    basic_string_view &operator=(basic_string_view &&) = default;
 
   public:
     auto begin() const
@@ -853,55 +866,37 @@ namespace stew
     return wstring_view(s, n);
   }
 
-  //////////////
-  /// STRING ///
-  //////////////
+  //----------------------------
+  //
+  // String
+  //
+  //----------------------------
 
   template <character C>
   class basic_string
   {
   private:
-    size_t _max;
-    size_t _size;
-    C *_data;
+    vector<C> _data;
 
   public:
-    ~basic_string()
-    {
-      if (_data != nullptr)
-      {
-        delete _data;
-        _data = nullptr;
-        _size = 0;
-        _max = 0;
-      }
-    }
+    ~basic_string() = default;
 
-    basic_string(size_t max)
-        : _max(max < 10 ? 10 : max),
-          _size(0),
-          _data(new C[_max])
+    basic_string(size_t max) : _data(max + 1)
     {
-      _data[0] = '\0';
+      _data[_data.size()] = '\0';
     }
 
     basic_string() : basic_string(10) {}
 
-    template <typename I>
-    basic_string(I b, I e)
-        : basic_string(e - b)
+    basic_string(basic_string_view<C> o)
+        : basic_string(o.size() + 1)
     {
-      for (size_t i(0); i < _max; ++i)
+      for (C c : o)
       {
-        _data[i] = b[i];
+        _data.push_back(c);
       }
 
-      _size = _max;
-    }
-
-    basic_string(basic_string_view<C> o)
-        : basic_string(o.begin(), o.end())
-    {
+      _data[_data.size()] = '\0';
     }
 
     basic_string(const C *c)
@@ -909,70 +904,26 @@ namespace stew
     {
     }
 
-    basic_string(const basic_string &o)
-        : basic_string(o.begin(), o.end())
+    template <size_t N>
+    basic_string(const char (&s)[N])
+        : basic_string(basic_string_view<C>(s))
     {
     }
 
-    basic_string(basic_string &&o)
-    {
-      _max = o._max;
-      _size = o._size;
-      _data = o._data;
-
-      o._max = 0;
-      o._size = 0;
-      o._data = nullptr;
-    }
-
-    basic_string &operator=(const basic_string &o)
-    {
-      if (this != &o)
-      {
-        if (_max < o._size)
-        {
-          delete _data;
-          _max = o._max;
-          _data = new C[_max];
-        }
-
-        for (size_t i(0); i < _size; ++i)
-        {
-          _data[i] = o._data[i];
-        }
-
-        _size = o._size;
-        _data[_size] = '\0';
-      }
-
-      return *this;
-    }
-
-    basic_string &operator=(basic_string &&o)
-    {
-      if (this != &o)
-      {
-        _max = o._max;
-        _data = o._data;
-        _size = o._size;
-
-        o._max = 0;
-        o._size = 0;
-        o._data = nullptr;
-      }
-
-      return *this;
-    }
+    basic_string(const basic_string &o) = default;
+    basic_string(basic_string &&o) = default;
+    basic_string &operator=(const basic_string &o) = default;
+    basic_string &operator=(basic_string &&o) = default;
 
   public:
     auto begin()
     {
-      return _data;
+      return _data.begin();
     }
 
     auto end()
     {
-      return _data + _size;
+      return _data.begin() + _data.size() - 1;
     }
 
     auto begin() const
@@ -982,33 +933,28 @@ namespace stew
 
     auto end() const
     {
-      return _data + _size;
-    }
-
-    auto data() const
-    {
-      return _data;
-    }
-
-    auto data()
-    {
-      return _data;
+      return _data.begin() + _data.size() - 1;
     }
 
   public:
     auto size() const
     {
-      return _size;
+      return _data.size() - 1;
     }
 
     auto capacity() const
     {
-      return _max;
+      return _data.cap() - 1;
     }
 
     auto empty() const
     {
-      return _size == 0;
+      return _data.empty();
+    }
+
+    auto full() const
+    {
+      return (size() - 1) == capacity();
     }
 
     auto starts_with(const basic_string &o) const
@@ -1032,33 +978,26 @@ namespace stew
     }
 
   public:
-    void push_one(C c)
+    void push_back(C c)
     {
-      if (_size == _max)
-      {
-        C *tmp = _data;
-        _max = _max * 2;
-        _data = new C[_max];
-
-        for (size_t i(0); i < _size; ++i)
-        {
-          _data[i] = tmp[i];
-        }
-
-        delete tmp;
-      }
-
-      _data[_size] = c;
-      ++_size;
-      _data[_size] = '\0';
+      _data.push_back(c);
+      _data[_data.size()] = '\0';
     }
 
-    void push_all(basic_string_view<C> o)
+    void push_back(basic_string_view<C> o)
     {
-      for (auto c : o)
+      for (C c : o)
       {
-        push_one(c);
+        _data.push_back(c);
       }
+
+      _data[_data.size()] = '\0';
+    }
+
+    void pop_back()
+    {
+      _data.pop_back();
+      _data[_data.size()] = '\0';
     }
 
   public:
@@ -1096,9 +1035,11 @@ namespace stew
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
 
-  //////////////
-  /// FORMAT ///
-  //////////////
+  //------------------------------
+  //
+  // Formatting
+  //
+  //------------------------------
 
   template <typename T>
   class formatter;
@@ -1289,7 +1230,7 @@ namespace stew
     template <ostream O>
     static void to(O &o, bool b)
     {
-      formatter<basic_string_view<char>>::to(o, b ? "true" : "false");
+      formatter<basic_string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
     }
   };
 

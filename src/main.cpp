@@ -1,6 +1,7 @@
 // #include <dbfile.hpp>
 
 #include <stew.hpp>
+#include <string>
 
 int main()
 {
@@ -27,5 +28,9 @@ int main()
 
   cout.printfln("equals {}", fv == fv);
 
+  string s = "coucou";
+  string s2 = "coucou";
+  string s3 = "coucou3";
+  
   return fv.size() - 100;
 }
