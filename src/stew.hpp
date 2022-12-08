@@ -176,6 +176,20 @@ namespace stew
     return static_cast<rm_ref<T> &&>(t);
   }
 
+  template <typename T>
+  constexpr T &&forward(rm_ref<T> &t) noexcept
+  {
+    return static_cast<T &&>(t);
+  }
+
+  template <typename T>
+  constexpr T &&forward(rm_ref<T> &&t) noexcept
+  {
+    static_assert(!std::is_lvalue_reference<T>::value,
+                  "Can not forward an rvalue as an lvalue.");
+    return static_cast<T &&>(t);
+  }
+
   //-----------------------------------
   //
   // Result
@@ -404,6 +418,118 @@ namespace stew
     }
 
     return true;
+  }
+
+  //----------------------------------
+  //
+  // Tuple container
+  //
+  //----------------------------------
+
+  template <typename... T>
+  class tuple;
+
+  template <>
+  class tuple<>
+  {
+  };
+
+  template <typename T0, typename... Tn>
+  class tuple<T0, Tn...> : public tuple<Tn...>
+  {
+    T0 _t;
+
+  public:
+    constexpr ~tuple() = default;
+    constexpr tuple() = default;
+    constexpr tuple(const tuple &) = default;
+    constexpr tuple(tuple &&) = default;
+    constexpr tuple &operator=(const tuple &) = default;
+    constexpr tuple &operator=(tuple &&) = default;
+
+  public:
+    constexpr tuple(T0 &&o0, Tn &&...on)
+        : _t(forward<T0>(o0)),
+          tuple<Tn...>(forward<Tn>(on)...)
+    {
+    }
+
+  public:
+    template <size_t I>
+    constexpr auto get() & -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return (_t);
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+
+    template <size_t I>
+    constexpr auto get() && -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return (_t);
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+
+    template <size_t I>
+    constexpr auto get() const & -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return (_t);
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+
+    template <size_t I>
+    constexpr auto get() const && -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return (_t);
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+  };
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(tuple<T0, Tn...> &t) -> decltype(auto)
+  {
+    return t.template get<I>();
+  }
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(tuple<T0, Tn...> &&t) -> decltype(auto)
+  {
+    return t.template get<I>();
+  }
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(const tuple<T0, Tn...> &t) -> decltype(auto)
+  {
+    return t.template get<I>();
+  }
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(const tuple<T0, Tn...> &&t) -> decltype(auto)
+  {
+    return t.template get<I>();
   }
 
   // ---------------------------------
@@ -1483,9 +1609,9 @@ namespace stew
       putc(c, _out);
     }
 
-    void push_back(const string_view_like<C> auto& s)
+    void push_back(const string_view_like<C> auto &s)
     {
-      fwrite(basic_string_view<C>(s).begin(), sizeof(C), s.size(), _out);
+      fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
     }
 
     void flush()

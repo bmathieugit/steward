@@ -13,18 +13,18 @@
 
 namespace stew::ui
 {
-  template <typename T, typename V, std::size_t i = 0>
+  template <typename T, typename V, std::size_t I = 0>
   constexpr std::size_t case_of_impl()
   {
-    static_assert(std::variant_size_v<V> > i, "Type not found in variant");
+    static_assert(std::variant_size_v<V> > I, "Type not found in variant");
 
-    if constexpr (i == std::variant_size_v<V>)
+    if constexpr (I == std::variant_size_v<V>)
     {
-      return i;
+      return I;
     }
     else if constexpr (std::is_same_v<std::variant_alternative_t<i, V>, T>)
     {
-      return i;
+      return I;
     }
     else
     {

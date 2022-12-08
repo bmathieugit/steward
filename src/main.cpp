@@ -1,38 +1,56 @@
 // #include <dbfile.hpp>
 
 #include <stew.hpp>
-#include <string>
+#include <threads.h>
+#include <any>
+#include <tuple>
+
+template <class... T>
+void task(T... args)
+{
+  stew::cout.printfln("{} {} coucou {} ! comment vas-tu ? {}", args...);
+}
+
+// namespace
+// {
+//   template <typename F, typename... A>
+//   concept thread_runnable =
+//       requires(F &&f, A &&...a) {
+//         std::apply(f, stew::tuple<stew::rm_ref<A>...>(stew::move(a)...));
+//       };
+
+//   template <typename F, typename... A>
+//   int run_thread(void *ctx)
+//   {
+//     auto &pctx = *static_cast<stew::tuple<F, stew::tuple<A...>> *>(ctx);
+//     std::apply(stew::get<0>(pctx), stew::get<1>(pctx));
+//     return 0;
+//   }
+
+//   template <typename F, typename... A>
+//   void spawn_thread(F &&f, A &&...a)
+//   {
+//     thrd_t t;
+//     stew::tuple<stew::rm_ref<A>...> args(stew::move(a)...);
+//     stew::tuple<stew::rm_ref<F>, stew::tuple<stew::rm_ref<A>...>> ctx(f, args);
+//     thrd_create(&t, run_thread<stew::rm_ref<F>, stew::rm_ref<A>...>, &ctx);
+
+//     int res;
+//     thrd_join(t, &res);
+//   }
+// }
 
 int main()
 {
-  using namespace stew;
-  using namespace stew::fs::literatals;
+  // spawn_thread([](auto &&...args)
+  //              { task(args...); },
+  //              stew::string_view("Benjamin"), 12, 24, true);
 
-  // auto tmp = "tmp"_cfp;
-  // auto tmp2 = "tmp2"_cfp;
+  stew::tuple<int, int> i2(1, 2);
+  stew::get<1>(i2) = 31;
+  // stew::cout.printfln("{} {}", stew::get<0>(i2), stew::get<1>(i2));
+  stew::tuple<int, int> i22(i2);
+  // stew::cout.printfln("{} {}", stew::get<0>(i22), stew::get<1>(i22));
 
-  // cout.printfln("tmp existing ? {}", (bool)fs::fexists(tmp));
-  // cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
-  // cout.printfln("tmp readable ? {}", (bool)fs::freadable(tmp));
-  // cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp));
-  // cout.printfln("tmp created ? {}", (bool)fs::fcreate(tmp));
-  // cout.printfln("tmp renamed ? {}", (bool)fs::frename(tmp, tmp2));
-  // cout.printfln("tmp removed ? {}", (bool)fs::fremove(tmp2));
-
-  // vector<int> fv{10};
-
-  // for (size_t i{0}; i < 100; ++i)
-  // {
-  //   fv.push_back(i);
-  // }
-
-  // cout.printfln("equals {}", fv == fv);
-
-  fstring o(500);
-  format_to(o, "{} {}", 12, 23);
-
-  cout.printfln("{}", o);
-
-  array<int, 4> is = {0, 1, 2, 3};
-  return is.size() - 4;
+  return EXIT_SUCCESS;
 }
