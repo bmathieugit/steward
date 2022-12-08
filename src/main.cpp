@@ -49,8 +49,8 @@ int main()
   stew::tuple<int, int> i2(1, 2);
   stew::get<1>(i2) = 31;
   // stew::cout.printfln("{} {}", stew::get<0>(i2), stew::get<1>(i2));
-  stew::tuple<int, int> i22(i2);
-  // stew::cout.printfln("{} {}", stew::get<0>(i22), stew::get<1>(i22));
+  stew::tuple<int&, int&> i22(stew::get<0>(i2), stew::get<1>(i2));
+  stew::cout.printfln("{} {}", stew::get<0>(i22), stew::get<1>(i22));
 
   return EXIT_SUCCESS;
 }

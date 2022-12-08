@@ -420,6 +420,31 @@ namespace stew
     return true;
   }
 
+  //---------------------------------
+  //
+  // Reference container
+  //
+  //---------------------------------
+
+  template<typename T>
+  class reference
+  {
+    private:
+    T* _t;
+
+    public:
+      constexpr ~reference() = default;
+      constexpr reference(T& t) : _t(&t){}
+      constexpr reference(const reference& ) = default;
+      constexpr reference& operator=(const reference&) = default;
+
+    public:
+      constexpr operator T&() const
+      {
+        return *_t;
+      }
+  };
+
   //----------------------------------
   //
   // Tuple container
@@ -437,6 +462,7 @@ namespace stew
   template <typename T0, typename... Tn>
   class tuple<T0, Tn...> : public tuple<Tn...>
   {
+    private:
     T0 _t;
 
   public:
@@ -448,9 +474,9 @@ namespace stew
     constexpr tuple &operator=(tuple &&) = default;
 
   public:
-    constexpr tuple(T0 &&o0, Tn &&...on)
-        : _t(forward<T0>(o0)),
-          tuple<Tn...>(forward<Tn>(on)...)
+    constexpr tuple(T0 &&t0, Tn &&...tn)
+        : _t(forward<T0>(t0)),
+          tuple<Tn...>(forward<Tn>(tn)...)
     {
     }
 
