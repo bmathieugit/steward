@@ -1970,12 +1970,12 @@ namespace stew
   {
     plain = mtx_plain,
     timed = mtx_timed,
-    recursive = mtx_recursive,
-    plain_recursive = mtx_plain | mtx_recursive,
+    recursive = mtx_plain | mtx_recursive,
     timed_recursive = mtx_timed | mtx_recursive
   };
 
-  class mutex
+  template <mutex_type T>
+  class basic_mutex
   {
   private:
     using mt = mutex_type;
@@ -1983,25 +1983,22 @@ namespace stew
   private:
     mtx_t _m;
     bool _lockable = false;
-    bool _timeable = false;
 
-  private:
   public:
-    ~mutex()
+    ~basic_mutex()
     {
       mtx_destroy(&_m);
     }
 
-    mutex(mutex_type type = mt::plain)
-        : _lockable(mtx_init(&_m, static_cast<int>(type)) == thrd_success),
-          _timeable(type == mt::timed || type == mt::timed_recursive)
+    basic_mutex()
+        : _lockable(mtx_init(&_m, static_cast<int>(T)) == thrd_success)
     {
     }
 
-    mutex(const mutex &) = delete;
-    mutex(mutex &&) = default;
-    mutex &operator=(const mutex &) = delete;
-    mutex &operator=(mutex &&) = default;
+    basic_mutex(const basic_mutex &) = delete;
+    basic_mutex(basic_mutex &&) = default;
+    basic_mutex &operator=(const basic_mutex &) = delete;
+    basic_mutex &operator=(basic_mutex &&) = default;
 
   public:
     void lock()
@@ -2022,15 +2019,14 @@ namespace stew
 
     void timedlock(time_t d, duration_type t = duration_type::second)
     {
-      if (_timeable && _lockable)
+      if ((T == mt::timed || T == mt::timed_recursive) && _lockable)
       {
         using dt = duration_type;
         timespec spec = {
             .tv_sec = t == dt::second ? d : 0,
             .tv_nsec = t == dt::nanosecond ? d : 0};
-        {
-          mtx_timedlock(&_m, &spec);
-        }
+
+        mtx_timedlock(&_m, &spec);
       }
     }
 
@@ -2041,6 +2037,41 @@ namespace stew
         mtx_unlock(&_m);
       }
     }
+  };
+
+  using mutex = basic_mutex<mutex_type::plain>;
+  using timed_mutex = basic_mutex<mutex_type::timed>;
+  using recursive_mutex = basic_mutex<mutex_type::recursive>;
+  using timed_recursive_mutex = basic_mutex<mutex_type::timed_recursive>;
+
+  template <mutex_type T>
+  class scoped_lock
+  {
+  private:
+    reference<basic_mutex<T>> _m;
+
+  public:
+    ~scoped_lock()
+    {
+      _m.get().unlock();
+    }
+
+    scoped_lock(basic_mutex<T> &m) : _m(m)
+    {
+      _m.get().lock();
+    }
+
+    scoped_lock(const scoped_lock &) = delete;
+    scoped_lock(scoped_lock &&) = delete;
+    scoped_lock &operator=(const scoped_lock &) = delete;
+    scoped_lock &operator=(scoped_lock &&) = delete;
+
+  public:
+  };
+
+  class condition_variable
+  {
+    // TODO: implement condition_variable
   };
 
   //////////////////
