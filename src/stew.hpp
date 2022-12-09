@@ -58,20 +58,20 @@ namespace stew
 
   namespace impl
   {
-    template <size_t I, class T0, class... Tn>
+    template <size_t I, typename T0, typename... Tn>
     struct typeat
     {
       using type = typeat<I - 1, Tn...>;
     };
 
-    template <class T0, class... Tn>
+    template <typename T0, typename... Tn>
     struct typeat<0, T0, Tn...>
     {
       using type = T0;
     };
   }
 
-  template <size_t I, class... T>
+  template <size_t I, typename... T>
   using typeat = typename impl::typeat<I, T...>::type;
 
   namespace impl
@@ -94,41 +94,41 @@ namespace stew
       using type = T;
     };
 
-    template <class T>
+    template <typename T>
     struct rm_const
     {
       using type = T;
     };
 
-    template <class T>
+    template <typename T>
     struct rm_const<const T>
     {
       using type = T;
     };
 
-    template <class T>
+    template <typename T>
     struct rm_volatile
     {
       using type = T;
     };
 
-    template <class T>
+    template <typename T>
     struct rm_volatile<volatile T>
     {
       using type = T;
     };
   }
 
-  template <class T>
+  template <typename T>
   using rm_const = typename impl::rm_const<T>::type;
 
-  template <class T>
+  template <typename T>
   using rm_volatile = typename impl::rm_volatile<T>::type;
 
-  template <class T>
+  template <typename T>
   using rm_ref = typename impl::rm_ref<T>::type;
 
-  template <class T>
+  template <typename T>
   using rm_cvref = rm_const<rm_volatile<rm_ref<T>>>;
 
   template <typename T, typename U>
@@ -170,7 +170,7 @@ namespace stew
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
 
-  template <class T>
+  template <typename T>
   rm_ref<T> &&move(T &&t)
   {
     return static_cast<rm_ref<T> &&>(t);
@@ -196,7 +196,7 @@ namespace stew
   //
   //-----------------------------------
 
-  template <class S, class E>
+  template <typename S, typename E>
   class result
   {
   private:
@@ -357,7 +357,7 @@ namespace stew
     return b2 == e2;
   }
 
-  template <range R, class T>
+  template <range R, typename T>
   constexpr bool starts_with(const R &r, const T &t)
   {
     auto b = r.begin();
@@ -406,7 +406,7 @@ namespace stew
     return find(r1, r2) != r1.end();
   }
 
-  template <class R, class P>
+  template <typename R, typename P>
   constexpr bool all_of(const R &r, P &&p)
   {
     for (const auto &i : r)
@@ -790,7 +790,7 @@ namespace stew
   //
   // ---------------------------------
 
-  template <class T, unsigned_integral S = size_t>
+  template <typename T, unsigned_integral S = size_t>
   class fixed_vector
   {
   private:
@@ -950,19 +950,19 @@ namespace stew
     }
   };
 
-  template <class T1, class S1, class T2, class S2>
+  template <typename T1, typename S1, typename T2, typename S2>
   constexpr bool operator==(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
   {
     return equals(fv1, fv2);
   }
 
-  template <class T1, class S1, class T2, class S2>
+  template <typename T1, typename S1, typename T2, typename S2>
   constexpr bool operator!=(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
   {
     return !(fv1 == fv2);
   }
 
-  template <class T, unsigned_integral S = size_t>
+  template <typename T, unsigned_integral S = size_t>
   class vector
   {
   private:
@@ -1073,13 +1073,13 @@ namespace stew
     }
   };
 
-  template <class T1, class S1, class T2, class S2>
+  template <typename T1, typename S1, typename T2, typename S2>
   constexpr bool operator==(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
   {
     return equals(fv1, fv2);
   }
 
-  template <class T1, class S1, class T2, class S2>
+  template <typename T1, typename S1, typename T2, typename S2>
   constexpr bool operator!=(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
   {
     return !(fv1 == fv2);
@@ -1248,21 +1248,21 @@ namespace stew
     return wstring_view(s, n);
   }
 
-  template <class S, class C>
+  template <typename S, typename C>
   concept string_view_castable =
       character<C> &&
       requires(const S &s) {
         static_cast<basic_string_view<C>>(s);
       };
 
-  template <class S, class C>
+  template <typename S, typename C>
   concept string_view_buildable =
       character<C> &&
       requires(const S &s) {
         basic_string_view<C>(s);
       };
 
-  template <class S, class C>
+  template <typename S, typename C>
   concept string_view_like =
       string_view_buildable<S, C> ||
       string_view_castable<S, C>;
@@ -1572,14 +1572,14 @@ namespace stew
   template <typename T>
   class formatter;
 
-  template <class O>
+  template <typename O>
   concept char_ostream =
       requires(O &o, char c, const basic_string<char> &s) {
         o.push_back(c);
         o.push_back(s);
       };
 
-  template <class O>
+  template <typename O>
   concept wchar_ostream =
       requires(O &o, wchar_t c, const basic_string<wchar_t> &s) {
         o.push_back(c);
@@ -1919,7 +1919,7 @@ namespace stew
       }
     }
 
-    template <class FS>
+    template <typename FS>
     class file
     {
     private:
@@ -2037,10 +2037,10 @@ namespace stew
       };
     }
 
-    template <class T>
+    template <typename T>
     concept path_file = impl::path_file<T>::value;
 
-    template <class T>
+    template <typename T>
     concept path_directory = impl::path_directory<T>::value;
 
     struct ferror
