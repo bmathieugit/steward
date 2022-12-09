@@ -8,7 +8,7 @@ void task(stew::string_view id)
   for (int i{0}; i < 100; i++)
   {
     stew::cout.printfln("{} : {}", id, i);
-    stew::this_thread::sleep(10000, stew::this_thread::duration_type::nanosecond);
+    stew::this_thread::sleep(10000, stew::duration_type::nanosecond);
   }
 }
 

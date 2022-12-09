@@ -2,7 +2,7 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
-#include <string>
+#include <stdatomic.h>
 
 namespace stew
 {
@@ -185,8 +185,8 @@ namespace stew
   template <typename T>
   constexpr T &&forward(rm_ref<T> &&t) noexcept
   {
-    static_assert(!std::is_lvalue_reference<T>::value,
-                  "Can not forward an rvalue as an lvalue.");
+    // static_assert(!std::is_lvalue_reference<T>::value,
+    //               "Can not forward an rvalue as an lvalue.");
     return static_cast<T &&>(t);
   }
 
@@ -1827,21 +1827,11 @@ namespace stew
   //
   //------------------------
 
-  enum class thread_status
-  {
-    notstarted,
-    started,
-    success,
-    nomemory,
-    error
-  };
-
   class thread
   {
   private:
     thrd_t _thrid;
-    thread_status _status = thread_status::notstarted;
-    bool _joinable = true;
+    bool _joinable = false;
 
   private:
     template <typename F>
@@ -1858,18 +1848,10 @@ namespace stew
     thread(F &&f)
     {
       auto tmp = forward<F>(f);
-      switch (thrd_create(&_thrid, fcall_wrapper<F>, &tmp))
+
+      if (thrd_create(&_thrid, fcall_wrapper<F>, &tmp) == thrd_success)
       {
-      case thrd_success:
-        _status = thread_status::started;
-        break;
-      case thrd_nomem:
-        _status = thread_status::nomemory;
-        break;
-      case thrd_error:
-      default:
-        _status = thread_status::error;
-        break;
+        _joinable = true;
       }
     }
 
@@ -1879,29 +1861,18 @@ namespace stew
     thread &operator=(thread &&) = default;
 
   public:
-    auto status() const
-    {
-      return _status;
-    }
-
     void join()
     {
-      if (_joinable)
+      if (_joinable && thrd_join(_thrid, nullptr) == thrd_success)
       {
-        _status = thrd_join(_thrid, nullptr) == thrd_success
-                      ? thread_status::success
-                      : thread_status::error;
         _joinable = false;
       }
     }
 
     void detach()
     {
-      if (_joinable)
+      if (_joinable && thrd_detach(_thrid) == thrd_success)
       {
-        _status = thrd_detach(_thrid) == thrd_success
-                      ? thread_status::success
-                      : thread_status::error;
         _joinable = false;
       }
     }
@@ -1935,11 +1906,7 @@ namespace stew
     jthread &operator=(const jthread &) = delete;
     jthread &operator=(jthread &&) = default;
 
-    auto status() const
-    {
-      return _t.status();
-    }
-
+  public:
     void join()
     {
       _t.join();
@@ -1966,15 +1933,15 @@ namespace stew
     }
   };
 
+  enum class duration_type
+  {
+    second,
+    nanosecond
+  };
+
   namespace this_thread
   {
-    enum class duration_type
-    {
-      second,
-      nanosecond
-    };
-
-    void sleep(time_t d, duration_type t)
+    inline void sleep(time_t d, duration_type t = duration_type::second)
     {
       using dt = duration_type;
       timespec spec = {
@@ -1983,21 +1950,95 @@ namespace stew
       thrd_sleep(&spec, nullptr);
     }
 
-    void yield()
+    inline void yield()
     {
       thrd_yield();
     }
 
-    void exit(int exitcode)
+    inline void exit(int exitcode)
     {
       thrd_exit(exitcode);
     }
 
-    auto id()
+    inline auto id()
     {
       return thrd_current();
     }
   }
+
+  enum class mutex_type
+  {
+    plain,
+    timedout,
+    recursive,
+    plain_recursive,
+    timedout_recursive
+  };
+
+  class mutex
+  {
+  private:
+    mtx_t _m;
+    bool _lockable = false;
+    bool _timeable = false;
+
+  public:
+    ~mutex()
+    {
+      mtx_destroy(&_m);
+    }
+
+    mutex(mutex_type type = mutex_type::plain)
+        : _lockable(mtx_init(&_m, mtx_plain) == thrd_success),
+          _timeable(type == mutex_type::timedout ||
+                    type == mutex_type::timedout_recursive)
+    {
+    }
+
+    mutex(const mutex &) = delete;
+    mutex(mutex &&) = default;
+    mutex &operator=(const mutex &) = delete;
+    mutex &operator=(mutex &&) = default;
+
+  public:
+    void lock()
+    {
+      if (_lockable)
+      {
+        mtx_lock(&_m);
+      }
+    }
+
+    void trylock()
+    {
+      if (_lockable)
+      {
+        mtx_trylock(&_m);
+      }
+    }
+
+    void timedlock(time_t d, duration_type t = duration_type::second)
+    {
+      if (_timeable && _lockable)
+      {
+        using dt = duration_type;
+        timespec spec = {
+            .tv_sec = t == dt::second ? d : 0,
+            .tv_nsec = t == dt::nanosecond ? d : 0};
+        {
+          mtx_timedlock(&_m, &spec);
+        }
+      }
+    }
+
+    void unlock()
+    {
+      if (_lockable)
+      {
+        mtx_unlock(&_m);
+      }
+    }
+  };
 
   //////////////////
   /// FILESYSTEM ///
