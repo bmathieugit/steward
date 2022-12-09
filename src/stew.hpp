@@ -2045,29 +2045,32 @@ namespace stew
   using timed_recursive_mutex = basic_mutex<mutex_type::timed_recursive>;
 
   template <mutex_type T>
-  class scoped_lock
+  class basic_scoped_lock
   {
   private:
     reference<basic_mutex<T>> _m;
 
   public:
-    ~scoped_lock()
+    ~basic_scoped_lock()
     {
       _m.get().unlock();
     }
 
-    scoped_lock(basic_mutex<T> &m) : _m(m)
+    basic_scoped_lock(basic_mutex<T> &m) : _m(m)
     {
       _m.get().lock();
     }
 
-    scoped_lock(const scoped_lock &) = delete;
-    scoped_lock(scoped_lock &&) = delete;
-    scoped_lock &operator=(const scoped_lock &) = delete;
-    scoped_lock &operator=(scoped_lock &&) = delete;
-
-  public:
+    basic_scoped_lock(const basic_scoped_lock &) = delete;
+    basic_scoped_lock(basic_scoped_lock &&) = delete;
+    basic_scoped_lock &operator=(const basic_scoped_lock &) = delete;
+    basic_scoped_lock &operator=(basic_scoped_lock &&) = delete;
   };
+
+  using scoped_lock = basic_scoped_lock<mutex_type::plain>;
+  using timed_scoped_lock = basic_scoped_lock<mutex_type::timed>;
+  using recursive_scoped_lock = basic_scoped_lock<mutex_type::recursive>;
+  using timed_recursive_scoped_lock = basic_scoped_lock<mutex_type::timed_recursive>;
 
   class condition_variable
   {
