@@ -1821,6 +1821,184 @@ namespace stew
   fostream cout(stdout);
   fostream cerr(stderr);
 
+  //------------------------
+  //
+  // Multithreading
+  //
+  //------------------------
+
+  enum class thread_status
+  {
+    notstarted,
+    started,
+    success,
+    nomemory,
+    error
+  };
+
+  class thread
+  {
+  private:
+    thrd_t _thrid;
+    thread_status _status = thread_status::notstarted;
+    bool _joinable = true;
+
+  private:
+    template <typename F>
+    static int fcall_wrapper(void *ctx)
+    {
+      (*static_cast<F *>(ctx))();
+      return 0;
+    }
+
+  public:
+    ~thread() = default;
+
+    template <typename F>
+    thread(F &&f)
+    {
+      auto tmp = forward<F>(f);
+      switch (thrd_create(&_thrid, fcall_wrapper<F>, &tmp))
+      {
+      case thrd_success:
+        _status = thread_status::started;
+        break;
+      case thrd_nomem:
+        _status = thread_status::nomemory;
+        break;
+      case thrd_error:
+      default:
+        _status = thread_status::error;
+        break;
+      }
+    }
+
+    thread(const thread &) = delete;
+    thread(thread &&) = default;
+    thread &operator=(const thread &) = delete;
+    thread &operator=(thread &&) = default;
+
+  public:
+    auto status() const
+    {
+      return _status;
+    }
+
+    void join()
+    {
+      if (_joinable)
+      {
+        _status = thrd_join(_thrid, nullptr) == thrd_success
+                      ? thread_status::success
+                      : thread_status::error;
+        _joinable = false;
+      }
+    }
+
+    void detach()
+    {
+      if (_joinable)
+      {
+        _status = thrd_detach(_thrid) == thrd_success
+                      ? thread_status::success
+                      : thread_status::error;
+        _joinable = false;
+      }
+    }
+
+    bool operator==(thrd_t id) const
+    {
+      return thrd_equal(_thrid, id) == 0;
+    }
+
+    bool operator==(const thread &o) const
+    {
+      return thrd_equal(_thrid, o._thrid) == 0;
+    }
+  };
+
+  class jthread
+  {
+  private:
+    thread _t;
+
+  public:
+    ~jthread()
+    {
+      _t.join();
+    }
+
+    template <typename F>
+    jthread(F &&f) : _t(forward<F>(f)) {}
+    jthread(const jthread &) = delete;
+    jthread(jthread &&) = default;
+    jthread &operator=(const jthread &) = delete;
+    jthread &operator=(jthread &&) = default;
+
+    auto status() const
+    {
+      return _t.status();
+    }
+
+    void join()
+    {
+      _t.join();
+    }
+
+    void detach()
+    {
+      _t.detach();
+    }
+
+    bool operator==(thrd_t id) const
+    {
+      return _t.operator==(id);
+    }
+
+    bool operator==(const thread &o) const
+    {
+      return _t == o;
+    }
+
+    bool operator==(const jthread &o) const
+    {
+      return _t == o._t;
+    }
+  };
+
+  namespace this_thread
+  {
+    enum class duration_type
+    {
+      second,
+      nanosecond
+    };
+
+    void sleep(time_t d, duration_type t)
+    {
+      using dt = duration_type;
+      timespec spec = {
+          .tv_sec = t == dt::second ? d : 0,
+          .tv_nsec = t == dt::nanosecond ? d : 0};
+      thrd_sleep(&spec, nullptr);
+    }
+
+    void yield()
+    {
+      thrd_yield();
+    }
+
+    void exit(int exitcode)
+    {
+      thrd_exit(exitcode);
+    }
+
+    auto id()
+    {
+      return thrd_current();
+    }
+  }
+
   //////////////////
   /// FILESYSTEM ///
   //////////////////
