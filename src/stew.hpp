@@ -2,7 +2,6 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
-#include <stdatomic.h>
 
 namespace stew
 {
@@ -1936,18 +1935,58 @@ namespace stew
   enum class duration_type
   {
     second,
+    millisecond,
+    microsecond,
     nanosecond
+  };
+
+  template <duration_type T>
+  class duration_spec
+  {
+    timespec _time;
+
+  public:
+    constexpr ~duration_spec() = default;
+    constexpr duration_spec() = default;
+    constexpr duration_spec(long time) { _spec(time); }
+    constexpr duration_spec(const duration_spec &) = default;
+    constexpr duration_spec(duration_spec &&) = default;
+    constexpr duration_spec &operator=(const duration_spec &) = default;
+    constexpr duration_spec &operator=(duration_spec &&) = default;
+
+  private:
+    void _spec(long time)
+    {
+      switch (T)
+      {
+      case duration_type::second:
+        _time.tv_sec = time;
+        break;
+      case duration_type::millisecond:
+        _time.tv_nsec = 1'000'000 * time;
+        break;
+      case duration_type::microsecond:
+        _time.tv_nsec = 1'000 * time;
+        break;
+      case duration_type::nanosecond:
+        _time.tv_nsec = time;
+        break;
+      }
+    }
+
+  public:
+    constexpr auto &spec() const
+    {
+      return (_time);
+    }
   };
 
   namespace this_thread
   {
-    inline void sleep(time_t d, duration_type t = duration_type::second)
+    template <duration_type T>
+    inline void sleep(duration_spec<T> spec)
     {
-      using dt = duration_type;
-      timespec spec = {
-          .tv_sec = t == dt::second ? d : 0,
-          .tv_nsec = t == dt::nanosecond ? d : 0};
-      thrd_sleep(&spec, nullptr);
+      thrd_sleep(&spec.spec(), nullptr);
     }
 
     inline void yield()
@@ -2001,6 +2040,11 @@ namespace stew
     basic_mutex &operator=(basic_mutex &&) = default;
 
   public:
+    auto underlying()
+    {
+      return &_m;
+    }
+
     void lock()
     {
       if (_lockable)
@@ -2017,16 +2061,12 @@ namespace stew
       }
     }
 
-    void timedlock(time_t d, duration_type t = duration_type::second)
+    template <duration_type Tp>
+    void timedlock(duration_spec<Tp> spec)
     {
       if ((T == mt::timed || T == mt::timed_recursive) && _lockable)
       {
-        using dt = duration_type;
-        timespec spec = {
-            .tv_sec = t == dt::second ? d : 0,
-            .tv_nsec = t == dt::nanosecond ? d : 0};
-
-        mtx_timedlock(&_m, &spec);
+        mtx_timedlock(&_m, &spec.spec());
       }
     }
 
@@ -2074,7 +2114,75 @@ namespace stew
 
   class condition_variable
   {
-    // TODO: implement condition_variable
+  private:
+    cnd_t _c;
+    bool _useable = false;
+
+  public:
+    ~condition_variable()
+    {
+      if (_useable)
+      {
+        cnd_destroy(&_c);
+      }
+    }
+
+    condition_variable()
+        : _useable(cnd_init(&_c) == thrd_success)
+    {
+    }
+
+    condition_variable(const condition_variable &) = default;
+    condition_variable(condition_variable &&) = default;
+    condition_variable &operator=(const condition_variable &) = default;
+    condition_variable &operator=(condition_variable &&) = default;
+
+  public:
+    void notify_one()
+    {
+      if (_useable)
+      {
+        cnd_signal(&_c);
+      }
+    }
+
+    void notify_all()
+    {
+      if (_useable)
+      {
+        cnd_broadcast(&_c);
+      }
+    }
+
+    template <mutex_type T>
+    void wait(basic_mutex<T> &m)
+    {
+      if (_useable)
+      {
+        cnd_wait(&_c, m.underlying());
+      }
+    }
+
+    template <mutex_type T, typename P>
+    void wait(basic_mutex<T> &m, P &&pred)
+    {
+      if (_useable)
+      {
+        while (!forward<P>(pred)())
+        {
+          wait(m);
+        }
+      }
+    }
+
+    template <mutex_type T, duration_type Tp>
+    void waitfor(basic_mutex<T> &m, time_t d, duration_spec<Tp> spec)
+    {
+      if (_useable)
+      {
+        cnd_timedwait(&_c, m.underlying(), &spec.spec());
+      }
+    }
   };
 
   //////////////////
