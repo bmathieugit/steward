@@ -422,27 +422,176 @@ namespace stew
 
   //---------------------------------
   //
-  // Reference container
+  // References container
   //
   //---------------------------------
 
-  template<typename T>
+  template <typename T>
   class reference
   {
-    private:
-    T* _t;
+  private:
+    T *_t;
 
-    public:
-      constexpr ~reference() = default;
-      constexpr reference(T& t) : _t(&t){}
-      constexpr reference(const reference& ) = default;
-      constexpr reference& operator=(const reference&) = default;
+  public:
+    constexpr ~reference() = default;
+    constexpr reference(T &t) : _t(&t) {}
+    constexpr reference(const reference &) = default;
+    constexpr reference &operator=(const reference &) = default;
 
-    public:
-      constexpr operator T&() const
-      {
-        return *_t;
-      }
+  public:
+    constexpr operator T &() const
+    {
+      return *_t;
+    }
+
+    constexpr T &get() const
+    {
+      return *_t;
+    }
+  };
+
+  template <typename T>
+  class const_reference
+  {
+  private:
+    const T *_t;
+
+  public:
+    constexpr ~const_reference() = default;
+    constexpr const_reference(const T &t) : _t(&t) {}
+    constexpr const_reference(const const_reference &) = default;
+    constexpr const_reference &operator=(const const_reference &) = default;
+
+  public:
+    constexpr operator const T &() const
+    {
+      return *_t;
+    }
+
+    constexpr const T &get() const
+    {
+      return *_t;
+    }
+  };
+
+  template <typename T>
+  class move_reference
+  {
+  private:
+    T *_t;
+
+  public:
+    constexpr ~move_reference() = default;
+    constexpr move_reference(T &&t) : _t(&t) {}
+    constexpr move_reference(const move_reference &) = default;
+    constexpr move_reference &operator=(const move_reference &) = default;
+
+  public:
+    constexpr operator T &&() const
+    {
+      return *_t;
+    }
+
+    constexpr T &&get() const
+    {
+      return *_t;
+    }
+  };
+
+  template <typename T>
+  class forward_reference
+  {
+  private:
+    T _t;
+
+  public:
+    constexpr ~forward_reference() = default;
+    constexpr forward_reference(T &&t) : _t(t) {}
+    constexpr forward_reference(const forward_reference &) = default;
+    constexpr forward_reference &operator=(const forward_reference &) = default;
+
+  public:
+    constexpr operator T &()
+    {
+      return _t;
+    }
+
+    constexpr T &get()
+    {
+      return _t;
+    }
+  };
+
+  template <typename T>
+  class forward_reference<T &&>
+  {
+  private:
+    move_reference<T> _t;
+
+  public:
+    constexpr ~forward_reference() = default;
+    constexpr forward_reference(T &&t) : _t(t) {}
+    constexpr forward_reference(const forward_reference &) = default;
+    constexpr forward_reference &operator=(const forward_reference &) = default;
+
+  public:
+    constexpr operator T &&() const
+    {
+      return _t.get();
+    }
+
+    constexpr T &&get() const
+    {
+      return _t.get();
+    }
+  };
+
+  template <typename T>
+  class forward_reference<T &>
+  {
+  private:
+    reference<T> _t;
+
+  public:
+    constexpr ~forward_reference() = default;
+    constexpr forward_reference(T &t) : _t(t) {}
+    constexpr forward_reference(const forward_reference &) = default;
+    constexpr forward_reference &operator=(const forward_reference &) = default;
+
+  public:
+    constexpr operator T &() const
+    {
+      return _t.get();
+    }
+
+    constexpr T &get() const
+    {
+      return _t.get();
+    }
+  };
+
+  template <typename T>
+  class forward_reference<const T &>
+  {
+  private:
+    const_reference<T> _t;
+
+  public:
+    constexpr ~forward_reference() = default;
+    constexpr forward_reference(const T &t) : _t(t) {}
+    constexpr forward_reference(const forward_reference &) = default;
+    constexpr forward_reference &operator=(const forward_reference &) = default;
+
+  public:
+    constexpr operator const T &() const
+    {
+      return _t.get();
+    }
+
+    constexpr const T &get() const
+    {
+      return _t.get();
+    }
   };
 
   //----------------------------------
@@ -462,8 +611,8 @@ namespace stew
   template <typename T0, typename... Tn>
   class tuple<T0, Tn...> : public tuple<Tn...>
   {
-    private:
-    T0 _t;
+  private:
+    forward_reference<T0> _t;
 
   public:
     constexpr ~tuple() = default;
@@ -475,7 +624,7 @@ namespace stew
 
   public:
     constexpr tuple(T0 &&t0, Tn &&...tn)
-        : _t(forward<T0>(t0)),
+        : _t{forward<T0>(t0)},
           tuple<Tn...>(forward<Tn>(tn)...)
     {
     }
@@ -486,7 +635,7 @@ namespace stew
     {
       if constexpr (I == 0)
       {
-        return (_t);
+        return _t.get();
       }
       else
       {
@@ -499,7 +648,7 @@ namespace stew
     {
       if constexpr (I == 0)
       {
-        return (_t);
+        return _t.get();
       }
       else
       {
@@ -512,7 +661,7 @@ namespace stew
     {
       if constexpr (I == 0)
       {
-        return (_t);
+        return _t.get();
       }
       else
       {
@@ -525,7 +674,7 @@ namespace stew
     {
       if constexpr (I == 0)
       {
-        return (_t);
+        return _t.get();
       }
       else
       {
