@@ -1966,32 +1966,35 @@ namespace stew
     }
   }
 
-  enum class mutex_type
+  enum class mutex_type : int
   {
-    plain,
-    timedout,
-    recursive,
-    plain_recursive,
-    timedout_recursive
+    plain = mtx_plain,
+    timed = mtx_timed,
+    recursive = mtx_recursive,
+    plain_recursive = mtx_plain | mtx_recursive,
+    timed_recursive = mtx_timed | mtx_recursive
   };
 
   class mutex
   {
   private:
+    using mt = mutex_type;
+
+  private:
     mtx_t _m;
     bool _lockable = false;
     bool _timeable = false;
 
+  private:
   public:
     ~mutex()
     {
       mtx_destroy(&_m);
     }
 
-    mutex(mutex_type type = mutex_type::plain)
-        : _lockable(mtx_init(&_m, mtx_plain) == thrd_success),
-          _timeable(type == mutex_type::timedout ||
-                    type == mutex_type::timedout_recursive)
+    mutex(mutex_type type = mt::plain)
+        : _lockable(mtx_init(&_m, static_cast<int>(type)) == thrd_success),
+          _timeable(type == mt::timed || type == mt::timed_recursive)
     {
     }
 

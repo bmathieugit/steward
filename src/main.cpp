@@ -1,7 +1,6 @@
 // #include <dbfile.hpp>
 
 #include <stew.hpp>
-#include <threads.h>
 
 void task(stew::string_view id)
 {
