@@ -13,11 +13,7 @@ void task(stew::string_view id)
 
 int main()
 {
-  stew::mutex m;
-  stew::scoped_lock scoped(m); 
-  
-  stew::jthread t1([] { task("Benjamin"); });
-  stew::jthread t2([] { task("Bob"); });
+  stew::async(stew::asynced, task, "Robot").get();
 
   return EXIT_SUCCESS;
 }

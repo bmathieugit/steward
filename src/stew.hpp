@@ -169,6 +169,16 @@ namespace stew
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
 
+  template <typename F, typename T>
+  concept convertible_to =
+      !
+  same_as<F, void> &&
+      !same_as<T, void> &&
+      (
+          requires(F f) {
+            static_cast<T>(f);
+          } || requires(F f) { T(f); });
+
   template <typename T>
   rm_ref<T> &&move(T &&t)
   {
@@ -595,6 +605,104 @@ namespace stew
 
   //----------------------------------
   //
+  // Function container
+  //
+  //----------------------------------
+
+  template <typename F>
+  class function;
+
+  template <typename R, typename... A>
+  class basic_function_handler
+  {
+  public:
+    virtual ~basic_function_handler() = default;
+    basic_function_handler() = default;
+    basic_function_handler(const basic_function_handler &) = default;
+    basic_function_handler(basic_function_handler &&) = default;
+    basic_function_handler &operator=(const basic_function_handler &) = default;
+    basic_function_handler &operator=(basic_function_handler &&) = default;
+
+  public:
+    virtual R invoke(A... args) = 0;
+  };
+
+  template <typename R, typename... A>
+  class pointer_function_handler
+      : virtual public basic_function_handler<R, A...>
+  {
+  private:
+    R(*_func)
+    (A...) = nullptr;
+
+  public:
+    virtual ~pointer_function_handler() = default;
+    pointer_function_handler() = default;
+    pointer_function_handler(R (*func)(A...)) : _func(func) {}
+    pointer_function_handler(const pointer_function_handler &) = default;
+    pointer_function_handler(pointer_function_handler &&) = default;
+    pointer_function_handler &operator=(const pointer_function_handler &) = default;
+    pointer_function_handler &operator=(pointer_function_handler &&) = default;
+
+  public:
+    virtual R invoke(A... args)
+    {
+      return _func(args...);
+    }
+  };
+
+  template <typename F, typename R, typename... A>
+  class functor_function_handler
+      : virtual public basic_function_handler<R, A...>
+  {
+  private:
+    F _func;
+
+  public:
+    virtual ~functor_function_handler() = default;
+    functor_function_handler() = default;
+    functor_function_handler(F && func) : _func(func) {}
+    functor_function_handler(const functor_function_handler &) = default;
+    functor_function_handler(functor_function_handler &&) = default;
+    functor_function_handler &operator=(const functor_function_handler &) = default;
+    functor_function_handler &operator=(functor_function_handler &&) = default;
+
+  public:
+    virtual R invoke(A... args)
+    {
+      return _func(args...);
+    }
+  };
+
+  template <typename R, typename... A>
+  class function<R(A...)>
+  {
+    basic_function_handler<R, A...> *_handler = nullptr;
+
+  public:
+    ~function() { delete _handler; }
+    function() = default;
+    template <convertible_to<R(A...)> F>
+    function(F &&f) : _handler(new pointer_function_handler<R, A...>(f)) {}
+
+    template <typename F>
+    function(F &&f) : _handler(new functor_function_handler<F, R, A...>(f)) {}
+    
+    function(const function &) = default;
+    function(function &&) = default;
+    function &operator=(const function &) = default;
+    function &operator=(function &&) = default;
+
+  public:
+    template <typename... T>
+    R operator()(T &&...t)
+    {
+      return _handler->invoke(forward<T>(t)...);
+    }
+  };
+
+  //----------------------------------
+  //
   // Tuple container
   //
   //----------------------------------
@@ -950,13 +1058,15 @@ namespace stew
   };
 
   template <typename T1, typename S1, typename T2, typename S2>
-  constexpr bool operator==(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
+  constexpr bool operator==(const fixed_vector<T1, S1> &fv1,
+                            const fixed_vector<T2, S2> &fv2)
   {
     return equals(fv1, fv2);
   }
 
   template <typename T1, typename S1, typename T2, typename S2>
-  constexpr bool operator!=(const fixed_vector<T1, S1> &fv1, const fixed_vector<T2, S2> &fv2)
+  constexpr bool operator!=(const fixed_vector<T1, S1> &fv1,
+                            const fixed_vector<T2, S2> &fv2)
   {
     return !(fv1 == fv2);
   }
@@ -1931,6 +2041,67 @@ namespace stew
       return _t == o._t;
     }
   };
+
+  template <typename T>
+  class future
+  {
+    function<T()> _func;
+
+  public:
+    ~future() = default;
+    future() = default;
+    template <typename F>
+    future(F &&func) : _func(func)
+    {
+    }
+
+    future(const future &) = default;
+    future(future &&) = default;
+    future &operator=(const future &) = default;
+    future &operator=(future &&) = default;
+
+  public:
+    T get()
+    {
+      return _func();
+    }
+  };
+
+  enum class async_policy
+  {
+    asynced,
+    defered
+  };
+
+  constexpr async_policy asynced = async_policy::asynced;
+  constexpr async_policy defered = async_policy::defered;
+
+  template <typename F, typename... A>
+  auto async(async_policy p, F &&f, A &&...args)
+      -> future<decltype(f(args...))>
+  {
+    using res_t = decltype(f(args...));
+
+    if (p == async_policy::asynced)
+    {
+      return future<res_t>([&f, &args...]
+                           {
+        if constexpr (same_as<res_t, void>)
+        {
+          jthread([&f, &args...] { f(args...); });
+        }
+        else 
+        {
+          res_t res;
+          jthread([&res, &f, &args...] { res = f(args...); });
+          return res;
+        } });
+    }
+    else
+    {
+      return future<res_t>([] {});
+    }
+  }
 
   enum class duration_type
   {
