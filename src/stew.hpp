@@ -627,30 +627,6 @@ namespace stew
     virtual R invoke(A... args) = 0;
   };
 
-  template <typename R, typename... A>
-  class pointer_function_handler
-      : virtual public basic_function_handler<R, A...>
-  {
-  private:
-    R(*_func)
-    (A...) = nullptr;
-
-  public:
-    virtual ~pointer_function_handler() = default;
-    pointer_function_handler() = default;
-    pointer_function_handler(R (*func)(A...)) : _func(func) {}
-    pointer_function_handler(const pointer_function_handler &) = default;
-    pointer_function_handler(pointer_function_handler &&) = default;
-    pointer_function_handler &operator=(const pointer_function_handler &) = default;
-    pointer_function_handler &operator=(pointer_function_handler &&) = default;
-
-  public:
-    virtual R invoke(A... args)
-    {
-      return _func(args...);
-    }
-  };
-
   template <typename F, typename R, typename... A>
   class functor_function_handler
       : virtual public basic_function_handler<R, A...>
@@ -661,7 +637,7 @@ namespace stew
   public:
     virtual ~functor_function_handler() = default;
     functor_function_handler() = default;
-    functor_function_handler(F && func) : _func(func) {}
+    functor_function_handler(F && func) : _func(forward<F>(func)) {}
     functor_function_handler(const functor_function_handler &) = default;
     functor_function_handler(functor_function_handler &&) = default;
     functor_function_handler &operator=(const functor_function_handler &) = default;
@@ -682,12 +658,10 @@ namespace stew
   public:
     ~function() { delete _handler; }
     function() = default;
-    template <convertible_to<R(A...)> F>
-    function(F &&f) : _handler(new pointer_function_handler<R, A...>(f)) {}
 
     template <typename F>
-    function(F &&f) : _handler(new functor_function_handler<F, R, A...>(f)) {}
-    
+    function(F &&f) : _handler(new functor_function_handler<F, R, A...>(forward<F>(f))) {}
+
     function(const function &) = default;
     function(function &&) = default;
     function &operator=(const function &) = default;
