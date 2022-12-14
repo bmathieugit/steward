@@ -9,7 +9,8 @@ int foo()
 
 int main()
 {
-  stew::cout.printfln("{}", stew::async(stew::asynced, [](auto i){stew::cout.printfln("hello {}", i); return i;}, "Bob").get());
+  stew::cout.printfln("{}", stew::defer(foo).get());
+  stew::cout.printfln("{}", stew::async(foo).get());
 
   return EXIT_SUCCESS;
 }

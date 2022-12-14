@@ -2271,40 +2271,32 @@ namespace stew
     }
   };
 
-  enum class async_policy
-  {
-    asynced,
-    defered
-  };
-
-  constexpr async_policy asynced = async_policy::asynced;
-  constexpr async_policy defered = async_policy::defered;
-
   template <typename F, typename... A>
-  auto async(async_policy p, F &&f, A &&...args) -> decltype(auto)
+  auto defer(F &&f, A &&...args) -> decltype(auto)
   {
     using res_t = decltype(forward<F>(f)(forward<A>(args)...));
 
-    if (p == async_policy::asynced)
-    {
-      return future<res_t>([&f, &args...]
-                           {
-        if constexpr (same_as<res_t, void>)
-        {
-          jthread([&f, &args...] { forward<F>(f)(forward<A>(args)...); });
-        }
-        else 
-        {
-          res_t res;
-          thread([&res, &f, &args...] { res = forward<F>(f)(forward<A>(args)...); }).join();
-          return res;
-        } });
-    }
-    else
-    {
-      return future<res_t>([]() -> res_t
-                           { return res_t{}; });
-    }
+    return future<res_t>([&]
+                         { return forward<F>(f)(forward<A>(args)...); });
+  }
+
+  template <typename F, typename... A>
+  auto async(F &&f, A &&...args) -> decltype(auto)
+  {
+    using res_t = decltype(forward<F>(f)(forward<A>(args)...));
+
+    return future<res_t>([&] {
+      if constexpr (!same_as<res_t, void>) 
+      {
+        res_t res;
+        thread([&] { res = forward<F>(f)(forward<A>(args)...);}).join();
+        return res;
+      }
+      else 
+      {
+        thread([&] { forward<F>(f)(forward<A>(args)...);}).join();
+      }
+    });
   }
 
   enum class duration_type
