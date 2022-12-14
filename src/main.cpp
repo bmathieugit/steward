@@ -2,13 +2,14 @@
 
 #include <stew.hpp>
 
-int foo(){
+int foo()
+{
   return 24;
 }
 
 int main()
 {
-  stew::function<int()> f = foo;
-  stew::cout.printfln("{}", f());
+  stew::async(stew::asynced, [](auto i){stew::cout.printfln("hello {}", i); }, "Bob").get();
+
   return EXIT_SUCCESS;
 }

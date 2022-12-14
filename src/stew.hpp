@@ -2253,8 +2253,9 @@ namespace stew
   public:
     ~future() = default;
     future() = default;
+
     template <typename F>
-    future(F &&func) : _func(func)
+    future(F &&func) : _func(forward<F>(func))
     {
     }
 
@@ -2280,10 +2281,9 @@ namespace stew
   constexpr async_policy defered = async_policy::defered;
 
   template <typename F, typename... A>
-  auto async(async_policy p, F &&f, A &&...args)
-      -> future<decltype(f(args...))>
+  auto async(async_policy p, F &&f, A &&...args) -> decltype(auto)
   {
-    using res_t = decltype(f(args...));
+    using res_t = decltype(forward<F>(f)(forward<A>(args)...));
 
     if (p == async_policy::asynced)
     {
@@ -2291,12 +2291,12 @@ namespace stew
                            {
         if constexpr (same_as<res_t, void>)
         {
-          jthread([&f, &args...] { f(args...); });
+          jthread([&f, &args...] { forward<F>(f)(forward<A>(args)...); });
         }
         else 
         {
           res_t res;
-          jthread([&res, &f, &args...] { res = f(args...); });
+          thread([&res, &f, &args...] { res = forward<F>(f)(forward<A>(args)...); }).join();
           return res;
         } });
     }
