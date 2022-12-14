@@ -438,6 +438,158 @@ namespace stew
 
   //---------------------------------
   //
+  // Smart pointers
+  //
+  //---------------------------------
+
+  template <typename T>
+  class owning
+  {
+  private:
+    T *_ptr = nullptr;
+
+  public:
+    ~owning()
+    {
+      if (_ptr != nullptr)
+      {
+        delete _ptr;
+        _ptr = nullptr;
+      }
+    }
+
+    owning() = default;
+
+    owning(T *ptr) : _ptr(ptr) {}
+
+    template <typename... U>
+    owning(U &&...u) : _ptr(new T(forward<U>(u)...)) {}
+
+    owning(const owning &) = delete;
+
+    owning(owning &&o) : _ptr(o._ptr)
+    {
+      o._ptr = nullptr;
+    }
+
+    owning &operator=(const owning &) = delete;
+
+    owning &operator=(T *ptr)
+    {
+      if (_ptr != ptr)
+      {
+        if (_ptr != nullptr)
+        {
+          delete _ptr;
+        }
+
+        _ptr = ptr;
+      }
+
+      return *this;
+    }
+
+    owning &operator=(owning &&o)
+    {
+      if (this != &o)
+      {
+        _ptr = o._ptr;
+        o._ptr = nullptr;
+      }
+
+      return *this;
+    }
+
+  public:
+    operator bool() const
+    {
+      return _ptr != nullptr;
+    }
+
+    auto operator*() const -> decltype(auto)
+    {
+      return (*_ptr);
+    }
+
+    auto operator->() const -> decltype(auto)
+    {
+      return _ptr;
+    }
+  };
+
+  template <typename T>
+  class owning<T[]>
+  {
+  private:
+    T *_ptr = nullptr;
+
+  public:
+    ~owning()
+    {
+      if (_ptr != nullptr)
+      {
+        delete[] _ptr;
+        _ptr = nullptr;
+      }
+    }
+
+    owning() = default;
+
+    owning(T *ptr) : _ptr(ptr) {}
+
+    owning(const owning &) = delete;
+
+    owning(owning &&o) : _ptr(o._ptr)
+    {
+      o._ptr = nullptr;
+    }
+
+    owning &operator=(const owning &) = delete;
+
+    owning &operator=(T *ptr)
+    {
+      if (_ptr != ptr)
+      {
+        if (_ptr != nullptr)
+        {
+          delete[] _ptr;
+        }
+
+        _ptr = ptr;
+      }
+
+      return *this;
+    }
+
+    owning &operator=(owning &&o)
+    {
+      if (this != &o)
+      {
+        _ptr = o._ptr;
+        o._ptr = nullptr;
+      }
+
+      return *this;
+    }
+
+  public:
+    operator bool() const
+    {
+      return _ptr != nullptr;
+    }
+
+    auto operator[](size_t i) const -> decltype(auto)
+    {
+      return _ptr[i];
+    }
+
+  };
+
+  template <typename T>
+  class sharing;
+
+  //---------------------------------
+  //
   // References container
   //
   //---------------------------------
