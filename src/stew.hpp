@@ -2302,7 +2302,8 @@ namespace stew
     }
     else
     {
-      return future<res_t>([] {});
+      return future<res_t>([]() -> res_t
+                           { return res_t{}; });
     }
   }
 
