@@ -2,21 +2,25 @@
 
 #include <stew.hpp>
 
-int task()
+struct toto
 {
-  for (int i{0}; i < 100; i++)
+  int task()
   {
-    stew::cout.printfln("{} : {}", i);
-    stew::this_thread::sleep<stew::duration_type::second>(10);
-  }
+    for (int i{0}; i < 100; i++)
+    {
+      stew::cout.printfln("{} : {}", i);
+      stew::this_thread::sleep<stew::duration_type::second>(10);
+    }
 
-  return 0;
-}
+    return 0;
+  }
+};
 
 int main()
 {
 
-  stew::function<int()> f2 = []
+  toto
+  stew::function<int()> f2 = &(toto{}.task;
   { return 12; };
   stew::cout.printfln("{}", f2());
 

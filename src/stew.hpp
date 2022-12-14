@@ -2,6 +2,7 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
+#include <new>
 
 namespace stew
 {
@@ -150,6 +151,12 @@ namespace stew
 
   template <typename T, typename... U>
   concept same_one_of = (same_as<T, U> || ...);
+
+  template <typename T, size_t N>
+  concept size_more_than = (sizeof(T) > N);
+
+  template <typename T, size_t N>
+  concept size_lesseq_than = (sizeof(T) <= N);
 
   template <typename T>
   concept character = same_one_of<T, char, wchar_t>;
@@ -637,23 +644,27 @@ namespace stew
   public:
     virtual ~functor_function_handler() = default;
     functor_function_handler() = default;
-    functor_function_handler(F && func) : _func(forward<F>(func)) {}
+    functor_function_handler(F &&func) : _func(forward<F>(func)) {}
     functor_function_handler(const functor_function_handler &) = default;
     functor_function_handler(functor_function_handler &&) = default;
     functor_function_handler &operator=(const functor_function_handler &) = default;
     functor_function_handler &operator=(functor_function_handler &&) = default;
 
   public:
-    virtual R invoke(A... args)
+    virtual R invoke(A&&... args) override
     {
       return _func(args...);
+    }
+
+    R operator()(A&&...args) {
+
     }
   };
 
   template <typename R, typename... A>
   class function<R(A...)>
   {
-    basic_function_handler<R, A...> *_handler = nullptr;
+    basic_function_handler<R, A...> *_handler;
 
   public:
     ~function() { delete _handler; }
