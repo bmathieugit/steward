@@ -2,7 +2,7 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
-#include <new>
+#include <atomic>
 
 namespace stew
 {
@@ -32,6 +32,8 @@ namespace stew
       }
     }
   }
+
+
 
   namespace impl
   {
@@ -2053,86 +2055,6 @@ namespace stew
     }
   };
 
-  //////////////
-  /// STREAM ///
-  //////////////
-
-  template <character C>
-  class basic_fostream
-  {
-  private:
-    FILE *_out = nullptr;
-
-  public:
-    ~basic_fostream()
-    {
-      if (_out != nullptr)
-      {
-        fclose(_out);
-        _out = nullptr;
-      }
-    }
-
-    basic_fostream() = default;
-
-    basic_fostream(const C *path)
-        : _out(fopen(path, "w"))
-    {
-    }
-
-    basic_fostream(FILE *o)
-        : _out(o)
-    {
-    }
-
-    basic_fostream(const basic_fostream &) = delete;
-    basic_fostream(basic_fostream &&) = default;
-    basic_fostream &operator=(const basic_fostream &) = delete;
-    basic_fostream &operator=(basic_fostream &) = default;
-
-  public:
-    void push_back(C c)
-    {
-      putc(c, _out);
-    }
-
-    void push_back(const string_view_like<C> auto &s)
-    {
-      fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
-    }
-
-    void flush()
-    {
-      fflush(_out);
-    }
-
-    void close()
-    {
-      fclose(_out);
-      _out = nullptr;
-    }
-
-  public:
-    template <typename... T>
-    void printf(basic_string_view<C> fmt, const T &...t)
-    {
-      format_to(*this, fmt, t...);
-    }
-
-    template <typename... T>
-    void printfln(basic_string_view<C> fmt, const T &...t)
-    {
-      printf(fmt, t...);
-      push_back('\n');
-    }
-  };
-
-  using fostream = basic_fostream<char>;
-  using wfostream = basic_fostream<wchar_t>;
-
-  fostream cout(stdout);
-  fostream cerr(stderr);
-
   //------------------------
   //
   // Multithreading
@@ -2245,6 +2167,47 @@ namespace stew
     }
   };
 
+  class dthread
+  {
+  private:
+    thread _t;
+
+  public:
+    ~dthread() = default;
+    template <typename F>
+    dthread(F &&f) : _t(forward<F>(f)) { detach(); }
+    dthread(const dthread &) = delete;
+    dthread(dthread &&) = default;
+    dthread &operator=(const dthread &) = delete;
+    dthread &operator=(dthread &&) = default;
+
+  public:
+    void join()
+    {
+      _t.join();
+    }
+
+    void detach()
+    {
+      _t.detach();
+    }
+
+    bool operator==(thrd_t id) const
+    {
+      return _t.operator==(id);
+    }
+
+    bool operator==(const thread &o) const
+    {
+      return _t == o;
+    }
+
+    bool operator==(const dthread &o) const
+    {
+      return _t == o._t;
+    }
+  };
+
   template <typename T>
   class future
   {
@@ -2285,7 +2248,8 @@ namespace stew
   {
     using res_t = decltype(forward<F>(f)(forward<A>(args)...));
 
-    return future<res_t>([&] {
+    return future<res_t>([&]
+                         {
       if constexpr (!same_as<res_t, void>) 
       {
         res_t res;
@@ -2294,9 +2258,8 @@ namespace stew
       }
       else 
       {
-        thread([&] { forward<F>(f)(forward<A>(args)...);}).join();
-      }
-    });
+        jthread([&] { forward<F>(f)(forward<A>(args)...);});
+      } });
   }
 
   enum class duration_type
@@ -2381,6 +2344,10 @@ namespace stew
   };
 
   template <mutex_type T>
+  concept is_timed = (T == mutex_type::timed) ||
+                     (T == mutex_type::timed_recursive);
+
+  template <mutex_type T>
   class basic_mutex
   {
   private:
@@ -2430,8 +2397,9 @@ namespace stew
 
     template <duration_type Tp>
     void timedlock(duration_spec<Tp> spec)
+      requires is_timed<T>
     {
-      if ((T == mt::timed || T == mt::timed_recursive) && _lockable)
+      if (_lockable)
       {
         mtx_timedlock(&_m, &spec.spec());
       }
@@ -2543,7 +2511,7 @@ namespace stew
     }
 
     template <mutex_type T, duration_type Tp>
-    void waitfor(basic_mutex<T> &m, time_t d, duration_spec<Tp> spec)
+    void waitfor(basic_mutex<T> &m, duration_spec<Tp> spec)
     {
       if (_useable)
       {
@@ -2552,12 +2520,148 @@ namespace stew
     }
   };
 
-  //////////////////
-  /// FILESYSTEM ///
-  //////////////////
+
+  //----------------------
+  //
+  // Ostream 
+  //
+  //----------------------
+
+  template <character C>
+  class basic_fostream
+  {
+  private:
+    FILE *_out = nullptr;
+
+  public:
+    ~basic_fostream()
+    {
+      if (_out != nullptr)
+      {
+        fclose(_out);
+        _out = nullptr;
+      }
+    }
+
+    basic_fostream() = default;
+
+    basic_fostream(const C *path)
+        : _out(fopen(path, "w"))
+    {
+    }
+
+    basic_fostream(FILE *o)
+        : _out(o)
+    {
+    }
+
+    basic_fostream(const basic_fostream &) = delete;
+    basic_fostream(basic_fostream &&) = default;
+    basic_fostream &operator=(const basic_fostream &) = delete;
+    basic_fostream &operator=(basic_fostream &) = default;
+
+  public:
+    void push_back(C c)
+    {
+      putc(c, _out);
+    }
+
+    void push_back(const string_view_like<C> auto &s)
+    {
+      fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
+    }
+
+    void flush()
+    {
+      fflush(_out);
+    }
+
+    void close()
+    {
+      fclose(_out);
+      _out = nullptr;
+    }
+
+  public:
+    template <typename... T>
+    void printf(basic_string_view<C> fmt, const T &...t)
+    {
+      format_to(*this, fmt, t...);
+    }
+
+    template <typename... T>
+    void printfln(basic_string_view<C> fmt, const T &...t)
+    {
+      printf(fmt, t...);
+      push_back('\n');
+    }
+  };
+
+  using fostream = basic_fostream<char>;
+  using wfostream = basic_fostream<wchar_t>;
+
+  fostream cout(stdout);
+  fostream cerr(stderr);
+
+
+  //-----------------------
+  //
+  // Filesystem
+  //
+  //-----------------------
 
   namespace fs
   {
+    template<typename T>
+    struct fs_result;
+
+    template<character C>
+    fs_result<basic_string<C>> current_dir();
+
+    template<character C>
+    fs_result<void> remove_dir(const string_view_like<C> auto& dirname, bool recursive);
+    
+    template<character C>
+    fs_result<void> make_dir(const string_view_like<C> auto& dirname, bool recursive);
+
+    template<character C>
+    fs_result<void> remove_file(const string_view_like<C> auto& filename);
+
+    template<character C>
+    fs_result<void> make_file(const string_view_like<C> auto& filename);
+
+    template<character C>
+    fs_result<void> rename_file(const string_view_like<C> auto& oldname, 
+                                const string_view_like<C> auto& newname);
+
+    template<character C>
+    fs_result<void> rename_dir(const string_view_like<C> auto& oldname, 
+                               const string_view_like<C> auto& newname);
+
+    template<character C>
+    fs_result<size_t> file_size(const string_view_like<C> auto& filename);
+
+    template<character C>
+    fs_result<bool> file_exists(const string_view_like<C> auto& filename);
+
+    template<character C>
+    fs_result<bool> dir_exists(const string_view_like<C> auto& dirname);
+
+    template<character C>
+    fs_result<void> dir_copy(const string_view_like<C>auto& oldname, 
+                             const string_view_like<C>auto& newname);
+    
+    template<character C>
+    fs_result<void> file_copy(const string_view_like<C>auto& oldname, 
+                              const string_view_like<C>auto& newname);
+
+    template<character C>
+    fs_result<bool> is_dir(const string_view_like<C> auto& dirname);
+
+    template<character C>
+    fs_result<bool> is_file(const string_view_like<C> auto& filename);
+    
+
     enum class permission : size_t
     {
       rwx = R_OK | W_OK | X_OK,
