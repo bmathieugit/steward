@@ -18,10 +18,7 @@ struct toto
 
 int main()
 {
-
-  toto
-  stew::function<int()> f2 = &(toto{}.task;
-  { return 12; };
+  stew::function<int()> f2 = []{ return 23;};
   stew::cout.printfln("{}", f2());
 
   return EXIT_SUCCESS;

@@ -620,65 +620,109 @@ namespace stew
   class function;
 
   template <typename R, typename... A>
-  class basic_function_handler
-  {
-  public:
-    virtual ~basic_function_handler() = default;
-    basic_function_handler() = default;
-    basic_function_handler(const basic_function_handler &) = default;
-    basic_function_handler(basic_function_handler &&) = default;
-    basic_function_handler &operator=(const basic_function_handler &) = default;
-    basic_function_handler &operator=(basic_function_handler &&) = default;
-
-  public:
-    virtual R invoke(A... args) = 0;
-  };
-
-  template <typename F, typename R, typename... A>
-  class functor_function_handler
-      : virtual public basic_function_handler<R, A...>
-  {
-  private:
-    F _func;
-
-  public:
-    virtual ~functor_function_handler() = default;
-    functor_function_handler() = default;
-    functor_function_handler(F &&func) : _func(forward<F>(func)) {}
-    functor_function_handler(const functor_function_handler &) = default;
-    functor_function_handler(functor_function_handler &&) = default;
-    functor_function_handler &operator=(const functor_function_handler &) = default;
-    functor_function_handler &operator=(functor_function_handler &&) = default;
-
-  public:
-    virtual R invoke(A&&... args) override
-    {
-      return _func(args...);
-    }
-
-    R operator()(A&&...args) {
-
-    }
-  };
-
-  template <typename R, typename... A>
   class function<R(A...)>
   {
-    basic_function_handler<R, A...> *_handler;
+  private:
+    class basic_function_handler
+    {
+    public:
+      virtual ~basic_function_handler() = default;
+      virtual R invoke(A &&...args) = 0;
+      virtual basic_function_handler *clone() = 0;
+    };
+
+    template <typename F>
+    class function_handler
+        : virtual public basic_function_handler
+    {
+    private:
+      F _func;
+
+    public:
+      virtual ~function_handler() = default;
+      function_handler() = default;
+      function_handler(F &&func) : _func(forward<F>(func)) {}
+      function_handler(const function_handler &) = default;
+      function_handler(function_handler &&) = default;
+      function_handler &operator=(const function_handler &) = default;
+      function_handler &operator=(function_handler &&) = default;
+
+    public:
+      virtual R invoke(A &&...args) override
+      {
+        return _func(forward<A>(args)...);
+      }
+
+      virtual basic_function_handler *clone() override
+      {
+        return new function_handler(*this);
+      }
+    };
+
+  private:
+    basic_function_handler *_handler = nullptr;
 
   public:
-    ~function() { delete _handler; }
+    ~function()
+    {
+      if (_handler != nullptr)
+      {
+        delete _handler;
+      }
+    }
+
     function() = default;
 
     template <typename F>
-    function(F &&f) : _handler(new functor_function_handler<F, R, A...>(forward<F>(f))) {}
+    function(F &&f) : _handler(new function_handler<F>(forward<F>(f))) {}
 
-    function(const function &) = default;
-    function(function &&) = default;
-    function &operator=(const function &) = default;
-    function &operator=(function &&) = default;
+    function(const function &o)
+        : _handler(o._handler == nullptr ? nullptr : o._handler->clone())
+    {
+    }
+
+    function(function &&o)
+        : _handler(o._handler)
+    {
+      o._handler = nullptr;
+    }
+
+    template <typename F>
+    function &operator=(F &&f)
+    {
+      delete _handler;
+      _handler = new function_handler<F>(forward<F>(f));
+
+      return *this;
+    }
+
+    function &operator=(const function &o)
+    {
+      if (this != &o)
+      {
+        _handler = o._handler == nullptr ? nullptr : o._handler->clone();
+      }
+
+      return *this;
+    }
+
+    function &operator=(function &&o)
+    {
+      if (this != &o)
+      {
+        _handler = o._handler;
+        o._handler = nullptr;
+      }
+
+      return *this;
+    }
 
   public:
+    operator bool() const
+    {
+      return _handler != nullptr;
+    }
+
     template <typename... T>
     R operator()(T &&...t)
     {
