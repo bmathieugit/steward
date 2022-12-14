@@ -460,10 +460,8 @@ namespace stew
 
     owning() = default;
 
-    owning(T *ptr) : _ptr(ptr) {}
-
-    template <typename... U>
-    owning(U &&...u) : _ptr(new T(forward<U>(u)...)) {}
+    template<typename U>
+    owning(U *ptr) : _ptr(ptr) {}
 
     owning(const owning &) = delete;
 
@@ -541,7 +539,8 @@ namespace stew
 
     owning() = default;
 
-    owning(T *ptr) : _ptr(ptr) {}
+    template<typename U>
+    owning(U *ptr) : _ptr(ptr) {}
 
     owning(const owning &) = delete;
 
@@ -822,17 +821,10 @@ namespace stew
     };
 
   private:
-    basic_function_handler *_handler = nullptr;
+    owning<basic_function_handler> _handler;
 
   public:
-    ~function()
-    {
-      if (_handler != nullptr)
-      {
-        delete _handler;
-      }
-    }
-
+    ~function() =default;
     function() = default;
 
     template <typename F>
@@ -844,7 +836,7 @@ namespace stew
     }
 
     function(function &&o)
-        : _handler(o._handler)
+        : _handler(move(o._handler))
     {
       o._handler = nullptr;
     }
@@ -852,9 +844,7 @@ namespace stew
     template <typename F>
     function &operator=(F &&f)
     {
-      delete _handler;
       _handler = new function_handler<F>(forward<F>(f));
-
       return *this;
     }
 
@@ -872,7 +862,7 @@ namespace stew
     {
       if (this != &o)
       {
-        _handler = o._handler;
+        _handler = move(o._handler);
         o._handler = nullptr;
       }
 
@@ -882,7 +872,7 @@ namespace stew
   public:
     operator bool() const
     {
-      return _handler != nullptr;
+      return static_cast<bool>(_handler);
     }
 
     template <typename... T>
