@@ -6,6 +6,7 @@
 
 namespace stew
 {
+  using nullptr_t = decltype(nullptr);
   using size_t = unsigned long;
 
   ////////////////
@@ -459,20 +460,33 @@ namespace stew
     }
 
     owning() = default;
+    owning(nullptr_t) : owning() {}
 
-    template<typename U>
+    template <typename U>
     owning(U *ptr) : _ptr(ptr) {}
 
     owning(const owning &) = delete;
 
-    owning(owning &&o) : _ptr(o._ptr)
+    template <typename U>
+    owning(owning<U> &&o) : _ptr(o._ptr)
     {
       o._ptr = nullptr;
     }
 
+    owning &operator=(nullptr_t)
+    {
+      if (_ptr != nullptr)
+      {
+        delete _ptr;
+      }
+
+      return *this;
+    }
+
     owning &operator=(const owning &) = delete;
 
-    owning &operator=(T *ptr)
+    template <typename U>
+    owning &operator=(U *ptr)
     {
       if (_ptr != ptr)
       {
@@ -487,7 +501,8 @@ namespace stew
       return *this;
     }
 
-    owning &operator=(owning &&o)
+    template <typename U>
+    owning &operator=(owning<U> &&o)
     {
       if (this != &o)
       {
@@ -538,20 +553,33 @@ namespace stew
     }
 
     owning() = default;
+    owning(nullptr_t) : owning() {}
 
-    template<typename U>
+    template <typename U>
     owning(U *ptr) : _ptr(ptr) {}
 
     owning(const owning &) = delete;
 
-    owning(owning &&o) : _ptr(o._ptr)
+    template <typename U>
+    owning(owning<U> &&o) : _ptr(o._ptr)
     {
       o._ptr = nullptr;
     }
 
+    owning &operator=(nullptr_t)
+    {
+      if (_ptr != nullptr)
+      {
+        delete _ptr;
+      }
+
+      return *this;
+    }
+
     owning &operator=(const owning &) = delete;
 
-    owning &operator=(T *ptr)
+    template <typename U>
+    owning &operator=(U *ptr)
     {
       if (_ptr != ptr)
       {
@@ -566,7 +594,8 @@ namespace stew
       return *this;
     }
 
-    owning &operator=(owning &&o)
+    template <typename U>
+    owning &operator=(owning<U> &&o)
     {
       if (this != &o)
       {
@@ -824,7 +853,7 @@ namespace stew
     owning<basic_function_handler> _handler;
 
   public:
-    ~function() =default;
+    ~function() = default;
     function() = default;
 
     template <typename F>
