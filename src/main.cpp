@@ -4,12 +4,13 @@
 
 int main()
 {
-  stew::owning<int[]> is = new int[]{1, 2, 3};
+  stew::vector<int> v(4);
   
-  for (int i{0}; i < 3; ++i)
-  {
-    stew::cout.printfln("{}", is[i]);
-  }
+  for (int i = 0; i < 4; ++i)
+    v.push_back(i);
+  
+  for (const int&  i : v)
+    stew::cout.printfln("{}", v[i]);
 
   return EXIT_SUCCESS;
 }

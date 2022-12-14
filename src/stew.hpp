@@ -501,6 +501,12 @@ namespace stew
     }
 
   public:
+    T *get() const
+    {
+      return _ptr;
+    }
+
+  public:
     operator bool() const
     {
       return _ptr != nullptr;
@@ -572,6 +578,11 @@ namespace stew
       return *this;
     }
 
+    T *get() const
+    {
+      return _ptr;
+    }
+
   public:
     operator bool() const
     {
@@ -582,7 +593,6 @@ namespace stew
     {
       return _ptr[i];
     }
-
   };
 
   template <typename T>
@@ -1084,17 +1094,10 @@ namespace stew
   private:
     S _size{0};
     S _max{0};
-    T *_data{nullptr};
+    owning<T[]> _data;
 
   public:
-    constexpr ~fixed_vector()
-    {
-      _size = 0;
-      _max = 0;
-      delete[] _data;
-      _data = nullptr;
-    }
-
+    constexpr ~fixed_vector() = default;
     constexpr fixed_vector() = default;
 
     constexpr fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]{}}
@@ -1113,7 +1116,7 @@ namespace stew
     }
 
     constexpr fixed_vector(fixed_vector &&o)
-        : _size{o._size}, _max{o._max}, _data{o._data}
+        : _size{o._size}, _max{o._max}, _data{move(o._data)}
     {
       o._size = 0;
       o._max = 0;
@@ -1143,7 +1146,7 @@ namespace stew
       {
         _size = o._size;
         _max = o._max;
-        _data = o._data;
+        _data = move(o._data);
 
         o._size = 0;
         o._max = 0;
@@ -1156,22 +1159,22 @@ namespace stew
   public:
     constexpr auto begin()
     {
-      return _data;
+      return _data.get();
     }
 
     constexpr auto end()
     {
-      return _data + _size;
+      return begin() + _size;
     }
 
     constexpr auto begin() const
     {
-      return _data;
+      return _data.get();
     }
 
     constexpr auto end() const
     {
-      return _data + _size;
+      return begin() + _size;
     }
 
     constexpr T &operator[](S i)
