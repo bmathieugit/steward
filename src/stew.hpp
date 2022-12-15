@@ -959,6 +959,14 @@ namespace stew
   //
   //----------------------------------
 
+  constexpr auto val = []<typename T>(T &&t)
+  {
+    return [&t]<typename... A>(A &&...args) -> decltype(auto)
+    {
+      return forward<T>(t);
+    };
+  };
+
   template <size_t N>
   struct placeholder
   {
