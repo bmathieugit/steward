@@ -921,7 +921,7 @@ namespace stew
   struct placeholder
   {
     template <typename T0, typename... Tn>
-    constexpr auto operator()(T0 &&t0, Tn &&...tn) const -> decltype(auto) 
+    constexpr auto operator()(T0 &&t0, Tn &&...tn) const -> decltype(auto)
     {
       if constexpr (N == 0)
       {
@@ -945,6 +945,382 @@ namespace stew
   constexpr auto p8 = placeholder<8>{};
   constexpr auto p9 = placeholder<9>{};
 
+  template <typename T>
+  struct is_placeholder
+  {
+    static constexpr bool value = false;
+  };
+
+  template <size_t N>
+  struct is_placeholder<placeholder<N>>
+  {
+    static constexpr bool value = true;
+  };
+
+  template <typename T>
+  concept placeholder_like = is_placeholder<T>::value;
+
+  template <size_t N0>
+  constexpr auto operator++(placeholder<N0> pn0) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return ++pn0(forward<A>(args)...);
+    };
+  }
+
+  template <size_t N0>
+  constexpr auto operator++(placeholder<N0> pn0, int) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return pn0(forward<A>(args)...)++;
+    };
+  }
+
+  template <size_t N0>
+  constexpr auto operator--(placeholder<N0> pn0) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return --pn0(forward<A>(args)...);
+    };
+  }
+
+  template <size_t N0>
+  constexpr auto operator--(placeholder<N0> pn0, int) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return pn0(forward<A>(args)...)--;
+    };
+  }
+
+  template <size_t N0>
+  constexpr auto operator!(placeholder<N0> pn0) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return !pn0(forward<A>(args)...);
+    };
+  }
+
+  template <size_t N0>
+  constexpr auto operator+(placeholder<N0> pn0) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return +pn0(forward<A>(args)...);
+    };
+  }
+
+  template <size_t N0>
+  constexpr auto operator-(placeholder<N0> pn0) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return -pn0(forward<A>(args)...);
+    };
+  }
+
+  template <size_t N0>
+  constexpr auto operator~(placeholder<N0> pn0) -> decltype(auto)
+  {
+    return [pn0]<typename... A>(A &&...args)
+    {
+      return ~pn0(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator+(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) + p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator-(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) - p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator/(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) / p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator*(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) * p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator%(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) % p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator|(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) | p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator&(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) & p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator^(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) ^ p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator||(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) || p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator&&(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) && p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<<(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) << p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>>(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) >> p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator==(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) == p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator!=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) != p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) < p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) > p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) <= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) >= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<=>(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) <=> p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator+=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) += p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator-=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) -= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator/=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) /= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator*=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) *= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator%=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) %= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator&=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) &= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator|=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) |= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator^=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) ^= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>>=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) >>= p1(forward<A>(args)...);
+    };
+  }
+
+  template <typename P0, typename P1>
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<<=(P0 p0, P1 p1) -> decltype(auto)
+  {
+    return [p0, p1]<typename... A>(A &&...args)
+    {
+      return p0(forward<A>(args)...) <<= p1(forward<A>(args)...);
+    };
+  }
   //----------------------------------
   //
   // Tuple container
