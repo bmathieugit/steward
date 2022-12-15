@@ -9,7 +9,9 @@ int foo()
 
 int main()
 {
-  stew::function<int()> f = foo;
-  stew::cout.printfln("{}", f());
+  int i = 0;
+  int j = 2;
+  auto assign = (stew::p0 = stew::p1);
+  stew::cout.printfln("{}", assign(i, j));
   return EXIT_SUCCESS;
 }

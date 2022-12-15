@@ -974,6 +974,15 @@ namespace stew
         return placeholder<N - 1>{}(forward<Tn>(tn)...);
       }
     }
+
+    template <typename O>
+    auto operator=(O op) const -> decltype(auto)
+    {
+      return [this, op]<typename... A>(A &&...args)
+      {
+        return (*this)(forward<A>(args)...) = op(forward<A>(args)...);
+      };
+    }
   };
 
   constexpr auto p0 = placeholder<0>{};
