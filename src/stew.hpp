@@ -560,7 +560,7 @@ namespace stew
     auto b = r1.begin();
     auto e = r1.end();
 
-    while (b != e && !pred(*b))
+    while (b != e && !forward<P>(pred)(*b))
     {
       ++b;
     }
@@ -576,6 +576,22 @@ namespace stew
     for (const auto &i : r)
     {
       if (i == forward<T>(t))
+      {
+        ++c;
+      }
+    }
+
+    return c;
+  }
+
+  template <range R, predicate<range_value_type<R>> P>
+  constexpr size_t count(const R &r, P &&pred)
+  {
+    size_t c = 0;
+
+    for (const auto &i : r)
+    {
+      if (forward<P>(pred)(i))
       {
         ++c;
       }
@@ -1044,13 +1060,14 @@ namespace stew
 
   private:
     owning<basic_function_handler> _handler;
-    R(*_func)(A...) = nullptr;
+    R(*_func)
+    (A...) = nullptr;
 
   public:
     ~function() = default;
     function() = default;
 
-    function(R(*f)(A...)) : _func(f) {}
+    function(R (*f)(A...)) : _func(f) {}
 
     template <typename F>
     function(F &&f) : _handler(new function_handler<F>(forward<F>(f)))
@@ -1071,7 +1088,7 @@ namespace stew
       o._func = nullptr;
     }
 
-    function &operator=(R(*f)(A...))
+    function &operator=(R (*f)(A...))
     {
       _func = f;
       return *this;
@@ -1117,7 +1134,9 @@ namespace stew
     template <typename... T>
     R operator()(T &&...t)
     {
-      return _handler ? _handler->invoke(forward<T>(t)...) : _func(forward<T>(t)...);
+      return _handler
+                 ? _handler->invoke(forward<T>(t)...)
+                 : _func(forward<T>(t)...);
     }
   };
 
@@ -1127,7 +1146,8 @@ namespace stew
   //
   //----------------------------------
 
-  constexpr auto val = []<typename T>(T &&t)
+  template <typename T>
+  constexpr auto val(T &&t)
   {
     return [&t]<typename... A>(A &&...args) -> decltype(auto)
     {
@@ -1172,20 +1192,21 @@ namespace stew
   constexpr auto p8 = placeholder<8>{};
   constexpr auto p9 = placeholder<9>{};
 
-  template <typename T>
-  struct is_placeholder
+  namespace impl
   {
-    static constexpr bool value = false;
-  };
+    template <typename T>
+    struct placeholder_like : false_type
+    {
+    };
 
-  template <size_t N>
-  struct is_placeholder<placeholder<N>>
-  {
-    static constexpr bool value = true;
-  };
+    template <size_t N>
+    struct placeholder_like<placeholder<N>> : true_type
+    {
+    };
+  }
 
   template <typename T>
-  concept placeholder_like = is_placeholder<T>::value;
+  concept placeholder_like = impl::placeholder_like<T>::value;
 
   template <size_t N0>
   constexpr auto operator++(placeholder<N0> pn0) -> decltype(auto)
