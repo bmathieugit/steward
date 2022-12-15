@@ -9,7 +9,7 @@ int foo()
 
 int main()
 {
-  constexpr auto add = stew::p1 + stew::p2 + stew::p2 - stew::p0;
-  stew::cout.printfln("{}", add(1, 2, 3));
+  stew::function<int()> f = foo;
+  stew::cout.printfln("{}", f());
   return EXIT_SUCCESS;
 }

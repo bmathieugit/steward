@@ -213,7 +213,7 @@ namespace stew
         (requires(F f) { T(f); })));
 
   template <typename T>
-  rm_ref<T> &&move(T &&t)
+  constexpr rm_ref<T> &&move(T &&t) noexcept
   {
     return static_cast<rm_ref<T> &&>(t);
   }
@@ -307,10 +307,11 @@ namespace stew
   /////////////////
 
   template <typename C>
-  concept range = requires(C &c) {
-                    c.begin();
-                    c.end();
-                  };
+  concept range =
+      requires(C &c) {
+        c.begin();
+        c.end();
+      };
 
   template <typename I>
   class frame
@@ -874,23 +875,38 @@ namespace stew
 
   private:
     owning<basic_function_handler> _handler;
+    R(*_func)
+    (A...) = nullptr;
 
   public:
     ~function() = default;
     function() = default;
 
+    function(R (*func)(A...)) : _func(func) {}
+
     template <typename F>
-    function(F &&f) : _handler(new function_handler<F>(forward<F>(f))) {}
+    function(F &&f) : _handler(new function_handler<F>(forward<F>(f)))
+    {
+    }
 
     function(const function &o)
-        : _handler(o._handler == nullptr ? nullptr : o._handler->clone())
+        : _handler(o._handler == nullptr ? nullptr : o._handler->clone()),
+          _func(o._func)
     {
     }
 
     function(function &&o)
-        : _handler(move(o._handler))
+        : _handler(move(o._handler)),
+          _func(move(o._func))
     {
       o._handler = nullptr;
+      o._func = nullptr;
+    }
+
+    function &operator=(R (*f)(A...))
+    {
+      _func = f;
+      return *this;
     }
 
     template <typename F>
@@ -905,6 +921,7 @@ namespace stew
       if (this != &o)
       {
         _handler = o._handler == nullptr ? nullptr : o._handler->clone();
+        _func = o._func;
       }
 
       return *this;
@@ -915,7 +932,9 @@ namespace stew
       if (this != &o)
       {
         _handler = move(o._handler);
+        _func = move(o._func);
         o._handler = nullptr;
+        o._func = nullptr;
       }
 
       return *this;
@@ -924,13 +943,13 @@ namespace stew
   public:
     operator bool() const
     {
-      return static_cast<bool>(_handler);
+      return static_cast<bool>(_handler) || _func != nullptr;
     }
 
     template <typename... T>
     R operator()(T &&...t)
     {
-      return _handler->invoke(forward<T>(t)...);
+      return _handler ? _handler->invoke(forward<T>(t)...) : _func(forward<T>(t)...);
     }
   };
 
