@@ -2,7 +2,6 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
-#include <atomic>
 
 namespace stew
 {
@@ -212,6 +211,18 @@ namespace stew
        ((requires(F f) { static_cast<T>(f); }) ||
         (requires(F f) { T(f); })));
 
+  template <typename T, typename R, typename... A>
+  concept callable = requires(T t, A &&...a) {{t(a...)} -> convertible_to<R>; };
+
+  template <typename P, typename... A>
+  concept predicate = callable<P, bool, A...>;
+
+  //-----------------------------------
+  //
+  // Utilities functions
+  //
+  //-----------------------------------
+
   template <typename T>
   constexpr rm_ref<T> &&move(T &&t) noexcept
   {
@@ -302,9 +313,11 @@ namespace stew
   {
   };
 
-  /////////////////
-  /// ALGORITHM ///
-  /////////////////
+  //---------------------------
+  //
+  // Algorithm facilities
+  //
+  //---------------------------
 
   template <typename C>
   concept range =
@@ -312,6 +325,27 @@ namespace stew
         c.begin();
         c.end();
       };
+
+  template <range R>
+  struct range_traits
+  {
+    using value_type = rm_cvref<decltype(*(R{}.begin()))>;
+    using reference = value_type &;
+    using pointer = value_type *;
+    using const_reference = const value_type &;
+  };
+
+  template <range R>
+  using range_value_type = typename range_traits<R>::value_type;
+
+  template <range R>
+  using range_reference = typename range_traits<R>::reference;
+
+  template <range R>
+  using range_pointer = typename range_traits<R>::pointer;
+
+  template <range R>
+  using range_const_reference = typename range_traits<R>::const_reference;
 
   template <typename I>
   class frame
@@ -435,6 +469,12 @@ namespace stew
     return b1;
   }
 
+  template <range R1, predicate<range_const_reference<R1>> P>
+  constexpr auto find(R1 &r1, P &&pred)
+  {
+    // TODO: to implement
+  }
+
   template <range R, typename T>
   constexpr bool contains(R &r, const T &t)
   {
@@ -447,8 +487,8 @@ namespace stew
     return find(r1, r2) != r1.end();
   }
 
-  template <typename R, typename P>
-  constexpr bool all_of(const R &r, P &&p)
+  template <range R1, predicate<const decltype(*(R1{}.begin())) &> P>
+  constexpr bool all_of(const R1 &r, P &&p)
   {
     for (const auto &i : r)
     {

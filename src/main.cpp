@@ -10,19 +10,6 @@ int foo()
 int main()
 {
   using namespace stew;
-  vector<int> v(1000);
-
-  for (int i = 0; i < 1000; ++i)
-  {
-    v.push_back(10);
-  }
-
-  for (int i : v)
-  {
-    cout.printfln("{}", i);
-  }
-
-  cout.printfln("{}", all_of(v, p0 < val(0)));
 
   int i = 0;
   int j = 2;
