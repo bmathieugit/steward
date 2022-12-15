@@ -33,8 +33,6 @@ namespace stew
     }
   }
 
-
-
   namespace impl
   {
     template <size_t I, typename H, typename... T>
@@ -912,6 +910,40 @@ namespace stew
       return _handler->invoke(forward<T>(t)...);
     }
   };
+
+  //----------------------------------
+  //
+  // Functionnal utilities
+  //
+  //----------------------------------
+
+  template <size_t N>
+  struct placeholder
+  {
+    template <typename T0, typename... Tn>
+    constexpr auto operator()(T0 &&t0, Tn &&...tn) const -> decltype(auto) 
+    {
+      if constexpr (N == 0)
+      {
+        return forward<T0>(t0);
+      }
+      else
+      {
+        return placeholder<N - 1>{}(forward<Tn>(tn)...);
+      }
+    }
+  };
+
+  constexpr auto p0 = placeholder<0>{};
+  constexpr auto p1 = placeholder<1>{};
+  constexpr auto p2 = placeholder<2>{};
+  constexpr auto p3 = placeholder<3>{};
+  constexpr auto p4 = placeholder<4>{};
+  constexpr auto p5 = placeholder<5>{};
+  constexpr auto p6 = placeholder<6>{};
+  constexpr auto p7 = placeholder<7>{};
+  constexpr auto p8 = placeholder<8>{};
+  constexpr auto p9 = placeholder<9>{};
 
   //----------------------------------
   //
@@ -2520,10 +2552,9 @@ namespace stew
     }
   };
 
-
   //----------------------
   //
-  // Ostream 
+  // Ostream
   //
   //----------------------
 
@@ -2603,7 +2634,6 @@ namespace stew
   fostream cout(stdout);
   fostream cerr(stderr);
 
-
   //-----------------------
   //
   // Filesystem
@@ -2612,55 +2642,54 @@ namespace stew
 
   namespace fs
   {
-    template<typename T>
+    template <typename T>
     struct fs_result;
 
-    template<character C>
+    template <character C>
     fs_result<basic_string<C>> current_dir();
 
-    template<character C>
-    fs_result<void> remove_dir(const string_view_like<C> auto& dirname, bool recursive);
-    
-    template<character C>
-    fs_result<void> make_dir(const string_view_like<C> auto& dirname, bool recursive);
+    template <character C>
+    fs_result<void> remove_dir(const string_view_like<C> auto &dirname, bool recursive);
 
-    template<character C>
-    fs_result<void> remove_file(const string_view_like<C> auto& filename);
+    template <character C>
+    fs_result<void> make_dir(const string_view_like<C> auto &dirname, bool recursive);
 
-    template<character C>
-    fs_result<void> make_file(const string_view_like<C> auto& filename);
+    template <character C>
+    fs_result<void> remove_file(const string_view_like<C> auto &filename);
 
-    template<character C>
-    fs_result<void> rename_file(const string_view_like<C> auto& oldname, 
-                                const string_view_like<C> auto& newname);
+    template <character C>
+    fs_result<void> make_file(const string_view_like<C> auto &filename);
 
-    template<character C>
-    fs_result<void> rename_dir(const string_view_like<C> auto& oldname, 
-                               const string_view_like<C> auto& newname);
+    template <character C>
+    fs_result<void> rename_file(const string_view_like<C> auto &oldname,
+                                const string_view_like<C> auto &newname);
 
-    template<character C>
-    fs_result<size_t> file_size(const string_view_like<C> auto& filename);
+    template <character C>
+    fs_result<void> rename_dir(const string_view_like<C> auto &oldname,
+                               const string_view_like<C> auto &newname);
 
-    template<character C>
-    fs_result<bool> file_exists(const string_view_like<C> auto& filename);
+    template <character C>
+    fs_result<size_t> file_size(const string_view_like<C> auto &filename);
 
-    template<character C>
-    fs_result<bool> dir_exists(const string_view_like<C> auto& dirname);
+    template <character C>
+    fs_result<bool> file_exists(const string_view_like<C> auto &filename);
 
-    template<character C>
-    fs_result<void> dir_copy(const string_view_like<C>auto& oldname, 
-                             const string_view_like<C>auto& newname);
-    
-    template<character C>
-    fs_result<void> file_copy(const string_view_like<C>auto& oldname, 
-                              const string_view_like<C>auto& newname);
+    template <character C>
+    fs_result<bool> dir_exists(const string_view_like<C> auto &dirname);
 
-    template<character C>
-    fs_result<bool> is_dir(const string_view_like<C> auto& dirname);
+    template <character C>
+    fs_result<void> dir_copy(const string_view_like<C> auto &oldname,
+                             const string_view_like<C> auto &newname);
 
-    template<character C>
-    fs_result<bool> is_file(const string_view_like<C> auto& filename);
-    
+    template <character C>
+    fs_result<void> file_copy(const string_view_like<C> auto &oldname,
+                              const string_view_like<C> auto &newname);
+
+    template <character C>
+    fs_result<bool> is_dir(const string_view_like<C> auto &dirname);
+
+    template <character C>
+    fs_result<bool> is_file(const string_view_like<C> auto &filename);
 
     enum class permission : size_t
     {
