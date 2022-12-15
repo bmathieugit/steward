@@ -11,6 +11,8 @@ int main()
 {
   using namespace stew;
 
+
+
   int i = 0;
   int j = 2;
   auto assign = (p0 = p1);

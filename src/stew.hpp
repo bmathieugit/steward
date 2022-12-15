@@ -145,6 +145,18 @@ namespace stew
     {
       using type = T;
     };
+
+    template <typename T>
+    struct rm_array
+    {
+      using type = T;
+    };
+
+    template <typename T>
+    struct rm_array<T[]>
+    {
+      using type = T;
+    };
   }
 
   template <typename T>
@@ -158,6 +170,9 @@ namespace stew
 
   template <typename T>
   using rm_cvref = rm_const<rm_volatile<rm_ref<T>>>;
+
+  template <typename T>
+  using rm_array = typename impl::rm_array<T>::type;
 
   namespace impl
   {
@@ -204,6 +219,22 @@ namespace stew
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
 
+  namespace impl
+  {
+    template <typename T>
+    struct native_array_like : false_type
+    {
+    };
+
+    template <typename T>
+    struct native_array_like<T[]> : true_type
+    {
+    };
+  }
+
+  template <typename T>
+  concept native_array_like = impl::native_array_like<T>::value;
+
   template <typename F, typename T>
   concept convertible_to =
       (!same_as<F, void> &&
@@ -216,6 +247,14 @@ namespace stew
 
   template <typename P, typename... A>
   concept predicate = callable<P, bool, A...>;
+
+  template <typename T, typename O>
+  concept equal_comparable =
+      requires(const T &t, const O &o) {
+        {
+          t == o
+          } -> convertible_to<bool>;
+      };
 
   //-----------------------------------
   //
@@ -319,11 +358,35 @@ namespace stew
   //
   //---------------------------
 
+  template <typename T>
+  concept forward_iterator =
+      requires(T i) {
+        ++i;
+        i++;
+        i != i;
+        i == i;
+        *i;
+      };
+
+  template <typename T>
+  concept backward_iterator =
+      requires(T i) {
+        --i;
+        i--;
+        i != i;
+        i == i;
+        *i;
+      };
+
   template <typename C>
   concept range =
       requires(C &c) {
-        c.begin();
-        c.end();
+        {
+          c.begin()
+          } -> forward_iterator;
+        {
+          c.end()
+          } -> forward_iterator;
       };
 
   template <range R>
@@ -346,6 +409,26 @@ namespace stew
 
   template <range R>
   using range_const_reference = typename range_traits<R>::const_reference;
+
+  template <typename T>
+  concept collection =
+      (range<T> &&
+       requires(T t) {
+         {
+           t.size()
+           } -> convertible_to<size_t>;
+         {
+           t.empty()
+           } -> convertible_to<bool>;
+       });
+
+  template <typename T>
+  concept random_accessible = requires(T t) { t[0]; };
+
+  template <typename T>
+  concept random_access_collection =
+      collection<T> &&
+      random_accessible<T>;
 
   template <typename I>
   class frame
@@ -472,7 +555,31 @@ namespace stew
   template <range R1, predicate<range_const_reference<R1>> P>
   constexpr auto find(R1 &r1, P &&pred)
   {
-    // TODO: to implement
+    auto b = r1.begin();
+    auto e = r1.end();
+
+    while (b != e && !pred(*b))
+    {
+      ++b;
+    }
+
+    return b;
+  }
+
+  template <range R, equal_comparable<range_value_type<R>> T>
+  constexpr size_t count(const R &r, T &&t)
+  {
+    size_t c = 0;
+
+    for (const auto &i : r)
+    {
+      if (i == forward<T>(t))
+      {
+        ++c;
+      }
+    }
+
+    return c;
   }
 
   template <range R, typename T>
@@ -508,77 +615,45 @@ namespace stew
   //---------------------------------
 
   template <typename T>
-  class owning
+  class non_owning
   {
   private:
-    T *_ptr = nullptr;
+    rm_array<T> *_ptr = nullptr;
 
   public:
-    ~owning()
-    {
-      if (_ptr != nullptr)
-      {
-        delete _ptr;
-        _ptr = nullptr;
-      }
-    }
-
-    owning() = default;
-    owning(nullptr_t) : owning() {}
+    ~non_owning() = default;
+    non_owning() = default;
 
     template <typename U>
-    owning(U *ptr) : _ptr(ptr) {}
+    non_owning(U *ptr) : _ptr(ptr) {}
 
-    owning(const owning &) = delete;
+    non_owning(nullptr_t) : non_owning() {}
 
-    template <typename U>
-    owning(owning<U> &&o) : _ptr(o._ptr)
-    {
-      o._ptr = nullptr;
-    }
-
-    owning &operator=(nullptr_t)
-    {
-      if (_ptr != nullptr)
-      {
-        delete _ptr;
-      }
-
-      return *this;
-    }
-
-    owning &operator=(const owning &) = delete;
+    non_owning(const non_owning &) = default;
+    non_owning(non_owning &&) = default;
 
     template <typename U>
-    owning &operator=(U *ptr)
+    non_owning &operator=(U *ptr)
     {
       if (_ptr != ptr)
       {
-        if (_ptr != nullptr)
-        {
-          delete _ptr;
-        }
-
         _ptr = ptr;
       }
 
       return *this;
     }
 
-    template <typename U>
-    owning &operator=(owning<U> &&o)
+    non_owning &operator=(nullptr_t)
     {
-      if (this != &o)
-      {
-        _ptr = o._ptr;
-        o._ptr = nullptr;
-      }
-
+      _ptr = nullptr;
       return *this;
     }
 
+    non_owning &operator=(const non_owning &) = default;
+    non_owning &operator=(non_owning &&) = default;
+
   public:
-    T *get() const
+    auto get() const
     {
       return _ptr;
     }
@@ -589,29 +664,48 @@ namespace stew
       return _ptr != nullptr;
     }
 
-    auto operator*() const -> decltype(auto)
+    auto operator*() const
+        -> decltype(auto)
+      requires(!native_array_like<T>)
     {
       return (*_ptr);
     }
 
-    auto operator->() const -> decltype(auto)
+    auto operator->() const
+        -> decltype(auto)
+      requires(!native_array_like<T>)
     {
       return _ptr;
+    }
+
+    auto operator[](size_t i) const
+        -> decltype(auto)
+      requires(native_array_like<T>)
+    {
+      return _ptr[i];
     }
   };
 
   template <typename T>
-  class owning<T[]>
+  class owning
   {
   private:
-    T *_ptr = nullptr;
+    rm_array<T> *_ptr = nullptr;
 
   public:
     ~owning()
     {
       if (_ptr != nullptr)
       {
-        delete[] _ptr;
+        if constexpr (native_array_like<T>)
+        {
+          delete[] _ptr;
+        }
+        else
+        {
+          delete _ptr;
+        }
+
         _ptr = nullptr;
       }
     }
@@ -634,7 +728,16 @@ namespace stew
     {
       if (_ptr != nullptr)
       {
-        delete _ptr;
+        if constexpr (native_array_like<T>)
+        {
+          delete[] _ptr;
+        }
+        else
+        {
+          delete _ptr;
+        }
+
+        _ptr = nullptr;
       }
 
       return *this;
@@ -649,7 +752,14 @@ namespace stew
       {
         if (_ptr != nullptr)
         {
-          delete[] _ptr;
+          if constexpr (native_array_like<T>)
+          {
+            delete[] _ptr;
+          }
+          else
+          {
+            delete _ptr;
+          }
         }
 
         _ptr = ptr;
@@ -670,7 +780,8 @@ namespace stew
       return *this;
     }
 
-    T *get() const
+  public:
+    auto get() const
     {
       return _ptr;
     }
@@ -681,7 +792,23 @@ namespace stew
       return _ptr != nullptr;
     }
 
-    auto operator[](size_t i) const -> decltype(auto)
+    auto operator*() const
+        -> decltype(auto)
+      requires(!native_array_like<T>)
+    {
+      return (*_ptr);
+    }
+
+    auto operator->() const
+        -> decltype(auto)
+      requires(!native_array_like<T>)
+    {
+      return _ptr;
+    }
+
+    auto operator[](size_t i) const
+        -> decltype(auto)
+      requires native_array_like<T>
     {
       return _ptr[i];
     }
@@ -1628,7 +1755,7 @@ namespace stew
     constexpr ~fixed_vector() = default;
     constexpr fixed_vector() = default;
 
-    constexpr fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]{}}
+    constexpr fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]}
     {
     }
 
@@ -1861,7 +1988,7 @@ namespace stew
       if (_data.full())
       {
         fixed_vector<T, S> tmp(move(_data));
-        _data = fixed_vector<T, S>(tmp.size() * 2);
+        _data = fixed_vector<T, S>(tmp.size() * 2 + 10);
 
         for (T &i : move(tmp))
         {
@@ -1877,7 +2004,7 @@ namespace stew
       if (_data.full())
       {
         fixed_vector<T, S> tmp(move(_data));
-        _data = fixed_vector<T, S>(tmp.size() * 2);
+        _data = fixed_vector<T, S>(tmp.size() * 2 + 10);
 
         for (T &i : move(tmp))
         {
