@@ -72,8 +72,36 @@ namespace stew
     };
   }
 
+  template <auto V>
+  struct value_type
+  {
+    static constexpr auto value = V;
+  };
+
+  using true_type = value_type<true>;
+  using false_type = value_type<false>;
+
   template <size_t I, typename... T>
   using typeat = typename impl::typeat<I, T...>::type;
+
+  namespace impl
+  {
+    template <typename T>
+    struct lvalue_reference_like : false_type
+    {
+    };
+
+    template <typename T>
+    struct lvalue_reference_like<T &> : true_type
+    {
+    };
+  }
+
+  template <typename T>
+  concept lvalue_reference_like = impl::lvalue_reference_like<T>::value;
+
+  template <typename T>
+  concept not_lvalue_reference_like = (!lvalue_reference_like<T>);
 
   namespace impl
   {
@@ -132,23 +160,23 @@ namespace stew
   template <typename T>
   using rm_cvref = rm_const<rm_volatile<rm_ref<T>>>;
 
-  template <typename T, typename U>
-  struct is_same
+  namespace impl
   {
-    static constexpr bool value = false;
-  };
+    template <typename T, typename U>
+    struct same_as
+    {
+      static constexpr bool value = false;
+    };
 
-  template <typename T>
-  struct is_same<T, T>
-  {
-    static constexpr bool value = true;
-  };
+    template <typename T>
+    struct same_as<T, T>
+    {
+      static constexpr bool value = true;
+    };
+  }
 
   template <typename T, typename U>
-  constexpr bool is_same_v = is_same<T, U>::value;
-
-  template <typename T, typename U>
-  concept same_as = is_same_v<T, U>;
+  concept same_as = impl::same_as<T, U>::value;
 
   template <typename T, typename... U>
   concept same_one_of = (same_as<T, U> || ...);
@@ -179,13 +207,10 @@ namespace stew
 
   template <typename F, typename T>
   concept convertible_to =
-      !
-  same_as<F, void> &&
-      !same_as<T, void> &&
-      (
-          requires(F f) {
-            static_cast<T>(f);
-          } || requires(F f) { T(f); });
+      (!same_as<F, void> &&
+       !same_as<T, void> &&
+       ((requires(F f) { static_cast<T>(f); }) ||
+        (requires(F f) { T(f); })));
 
   template <typename T>
   rm_ref<T> &&move(T &&t)
@@ -199,11 +224,9 @@ namespace stew
     return static_cast<T &&>(t);
   }
 
-  template <typename T>
+  template <not_lvalue_reference_like T>
   constexpr T &&forward(rm_ref<T> &&t) noexcept
   {
-    // static_assert(!std::is_lvalue_reference<T>::value,
-    //               "Can not forward an rvalue as an lvalue.");
     return static_cast<T &&>(t);
   }
 
