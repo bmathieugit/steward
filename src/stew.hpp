@@ -8,9 +8,11 @@ namespace stew
   using nullptr_t = decltype(nullptr);
   using size_t = unsigned long;
 
-  ////////////////
-  /// METAPROG ///
-  ////////////////
+  //--------------------------------
+  //
+  // Metaprogramming
+  //
+  //--------------------------------
 
   template <typename T0, typename... Tn>
   consteval size_t sizeofmax()
@@ -827,7 +829,7 @@ namespace stew
   class reference
   {
   private:
-    T *_t;
+    non_owning<T> _t;
 
   public:
     constexpr ~reference() = default;
@@ -851,7 +853,7 @@ namespace stew
   class const_reference
   {
   private:
-    const T *_t;
+    non_owning<const T> _t;
 
   public:
     constexpr ~const_reference() = default;
@@ -875,7 +877,7 @@ namespace stew
   class move_reference
   {
   private:
-    T *_t;
+    non_owning<T> _t;
 
   public:
     constexpr ~move_reference() = default;
@@ -1042,14 +1044,13 @@ namespace stew
 
   private:
     owning<basic_function_handler> _handler;
-    R(*_func)
-    (A...) = nullptr;
+    R(*_func)(A...) = nullptr;
 
   public:
     ~function() = default;
     function() = default;
 
-    function(R (*func)(A...)) : _func(func) {}
+    function(R(*f)(A...)) : _func(f) {}
 
     template <typename F>
     function(F &&f) : _handler(new function_handler<F>(forward<F>(f)))
@@ -1070,7 +1071,7 @@ namespace stew
       o._func = nullptr;
     }
 
-    function &operator=(R (*f)(A...))
+    function &operator=(R(*f)(A...))
     {
       _func = f;
       return *this;
