@@ -21,7 +21,7 @@ namespace stew
   };
 
   template <typename T>
-  using type = typename struct_type<T>::type;
+  using type = typename T::type;
 
   template <typename T0, typename... Tn>
   consteval size_t sizeofmax()
@@ -896,6 +896,7 @@ namespace stew
 
   public:
     constexpr ~forward_reference() = default;
+    constexpr forward_reference() = default;
     constexpr forward_reference(T &&t) : _t(t) {}
     constexpr forward_reference(const forward_reference &) = default;
     constexpr forward_reference &operator=(const forward_reference &) = default;
@@ -1124,7 +1125,7 @@ namespace stew
   template <typename T>
   constexpr auto val(T &&t)
   {
-    return [&t]<typename... A>(A &&...) -> decltype(auto)
+    return [&t]<typename... A>(A &&...args) -> decltype(auto)
     {
       return forward<T>(t);
     };
@@ -1569,9 +1570,9 @@ namespace stew
     constexpr tuple &operator=(tuple &&) = default;
 
   public:
-    constexpr tuple(T0 &&t0, Tn &&...tn)
-        : _t{forward<T0>(t0)},
-          tuple<Tn...>(forward<Tn>(tn)...)
+    template <convertible_to<T0> U0, convertible_to<Tn>... Un>
+    constexpr tuple(U0 &&u0, Un &&...un)
+        : _t{forward<U0>(u0)}, tuple<Tn...>(forward<Un>(un)...)
     {
     }
 
@@ -2078,11 +2079,6 @@ namespace stew
       _end = b + s;
     }
 
-    constexpr basic_string_view(const C *c)
-        : basic_string_view(c, strlen(c))
-    {
-    }
-
     template <size_t N>
     constexpr basic_string_view(const C (&s)[N])
         : basic_string_view(s, N)
@@ -2568,7 +2564,7 @@ namespace stew
   };
 
   template <typename T>
-  using type_identity_t = type<type_identity<T>>;
+  using type_identity_t = typename type_identity<T>::type;
 
   template <size_t... I>
   struct isequence
@@ -2629,9 +2625,6 @@ namespace stew
     sview _fmt;
     array<sview, sizeof...(A) + 1> _fmtsplit;
 
-    consteval basic_format_string(const char *s)
-        : _fmt(s), _fmtsplit(split(_fmt)) {}
-
     template <size_t N>
     consteval basic_format_string(const char (&s)[N])
         : _fmt(s), _fmtsplit(split(_fmt)) {}
@@ -2640,30 +2633,26 @@ namespace stew
         : _fmt(s), _fmtsplit(split(_fmt)) {}
 
   private:
-    consteval static void split_one(sview &fmt, sview &part)
+    consteval array<sview, sizeof...(A) + 1> split(sview fmt)
     {
-      if (!fmt.empty())
+      array<sview, sizeof...(A) + 1> parts;
+
+      for (auto &part : parts)
       {
         auto [found, bef, aft] = fmt.around("{}");
-
         if (found)
         {
-          part = bef;
           fmt = aft;
+          part = bef;
         }
         else
         {
           part = aft;
+          break;
         }
       }
-    }
 
-    consteval array<sview, sizeof...(A) + 1> split(sview fmt)
-    {
-      array<sview, sizeof...(A) + 1> res;
-      apply(
-          res, [fmt](auto &&...part) consteval { auto copy = fmt; (split_one(copy, part), ...); });
-      return res;
+      return parts;
     }
   };
 
