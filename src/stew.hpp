@@ -179,20 +179,14 @@ namespace stew
   namespace impl
   {
     template <typename T, typename U>
-    struct same_as
-    {
-      static constexpr bool value = false;
-    };
+    constexpr bool same_as = false;
 
     template <typename T>
-    struct same_as<T, T>
-    {
-      static constexpr bool value = true;
-    };
+    constexpr bool same_as<T, T> = true;
   }
 
   template <typename T, typename U>
-  concept same_as = impl::same_as<T, U>::value;
+  concept same_as = impl::same_as<T, U>;
 
   template <typename T, typename... U>
   concept same_one_of = (same_as<T, U> || ...);
@@ -440,31 +434,31 @@ namespace stew
     I _end;
 
   public:
-    ~frame() = default;
-    frame() = default;
-    frame(I b, I e) : _begin(b), _end(e) {}
-    frame(const frame &) = default;
-    frame(frame &&) = default;
-    frame &operator=(const frame &) = default;
-    frame &operator=(frame &&) = default;
+    constexpr ~frame() = default;
+    constexpr frame() = default;
+    constexpr frame(I b, I e) : _begin(b), _end(e) {}
+    constexpr frame(const frame &) = default;
+    constexpr frame(frame &&) = default;
+    constexpr frame &operator=(const frame &) = default;
+    constexpr frame &operator=(frame &&) = default;
 
   public:
-    auto begin()
+    constexpr auto begin()
     {
       return _begin;
     }
 
-    auto end()
+    constexpr auto end()
     {
       return _end;
     }
 
-    auto begin() const
+    constexpr auto begin() const
     {
       return _begin;
     }
 
-    auto end() const
+    constexpr auto end() const
     {
       return _end;
     }
@@ -1730,6 +1724,30 @@ namespace stew
     }
   };
 
+  template <size_t I, typename T, size_t N>
+  constexpr auto get(array<T, N> &a) -> decltype(auto)
+  {
+    return a[I];
+  }
+
+  template <size_t I, typename T, size_t N>
+  constexpr auto get(const array<T, N> &a) -> decltype(auto)
+  {
+    return a[I];
+  }
+
+  template <size_t I, typename T, size_t N>
+  constexpr auto get(array<T, N> &&a) -> decltype(auto)
+  {
+    return a[I];
+  }
+
+  template <size_t I, typename T, size_t N>
+  constexpr auto get(const array<T, N> &&a) -> decltype(auto)
+  {
+    return a[I];
+  }
+
   template <typename T, size_t N>
   class stack_array
   {
@@ -2169,6 +2187,13 @@ namespace stew
       basic_string_view _aft;
     };
 
+    /**
+     * Si jamais quelque chose est trouvé alors on renvoi
+     * true , begin - pos, pos+2, end
+     * Si jamais rien n'est trouvé alors on renvoi
+     * false , begin - begin, begin - end
+     *
+     */
     constexpr around_pair around(basic_string_view sep)
     {
       auto pos = find(sep);
@@ -2559,45 +2584,146 @@ namespace stew
   template <typename O>
   concept ostream = char_ostream<O> || wchar_ostream<O>;
 
+  template <class T>
+  struct type_identity
+  {
+    using type = T;
+  };
+
+  template <typename T>
+  using type_identity_t = typename type_identity<T>::type;
+
+  template <size_t... I>
+  struct isequence
+  {
+  };
+
+  namespace impl
+  {
+    template <size_t I0, size_t... In>
+    consteval auto make_isequence()
+    {
+      if constexpr (I0 == 0)
+      {
+        return isequence<I0, In...>{};
+      }
+      else
+      {
+        return make_isequence<I0 - 1, I0, In...>();
+      }
+    }
+  }
+
+  template <size_t N>
+    requires(N > 0)
+  constexpr auto make_isequence()
+  {
+    return impl::make_isequence<N - 1>();
+  }
+
+  template <typename T>
+  constexpr size_t array_size = 0;
+
+  template <typename T, size_t N>
+  constexpr size_t array_size<array<T, N>> = N;
+
+  template <typename... T>
+  constexpr size_t array_size<tuple<T...>> = sizeof...(T);
+
+  template <typename T, typename F, size_t... I>
+  consteval auto apply(T &&t, F &&f, isequence<I...>) -> decltype(auto)
+  {
+    return forward<F>(f)(get<I>(forward<T>(t))...);
+  }
+
+  template <typename T, typename F>
+  consteval auto apply(T &&t, F &&f) -> decltype(auto)
+  {
+    return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
+  }
+
+  template <character C, typename... A>
+  struct basic_format_string
+  {
+  private:
+    using sview = basic_string_view<C>;
+
+  public:
+    sview _fmt;
+    array<sview, sizeof...(A) + 1> _fmtsplit;
+
+    consteval basic_format_string(const char *s)
+        : _fmt(s), _fmtsplit(split(_fmt)) {}
+
+    template <size_t N>
+    consteval basic_format_string(const char (&s)[N])
+        : _fmt(s), _fmtsplit(split(_fmt)) {}
+
+    consteval basic_format_string(sview s)
+        : _fmt(s), _fmtsplit(split(_fmt)) {}
+
+  private:
+    consteval static void split_one(sview &fmt, sview &part)
+    {
+      if (!fmt.empty())
+      {
+        auto [found, bef, aft] = fmt.around("{}");
+
+        if (found)
+        {
+          part = bef;
+          fmt = aft;
+        }
+        else
+        {
+          part = aft;
+        }
+      }
+    }
+
+    consteval array<sview, sizeof...(A) + 1> split(sview fmt)
+    {
+      array<sview, sizeof...(A) + 1> res;
+      apply(
+          res, [fmt](auto &&...part) consteval { auto copy = fmt; (split_one(copy, part), ...); });
+      return res;
+    }
+  };
+
   namespace fmt
   {
     template <ostream O, character C, typename A>
-    constexpr basic_string_view<C> format_one_to(O &o, basic_string_view<C> &fmt, const A &a)
+    constexpr void format_one_to(O &o, basic_string_view<C> bef, const A &a)
     {
-      auto [found, bef, aft] = fmt.around("{}");
+      formatter<basic_string_view<C>>::to(o, bef);
+      formatter<A>::to(o, a);
+    }
 
-      if (found)
-      {
-        formatter<basic_string_view<C>>::to(o, bef);
-        formatter<A>::to(o, a);
-      }
-
-      return aft;
+    template <ostream O, character C, size_t... I, typename... A>
+    constexpr void format_to(O &o, const basic_format_string<C, A...> &fmt, isequence<I...>, const A &...a)
+    {
+      (format_one_to(o, fmt._fmtsplit[I], a), ...);
     }
 
     template <ostream O, character C, typename... A>
-    constexpr void format_to(O &o, basic_string_view<C> fmt, const A &...a)
+    constexpr void format_to(O &o, const basic_format_string<C, A...> &fmt, const A &...a)
     {
-      ((fmt = format_one_to(o, fmt, a)), ...);
-
-      if (!fmt.empty())
-      {
-        formatter<basic_string_view<C>>::to(o, fmt);
-      };
+      format_to(o, fmt, make_isequence<sizeof...(A)>(), a...);
+      formatter<basic_string_view<C>>::to(o, fmt._fmtsplit[sizeof...(A)]);
     }
   }
 
   template <ostream O, typename... A>
-  constexpr void format_to(O &o, string_view fmt, const A &...a)
+  constexpr void format_to(O &o, basic_format_string<char, type_identity_t<A>...> fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
   }
 
-  template <ostream O, typename... A>
-  constexpr void format_to(O &o, wstring_view fmt, const A &...a)
-  {
-    fmt::format_to(o, fmt, a...);
-  }
+  // template <ostream O, typename... A>
+  // constexpr void format_to(O &o, basic_format_string<wchar_t, type_identity_t<A>...> fmt, const A &...a)
+  // {
+  //   fmt::format_to(o, fmt, a...);
+  // }
 
   template <character C>
   class formatter<C>
@@ -3239,13 +3365,13 @@ namespace stew
 
   public:
     template <typename... T>
-    void printf(basic_string_view<C> fmt, const T &...t)
+    void printf(basic_format_string<C, type_identity_t<T>...> fmt, const T &...t)
     {
       format_to(*this, fmt, t...);
     }
 
     template <typename... T>
-    void printfln(basic_string_view<C> fmt, const T &...t)
+    void printfln(basic_format_string<C, type_identity_t<T>...> fmt, const T &...t)
     {
       printf(fmt, t...);
       push_back('\n');
