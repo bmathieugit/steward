@@ -14,6 +14,15 @@ namespace stew
   //
   //--------------------------------
 
+  template <typename T>
+  struct struct_type
+  {
+    using type = T;
+  };
+
+  template <typename T>
+  using type = typename struct_type<T>::type;
+
   template <typename T0, typename... Tn>
   consteval size_t sizeofmax()
   {
@@ -61,45 +70,30 @@ namespace stew
   namespace impl
   {
     template <size_t I, typename T0, typename... Tn>
-    struct typeat
+    struct typeat : struct_type<typeat<I - 1, Tn...>>
     {
-      using type = typeat<I - 1, Tn...>;
     };
 
     template <typename T0, typename... Tn>
-    struct typeat<0, T0, Tn...>
+    struct typeat<0, T0, Tn...> : struct_type<T0>
     {
-      using type = T0;
     };
   }
 
-  template <auto V>
-  struct value_type
-  {
-    static constexpr auto value = V;
-  };
-
-  using true_type = value_type<true>;
-  using false_type = value_type<false>;
-
   template <size_t I, typename... T>
-  using typeat = typename impl::typeat<I, T...>::type;
+  using typeat = type<impl::typeat<I, T...>>;
 
   namespace impl
   {
     template <typename T>
-    struct lvalue_reference_like : false_type
-    {
-    };
+    constexpr bool lvalue_reference_like = false;
 
     template <typename T>
-    struct lvalue_reference_like<T &> : true_type
-    {
-    };
+    constexpr bool lvalue_reference_like<T &> = true;
   }
 
   template <typename T>
-  concept lvalue_reference_like = impl::lvalue_reference_like<T>::value;
+  concept lvalue_reference_like = impl::lvalue_reference_like<T>;
 
   template <typename T>
   concept not_lvalue_reference_like = (!lvalue_reference_like<T>);
@@ -107,74 +101,65 @@ namespace stew
   namespace impl
   {
     template <typename T>
-    struct rm_ref
+    struct rm_ref : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_ref<T &>
+    struct rm_ref<T &> : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_ref<T &&>
+    struct rm_ref<T &&> : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_const
+    struct rm_const : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_const<const T>
+    struct rm_const<const T> : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_volatile
+    struct rm_volatile : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_volatile<volatile T>
+    struct rm_volatile<volatile T> : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_array
+    struct rm_array : struct_type<T>
     {
-      using type = T;
     };
 
     template <typename T>
-    struct rm_array<T[]>
+    struct rm_array<T[]> : struct_type<T>
     {
-      using type = T;
     };
   }
 
   template <typename T>
-  using rm_const = typename impl::rm_const<T>::type;
+  using rm_const = type<impl::rm_const<T>>;
 
   template <typename T>
-  using rm_volatile = typename impl::rm_volatile<T>::type;
+  using rm_volatile = type<impl::rm_volatile<T>>;
 
   template <typename T>
-  using rm_ref = typename impl::rm_ref<T>::type;
+  using rm_ref = type<impl::rm_ref<T>>;
 
   template <typename T>
   using rm_cvref = rm_const<rm_volatile<rm_ref<T>>>;
 
   template <typename T>
-  using rm_array = typename impl::rm_array<T>::type;
+  using rm_array = type<impl::rm_array<T>>;
 
   namespace impl
   {
@@ -218,18 +203,14 @@ namespace stew
   namespace impl
   {
     template <typename T>
-    struct native_array_like : false_type
-    {
-    };
+    constexpr bool native_array_like = false;
 
     template <typename T>
-    struct native_array_like<T[]> : true_type
-    {
-    };
+    constexpr bool native_array_like<T[]> = true;
   }
 
   template <typename T>
-  concept native_array_like = impl::native_array_like<T>::value;
+  concept native_array_like = impl::native_array_like<T>;
 
   template <typename F, typename T>
   concept convertible_to =
@@ -578,7 +559,7 @@ namespace stew
     return c;
   }
 
-  template <range R, predicate<range_value_type<R>> P>
+  template <range R, predicate<range_const_reference<R>> P>
   constexpr size_t count(const R &r, P &&pred)
   {
     size_t c = 0;
@@ -606,7 +587,7 @@ namespace stew
     return find(r1, r2) != r1.end();
   }
 
-  template <range R1, predicate<const decltype(*(R1{}.begin())) &> P>
+  template <range R1, predicate<range_const_reference<R1>> P>
   constexpr bool all_of(const R1 &r, P &&p)
   {
     for (const auto &i : r)
@@ -1143,7 +1124,7 @@ namespace stew
   template <typename T>
   constexpr auto val(T &&t)
   {
-    return [&t]<typename... A>(A &&...args) -> decltype(auto)
+    return [&t]<typename... A>(A &&...) -> decltype(auto)
     {
       return forward<T>(t);
     };
@@ -1189,18 +1170,14 @@ namespace stew
   namespace impl
   {
     template <typename T>
-    struct placeholder_like : false_type
-    {
-    };
+    constexpr bool placeholder_like = false;
 
     template <size_t N>
-    struct placeholder_like<placeholder<N>> : true_type
-    {
-    };
+    constexpr bool placeholder_like<placeholder<N>> = true;
   }
 
   template <typename T>
-  concept placeholder_like = impl::placeholder_like<T>::value;
+  concept placeholder_like = impl::placeholder_like<T>;
 
   template <size_t N0>
   constexpr auto operator++(placeholder<N0> pn0) -> decltype(auto)
@@ -2591,7 +2568,7 @@ namespace stew
   };
 
   template <typename T>
-  using type_identity_t = typename type_identity<T>::type;
+  using type_identity_t = type<type_identity<T>>;
 
   template <size_t... I>
   struct isequence
