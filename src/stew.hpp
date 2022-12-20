@@ -472,7 +472,7 @@ namespace stew
     }
   }
 
-    template <range R1, range R2>
+  template <range R1, range R2>
   bool operator==(const R1 &r1, const R2 &r2)
   {
     return stew::equals(r1, r2);
@@ -1830,7 +1830,18 @@ namespace stew
   //
   // ---------------------------------
 
-  template <typename T, unsigned_integral S = size_t>
+  struct basic_end_marker
+  {
+    template <typename T, size_t N>
+    static constexpr size_t length(T (&t)[N])
+    {
+      return N;
+    }
+  };
+
+  template <typename T,
+            unsigned_integral S = size_t,
+            typename EM = basic_end_marker>
   class fixed_vector
   {
   private:
@@ -1844,6 +1855,28 @@ namespace stew
 
     constexpr fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]}
     {
+    }
+
+    template <S N>
+    constexpr fixed_vector(T (&t)[N]) : fixed_vector(N)
+    {
+      for (S i{0}; i < N; ++i)
+      {
+        _data[i] = t[i];
+      }
+
+      _size = EM::length(t);
+    }
+
+    template <S N>
+    constexpr fixed_vector(const T (&t)[N]) : fixed_vector(N)
+    {
+      for (S i{0}; i < N; ++i)
+      {
+        _data[i] = t[i];
+      }
+
+      _size = EM::length(t);
     }
 
     constexpr fixed_vector(const fixed_vector &o)
@@ -1863,6 +1896,12 @@ namespace stew
       o._size = 0;
       o._max = 0;
       o._data = nullptr;
+    }
+
+    constexpr fixed_vector(range auto &&r)
+        : fixed_vector(r.end() - r.begin())
+    {
+      push_back(r);
     }
 
     constexpr fixed_vector &operator=(const fixed_vector &o)
@@ -1895,6 +1934,26 @@ namespace stew
         o._data = nullptr;
       }
 
+      return *this;
+    }
+
+    constexpr fixed_vector &operator=(range auto &&r)
+    {
+      *this = move(fixed_vector(r));
+      return *this;
+    }
+
+    template <S N>
+    constexpr fixed_vector &operator=(const T (&t)[N])
+    {
+      *this = move(fixed_vector(t));
+      return *this;
+    }
+
+    template <S N>
+    constexpr fixed_vector &operator=(T (&t)[N])
+    {
+      *this = move(fixed_vector(t));
       return *this;
     }
 
@@ -1974,6 +2033,14 @@ namespace stew
       }
     }
 
+    constexpr void push_back(const range auto &&r)
+    {
+      for (auto &&i : forward<decltype(r)>(r))
+      {
+        push_back(forward<decltype(i)>(i));
+      }
+    }
+
     constexpr void pop_back()
     {
       if (_size != 0)
@@ -1983,20 +2050,55 @@ namespace stew
     }
   };
 
-  template <typename T, unsigned_integral S = size_t>
+  template <typename T,
+            unsigned_integral S = size_t,
+            typename EM = basic_end_marker>
   class vector
   {
   private:
-    fixed_vector<T, S> _data;
+    fixed_vector<T, S, EM> _data;
 
   public:
     constexpr ~vector() = default;
     constexpr vector() = default;
     constexpr vector(S max) : _data{max} {}
+
+    template <S N>
+    constexpr vector(T (&t)[N]) : _data(t) {}
+
+    template <S N>
+    constexpr vector(const T (&t)[N]) : _data(t) {}
+
+    constexpr vector(range auto &&r)
+        : vector(r.end() - r.begin())
+    {
+      push_back(r);
+    }
+
     constexpr vector(const vector &) = default;
     constexpr vector(vector &) = default;
     constexpr vector &operator=(const vector &) = default;
     constexpr vector &operator=(vector &&) = default;
+
+    constexpr vector &operator=(range auto &&r)
+    {
+      *this = move(fixed_vector(r));
+      return *this;
+    }
+
+    template <S N>
+    constexpr vector &operator=(const T (&t)[N])
+    {
+      *this = move(fixed_vector(t));
+      return *this;
+    }
+
+    template <S N>
+    constexpr vector &operator=(T (&t)[N])
+    {
+      *this = move(fixed_vector(t));
+      return *this;
+    }
 
   public:
     constexpr auto begin()
@@ -2086,6 +2188,14 @@ namespace stew
       }
 
       _data.push_back(move(t));
+    }
+
+    constexpr void push_back(const range auto &&r)
+    {
+      for (auto &&i : forward<decltype(r)>(r))
+      {
+        push_back(forward<decltype(i)>(i));
+      }
     }
 
     constexpr void pop_back()
@@ -2210,236 +2320,26 @@ namespace stew
   //
   //----------------------------
 
-  template <character C>
-  class basic_fixed_string
+  struct string_end_marker
   {
-  private:
-    fixed_vector<C> _data;
-
-  public:
-    constexpr ~basic_fixed_string() = default;
-
-    constexpr basic_fixed_string(size_t max) : _data(max)
+    template <typename C, size_t N>
+    static constexpr size_t length(C (&s)[N])
     {
-    }
-
-    constexpr basic_fixed_string() : basic_fixed_string(10) {}
-
-    constexpr basic_fixed_string(const string_view_like<C> auto &o)
-        : basic_fixed_string(basic_string_view<C>(o).size())
-    {
-      for (C c : basic_string_view<C>(o))
-      {
-        _data.push_back(c);
-      }
-    }
-
-    constexpr basic_fixed_string(const basic_fixed_string &o) = default;
-    constexpr basic_fixed_string(basic_fixed_string &&o) = default;
-    constexpr basic_fixed_string &operator=(const basic_fixed_string &o) = default;
-    constexpr basic_fixed_string &operator=(basic_fixed_string &&o) = default;
-
-  public:
-    constexpr auto begin()
-    {
-      return _data.begin();
-    }
-
-    constexpr auto end()
-    {
-      return _data.end();
-    }
-
-    constexpr auto begin() const
-    {
-      return _data.begin();
-    }
-
-    constexpr auto end() const
-    {
-      return _data.end();
-    }
-
-  public:
-    constexpr auto size() const
-    {
-      return _data.size();
-    }
-
-    constexpr auto cap() const
-    {
-      return _data.cap();
-    }
-
-    constexpr auto empty() const
-    {
-      return _data.empty();
-    }
-
-    constexpr auto full() const
-    {
-      return _data.full();
-    }
-
-  public:
-    constexpr void push_back(C c)
-    {
-      _data.push_back(c);
-    }
-
-    constexpr void push_back(const string_view_like<C> auto o)
-    {
-      for (C c : basic_string_view<C>(o))
-      {
-        _data.push_back(c);
-      }
-    }
-
-    constexpr void pop_back()
-    {
-      _data.pop_back();
-    }
-
-  public:
-    constexpr operator basic_string_view<C>() const
-    {
-      return basic_string_view<C>(begin(), end());
-    }
-
-    constexpr operator bool() const
-    {
-      return !empty();
-    }
-
-    constexpr C &operator[](size_t i)
-    {
-      return _data[i];
-    }
-
-    constexpr C operator[](size_t i) const
-    {
-      return _data[i];
+      return N - 1;
     }
   };
+
+  template <character C>
+  using basic_fixed_string = fixed_vector<C, size_t, string_end_marker>;
 
   using fstring = basic_fixed_string<char>;
   using wfstring = basic_fixed_string<wchar_t>;
 
   template <character C>
-  class basic_string
-  {
-  private:
-    vector<C> _data;
-
-  public:
-    constexpr ~basic_string() = default;
-
-    constexpr basic_string(size_t max) : _data(max)
-    {
-    }
-
-    constexpr basic_string() : basic_string(10) {}
-
-    constexpr basic_string(const string_view_like<C> auto &o)
-        : basic_string(basic_string_view<C>(o).size())
-    {
-      for (C c : basic_string_view<C>(o))
-      {
-        _data.push_back(c);
-      }
-    }
-
-    constexpr basic_string(const basic_string &o) = default;
-    constexpr basic_string(basic_string &&o) = default;
-    constexpr basic_string &operator=(const basic_string &o) = default;
-    constexpr basic_string &operator=(basic_string &&o) = default;
-
-  public:
-    constexpr auto begin()
-    {
-      return _data.begin();
-    }
-
-    constexpr auto end()
-    {
-      return _data.end();
-    }
-
-    constexpr auto begin() const
-    {
-      return _data.begin();
-    }
-
-    constexpr auto end() const
-    {
-      return _data.end();
-    }
-
-  public:
-    constexpr auto size() const
-    {
-      return _data.size();
-    }
-
-    constexpr auto capacity() const
-    {
-      return _data.cap();
-    }
-
-    constexpr auto empty() const
-    {
-      return _data.empty();
-    }
-
-    constexpr auto full() const
-    {
-      return _data.full();
-    }
-
-  public:
-    constexpr void push_back(C c)
-    {
-      _data.push_back(c);
-    }
-
-    constexpr void push_back(const string_view_like<C> auto &o)
-    {
-      for (C c : basic_string_view<C>(o))
-      {
-        _data.push_back(c);
-      }
-    }
-
-    constexpr void pop_back()
-    {
-      _data.pop_back();
-    }
-
-  public:
-    constexpr operator basic_string_view<C>() const
-    {
-      return basic_string_view<C>(begin(), end());
-    }
-
-    constexpr operator bool() const
-    {
-      return !empty();
-    }
-
-    constexpr C &operator[](size_t i)
-    {
-      return _data[i];
-    }
-
-    constexpr C operator[](size_t i) const
-    {
-      return _data[i];
-    }
-  };
+  using basic_string = vector<C, size_t, string_end_marker>;
 
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
-
 
   //------------------------------
   //

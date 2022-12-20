@@ -4,15 +4,14 @@
 
 using namespace stew;
 
+
+
 int main()
 {
+
   using namespace stew;
-  fixed_vector<int> v1(10);
-  v1.push_back(1);
-  v1.push_back(1);
-  v1.push_back(1);
-  v1.push_back(1);
-  v1.push_back(1);
+  fstring v1("coucou");
+
   cout.printfln("{}", v1.size());
   return EXIT_SUCCESS;
 }
