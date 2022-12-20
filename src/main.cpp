@@ -7,9 +7,12 @@ using namespace stew;
 int main()
 {
   using namespace stew;
-  int i = 0;
-  int j = 2;
-  auto assign = (p0 = p1);
-  cout.printfln("{}", assign(i, j));
+  fixed_vector<int> v1(10);
+  v1.push_back(1);
+  v1.push_back(1);
+  v1.push_back(1);
+  v1.push_back(1);
+  v1.push_back(1);
+  cout.printfln("{}", v1.size());
   return EXIT_SUCCESS;
 }

@@ -472,6 +472,18 @@ namespace stew
     }
   }
 
+    template <range R1, range R2>
+  bool operator==(const R1 &r1, const R2 &r2)
+  {
+    return stew::equals(r1, r2);
+  }
+
+  template <range R1, range R2>
+  bool operator!=(const R1 &r1, const R2 &r2)
+  {
+    return !stew::equals(r1, r2);
+  }
+
   template <range R1, range R2>
   constexpr bool starts_with(const R1 &r1, const R2 &r2)
   {
@@ -587,12 +599,69 @@ namespace stew
     return find(r1, r2) != r1.end();
   }
 
+  template <forward_iterator I>
+  struct around_pair
+  {
+    bool _found;
+    frame<I> _bef;
+    frame<I> _aft;
+  };
+
+  template <range R, typename T>
+  constexpr auto around(R &r, const T &sep) -> decltype(auto)
+  {
+    auto pos = find(r, sep);
+
+    if (pos != r.end())
+    {
+      return around_pair<decltype(r.begin())>{
+          true,
+          {r.begin(), pos},
+          {pos + 2, r.end()}};
+    }
+    else
+    {
+      return around_pair<decltype(r.begin())>{
+          false,
+          {r.begin(), r.begin()},
+          {r.begin(), r.end()}};
+    }
+  }
+
   template <range R1, predicate<range_const_reference<R1>> P>
   constexpr bool all_of(const R1 &r, P &&p)
   {
     for (const auto &i : r)
     {
       if (!p(i))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  template <range R1, predicate<range_const_reference<R1>> P>
+  constexpr bool any_of(const R1 &r, P &&p)
+  {
+    for (const auto &i : r)
+    {
+      if (p(i))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  template <range R1, predicate<range_const_reference<R1>> P>
+  constexpr bool none_of(const R1 &r, P &&p)
+  {
+    for (const auto &i : r)
+    {
+      if (p(i))
       {
         return false;
       }
@@ -1914,20 +1983,6 @@ namespace stew
     }
   };
 
-  template <typename T1, typename S1, typename T2, typename S2>
-  constexpr bool operator==(const fixed_vector<T1, S1> &fv1,
-                            const fixed_vector<T2, S2> &fv2)
-  {
-    return equals(fv1, fv2);
-  }
-
-  template <typename T1, typename S1, typename T2, typename S2>
-  constexpr bool operator!=(const fixed_vector<T1, S1> &fv1,
-                            const fixed_vector<T2, S2> &fv2)
-  {
-    return !(fv1 == fv2);
-  }
-
   template <typename T, unsigned_integral S = size_t>
   class vector
   {
@@ -2039,18 +2094,6 @@ namespace stew
     }
   };
 
-  template <typename T1, typename S1, typename T2, typename S2>
-  constexpr bool operator==(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
-  {
-    return equals(fv1, fv2);
-  }
-
-  template <typename T1, typename S1, typename T2, typename S2>
-  constexpr bool operator!=(const vector<T1, S1> &fv1, const vector<T2, S2> &fv2)
-  {
-    return !(fv1 == fv2);
-  }
-
   //--------------------------
   //
   // String view
@@ -2118,83 +2161,9 @@ namespace stew
       return size() == 0;
     }
 
-    constexpr bool equals(const basic_string_view &o) const
-    {
-      return stew::equals(*this, o);
-    }
-
-    constexpr auto find(basic_string_view o) const
-    {
-      return stew::find(*this, o);
-    }
-
-    constexpr auto find(const C *c) const
-    {
-      return stew::find(*this, basic_string_view(c));
-    }
-
-    constexpr auto find(C c) const
-    {
-      return stew::find(*this, c);
-    }
-
-    constexpr auto starts_with(const basic_string_view &o) const
-    {
-      return stew::starts_with(*this, o);
-    }
-
-    constexpr auto contains(const basic_string_view &o) const
-    {
-      return stew::contains(*this, o);
-    }
-
-    constexpr auto contains(C c) const
-    {
-      return stew::contains(*this, c);
-    }
-
-    struct around_pair
-    {
-      bool _found;
-      basic_string_view _bef;
-      basic_string_view _aft;
-    };
-
-    /**
-     * Si jamais quelque chose est trouvé alors on renvoi
-     * true , begin - pos, pos+2, end
-     * Si jamais rien n'est trouvé alors on renvoi
-     * false , begin - begin, begin - end
-     *
-     */
-    constexpr around_pair around(basic_string_view sep)
-    {
-      auto pos = find(sep);
-
-      if (pos != _end)
-      {
-        return {true, {_begin, pos}, {pos + 2, _end}};
-      }
-      else
-      {
-        return {false, {_begin, _begin}, {_begin, _end}};
-      }
-    }
-
-  public:
     constexpr operator bool() const
     {
       return !empty();
-    }
-
-    constexpr bool operator==(const basic_string_view &o) const
-    {
-      return equals(o);
-    }
-
-    constexpr bool operator!=(const basic_string_view &o) const
-    {
-      return !operator==(o);
     }
 
     constexpr C operator[](size_t i) const
@@ -2312,26 +2281,6 @@ namespace stew
       return _data.full();
     }
 
-    constexpr auto starts_with(const string_view_like<C> auto &o) const
-    {
-      return stew::starts_with(*this, basic_string_view<C>(o));
-    }
-
-    constexpr auto contains(const string_view_like<C> auto &o) const
-    {
-      return stew::contains(*this, basic_string_view<C>(o));
-    }
-
-    constexpr auto contains(C c) const
-    {
-      return stew::contains(*this, c);
-    }
-
-    constexpr bool equals(const string_view_like<C> auto &o) const
-    {
-      return stew::equals(*this, basic_string_view<C>(o));
-    }
-
   public:
     constexpr void push_back(C c)
     {
@@ -2360,16 +2309,6 @@ namespace stew
     constexpr operator bool() const
     {
       return !empty();
-    }
-
-    constexpr bool operator==(const string_view_like<C> auto o) const
-    {
-      return equals(o);
-    }
-
-    constexpr bool operator!=(const string_view_like<C> auto o) const
-    {
-      return !operator==(o);
     }
 
     constexpr C &operator[](size_t i)
@@ -2457,26 +2396,6 @@ namespace stew
       return _data.full();
     }
 
-    constexpr auto starts_with(const string_view_like<C> auto &o) const
-    {
-      return stew::starts_with(*this, basic_string_view<C>(o));
-    }
-
-    constexpr auto contains(const string_view_like<C> auto &o) const
-    {
-      return stew::contains(*this, basic_string_view<C>(o));
-    }
-
-    constexpr auto contains(C c) const
-    {
-      return stew::contains(*this, c);
-    }
-
-    constexpr bool equals(const string_view_like<C> auto &o) const
-    {
-      return stew::equals(*this, basic_string_view<C>(o));
-    }
-
   public:
     constexpr void push_back(C c)
     {
@@ -2507,16 +2426,6 @@ namespace stew
       return !empty();
     }
 
-    constexpr bool operator==(const string_view_like<C> auto &o) const
-    {
-      return equals(o);
-    }
-
-    constexpr bool operator!=(const string_view_like<C> auto &o) const
-    {
-      return !operator==(o);
-    }
-
     constexpr C &operator[](size_t i)
     {
       return _data[i];
@@ -2531,6 +2440,7 @@ namespace stew
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
 
+
   //------------------------------
   //
   // Formatting
@@ -2542,14 +2452,14 @@ namespace stew
 
   template <typename O>
   concept char_ostream =
-      requires(O &o, char c, const basic_string<char> &s) {
+      requires(O &o, char c, string_view s) {
         o.push_back(c);
         o.push_back(s);
       };
 
   template <typename O>
   concept wchar_ostream =
-      requires(O &o, wchar_t c, const basic_string<wchar_t> &s) {
+      requires(O &o, wchar_t c, wstring_view s) {
         o.push_back(c);
         o.push_back(s);
       };
@@ -2639,15 +2549,16 @@ namespace stew
 
       for (auto &part : parts)
       {
-        auto [found, bef, aft] = fmt.around("{}");
+        auto [found, bef, aft] = around(fmt, "{}"_sv);
+
         if (found)
         {
-          fmt = aft;
-          part = bef;
+          fmt = basic_string_view<C>(aft.begin(), aft.end());
+          part = basic_string_view<C>(bef.begin(), bef.end());
         }
         else
         {
-          part = aft;
+          part = basic_string_view<C>(aft.begin(), aft.end());
           break;
         }
       }
@@ -3349,379 +3260,6 @@ namespace stew
 
   fostream cout(stdout);
   fostream cerr(stderr);
-
-  //-----------------------
-  //
-  // Filesystem
-  //
-  //-----------------------
-
-  namespace fs
-  {
-    template <typename T>
-    struct fs_result;
-
-    template <character C>
-    fs_result<basic_string<C>> current_dir();
-
-    template <character C>
-    fs_result<void> remove_dir(const string_view_like<C> auto &dirname, bool recursive);
-
-    template <character C>
-    fs_result<void> make_dir(const string_view_like<C> auto &dirname, bool recursive);
-
-    template <character C>
-    fs_result<void> remove_file(const string_view_like<C> auto &filename);
-
-    template <character C>
-    fs_result<void> make_file(const string_view_like<C> auto &filename);
-
-    template <character C>
-    fs_result<void> rename_file(const string_view_like<C> auto &oldname,
-                                const string_view_like<C> auto &newname);
-
-    template <character C>
-    fs_result<void> rename_dir(const string_view_like<C> auto &oldname,
-                               const string_view_like<C> auto &newname);
-
-    template <character C>
-    fs_result<size_t> file_size(const string_view_like<C> auto &filename);
-
-    template <character C>
-    fs_result<bool> file_exists(const string_view_like<C> auto &filename);
-
-    template <character C>
-    fs_result<bool> dir_exists(const string_view_like<C> auto &dirname);
-
-    template <character C>
-    fs_result<void> dir_copy(const string_view_like<C> auto &oldname,
-                             const string_view_like<C> auto &newname);
-
-    template <character C>
-    fs_result<void> file_copy(const string_view_like<C> auto &oldname,
-                              const string_view_like<C> auto &newname);
-
-    template <character C>
-    fs_result<bool> is_dir(const string_view_like<C> auto &dirname);
-
-    template <character C>
-    fs_result<bool> is_file(const string_view_like<C> auto &filename);
-
-    enum class permission : size_t
-    {
-      rwx = R_OK | W_OK | X_OK,
-      rw = R_OK | W_OK,
-      rx = R_OK | X_OK,
-      r = R_OK,
-      wx = W_OK | X_OK,
-      w = W_OK,
-      x = X_OK,
-      f = F_OK
-    };
-
-    using perm = permission;
-
-    class mode
-    {
-    private:
-      perm _user = perm::f;
-      perm _group = perm::f;
-      perm _other = perm::f;
-
-      size_t _literal = to_literal();
-
-    public:
-      ~mode() = default;
-      mode() = default;
-      mode(perm u, perm g, perm o)
-          : _user(u), _group(g),
-            _other(o), _literal(to_literal()) {}
-      mode(const mode &) = default;
-      mode(mode &&) = default;
-      mode &operator=(const mode &) = default;
-      mode &operator=(mode &&) = default;
-
-    public:
-      operator size_t() const
-      {
-        return _literal;
-      }
-
-    private:
-      size_t to_literal()
-      {
-        return static_cast<size_t>(_user) << 6 |
-               static_cast<size_t>(_group) << 3 |
-               static_cast<size_t>(_other);
-      }
-    };
-
-    template <typename P>
-    concept path = requires(const P &p) {
-                     p.path();
-                     p.perms();
-                   };
-
-    template <typename FS>
-    class directory
-    {
-    private:
-      string _path;
-      mode _mode;
-
-    public:
-      ~directory() = default;
-      directory() = delete;
-      directory(string_view path, mode m = {perm::rwx, perm::rx, perm::rx})
-          : _path(path), _mode(m) {}
-      directory(const directory &) = default;
-      directory(directory &&) = default;
-      directory &operator=(const directory &) = default;
-      directory &operator=(directory &&) = default;
-
-    public:
-      const string &path() const
-      {
-        return _path;
-      }
-
-      const mode &perms() const
-      {
-        return _mode;
-      }
-    };
-
-    namespace literatals
-    {
-      directory<void> operator"" _dp(const char *s, size_t n)
-      {
-        return directory<void>(string_view(s, n));
-      }
-    }
-
-    template <typename FS>
-    class file
-    {
-    private:
-      string _path;
-
-      mode _mode;
-
-    public:
-      ~file() = default;
-      file() = delete;
-      file(string_view path, mode m = {perm::rwx, perm::rx, perm::rx})
-          : _path(path), _mode(m) {}
-      file(const file &) = default;
-      file(file &&) = default;
-      file &operator=(const file &) = default;
-      file &operator=(file &&) = default;
-
-    public:
-      const string &path() const
-      {
-        return _path;
-      }
-
-      const mode &perms() const
-      {
-        return _mode;
-      }
-    };
-
-    namespace literatals
-    {
-      file<void> operator"" _fp(const char *s, size_t n)
-      {
-        return file<void>(string_view(s, n));
-      }
-    }
-
-    template <path P>
-    class cpath
-    {
-    private:
-      string_view _path;
-      mode _mode;
-
-    public:
-      ~cpath() = default;
-      cpath() = default;
-      cpath(string_view p, mode m = {perm::rwx, perm::rx, perm::rx}) : _path(p), _mode(m) {}
-      cpath(const cpath &) = default;
-      cpath(cpath &&) = default;
-      cpath &operator=(const cpath &) = default;
-      cpath &operator=(cpath &&) = default;
-
-    public:
-      const string_view &path() const
-      {
-        return _path;
-      }
-
-      const mode &perms() const
-      {
-        return _mode;
-      }
-    };
-
-    namespace literatals
-    {
-      cpath<file<void>> operator"" _cfp(const char *s, size_t n)
-      {
-        return cpath<file<void>>(string_view(s, n));
-      }
-
-      cpath<directory<void>> operator"" _cdp(const char *s, size_t n)
-      {
-        return cpath<directory<void>>(string_view(s, n));
-      }
-    }
-
-    namespace impl
-    {
-      template <typename T>
-      struct path_file
-      {
-        static constexpr bool value = false;
-      };
-
-      template <typename FS>
-      struct path_file<file<FS>>
-      {
-        static constexpr bool value = true;
-      };
-
-      template <typename FS>
-      struct path_file<cpath<file<FS>>>
-      {
-        static constexpr bool value = true;
-      };
-
-      template <typename T>
-      struct path_directory
-      {
-        static constexpr bool value = false;
-      };
-
-      template <typename FS>
-      struct path_directory<directory<FS>>
-      {
-        static constexpr bool value = true;
-      };
-
-      template <typename FS>
-      struct path_directory<cpath<directory<FS>>>
-      {
-        static constexpr bool value = true;
-      };
-    }
-
-    template <typename T>
-    concept path_file = impl::path_file<T>::value;
-
-    template <typename T>
-    concept path_directory = impl::path_directory<T>::value;
-
-    struct ferror
-    {
-    };
-
-    template <path P>
-    bool fexists(const P &p)
-    {
-      return stew::c::access(p.path().data(), (int)perm::f) == 0;
-    }
-
-    template <path P>
-    bool freadable(const P &p)
-    {
-      return stew::c::access(p.path().data(), (int)perm::r) == 0;
-    }
-
-    template <path P>
-    bool fwritable(const P &p)
-    {
-      return stew::c::access(p.path().data(), (int)perm::w) == 0;
-    }
-
-    template <path P>
-    bool fexecutable(const P &p)
-    {
-      return stew::c::access(p.path().data(), (int)perm::x) == 0;
-    }
-
-    // ---------------------------------------------------------
-    //
-    // fcreate : create a file corresponding to the path specification.
-    //
-    // ---------------------------------------------------------
-
-    template <path P>
-    result<basic_success, ferror> fcreate(const P &p)
-    {
-      if constexpr (path_directory<P>)
-      {
-        auto res = stew::c::mkdir(p.path().data(), static_cast<size_t>(p.perms()));
-
-        if (res == 0 || res == EEXIST)
-        {
-          return basic_success();
-        }
-      }
-      else if constexpr (path_file<P>)
-      {
-        auto res = stew::c::touch(p.path().data(), static_cast<size_t>(p.perms()));
-
-        if (res == 0 || res == EEXIST)
-        {
-          return basic_success();
-        }
-      }
-
-      return ferror();
-    }
-
-    template <path P>
-    result<basic_success, ferror> fremove(const P &p)
-    {
-      if (stew::c::remove(p.path().data()) == 0)
-      {
-        return basic_success();
-      }
-      else
-      {
-        return ferror();
-      }
-    }
-
-    template <path P>
-    result<basic_success, ferror> frename(const P &pold, const P &pnew)
-    {
-      if (stew::c::rename(pold.path().data(), pnew.path().data()) == 0)
-      {
-        return basic_success();
-      }
-      else
-      {
-        return ferror();
-      }
-    }
-
-    template <path P>
-    result<basic_success, ferror> fchmod(const P &p, mode m)
-    {
-      if (stew::c::chmod(p.path().data(), static_cast<size_t>(m)) == 0)
-      {
-        return basic_success();
-      }
-      else
-      {
-        return ferror();
-      }
-    }
-
-  }
 }
 
 #endif
