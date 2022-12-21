@@ -1725,7 +1725,7 @@ namespace stew
 
   // ---------------------------------
   //
-  // Array container
+  // Containers
   //
   // ---------------------------------
 
@@ -1823,12 +1823,6 @@ namespace stew
       return _idx == -1;
     }
   };
-
-  // ---------------------------------
-  //
-  // Vector containers
-  //
-  // ---------------------------------
 
   struct basic_end_marker
   {
@@ -2204,45 +2198,39 @@ namespace stew
     }
   };
 
-  //--------------------------
-  //
-  // String view
-  //
-  //--------------------------
-
-  template <character C>
-  class basic_string_view
+  template <typename T>
+  class vector_view
   {
   private:
-    const C *_begin = nullptr;
-    const C *_end = nullptr;
+    const T *_begin = nullptr;
+    const T *_end = nullptr;
 
   public:
-    constexpr ~basic_string_view() = default;
+    constexpr ~vector_view() = default;
 
-    constexpr basic_string_view(const C *b, const C *e)
+    constexpr vector_view(const T *b, const T *e)
     {
       _begin = b;
       _end = e;
     }
 
-    constexpr basic_string_view(const C *b, size_t s)
+    constexpr vector_view(const T *b, size_t s)
     {
       _begin = b;
       _end = b + s;
     }
 
     template <size_t N>
-    constexpr basic_string_view(const C (&s)[N])
-        : basic_string_view(s, N)
+    constexpr vector_view(const T (&s)[N])
+        : vector_view(s, N)
     {
     }
 
-    constexpr basic_string_view() = default;
-    constexpr basic_string_view(const basic_string_view &) = default;
-    constexpr basic_string_view(basic_string_view &&) = default;
-    constexpr basic_string_view &operator=(const basic_string_view &) = default;
-    constexpr basic_string_view &operator=(basic_string_view &&) = default;
+    constexpr vector_view() = default;
+    constexpr vector_view(const vector_view &) = default;
+    constexpr vector_view(vector_view &&) = default;
+    constexpr vector_view &operator=(const vector_view &) = default;
+    constexpr vector_view &operator=(vector_view &&) = default;
 
   public:
     constexpr auto begin() const
@@ -2276,11 +2264,245 @@ namespace stew
       return !empty();
     }
 
-    constexpr C operator[](size_t i) const
+    constexpr T operator[](size_t i) const
     {
       return _begin[i];
     }
   };
+
+  template <typename T, unsigned_integral S = size_t>
+  class list
+  {
+    struct node
+    {
+      T _t;
+      S _next = static_cast<S>(-1);
+
+    public:
+      ~node() = default;
+      node() = default;
+      node(const T &t) : _t(t) {}
+      node(T &&t) : _t(move(t)) {}
+      node(const node &o) : _t(o._t), _next(o._next) {}
+      node(node &&o) : _t(move(o._t)), _next(o._next) {}
+
+      node &operator=(const node &o)
+      {
+        if (this != &o)
+        {
+          _t = o._t;
+          _next = o._next;
+        }
+
+        return *this;
+      }
+
+      node &operator=(node &&o)
+      {
+        if (this != &o)
+        {
+          _t = move(o._t);
+          _next = o._next;
+          o._next = static_cast<S>(-1);
+        }
+
+        return *this;
+      }
+    };
+    /**
+     *
+     *
+     *  template <typename T>
+        concept forward_iterator =
+        requires(T i) {
+          ++i;
+          i++;
+          i != i;
+          i == i;
+          *i;
+        };
+     */
+
+    struct iterator
+    {
+      non_owning<list> _l;
+      S _current = static_cast<S>(-1);
+
+      iterator &operator++()
+      {
+        if (_current != static_cast<S>(-1))
+        {
+          _current = _l->_nodes[_current]._next;
+        }
+
+        return *this;
+      }
+
+      iterator operator++(int)
+      {
+        iterator copy = *this;
+        ++this;
+        return copy;
+      }
+
+      bool operator==(const iterator &o) const
+      {
+        return _l == o._l && _current == o._current;
+      }
+
+      bool operator!=(const iterator &o) const
+      {
+        return !(*this == o);
+      }
+
+      T &operator*() const
+      {
+        return _l->_nodes[_current]._t;
+      }
+    };
+
+    struct const_iterator
+    {
+      non_owning<const list> _l;
+      S _current = static_cast<S>(-1);
+
+      const_iterator &operator++()
+      {
+        if (_current != static_cast<S>(-1))
+        {
+          _current = _l->_nodes[_current]._next;
+        }
+
+        return *this;
+      }
+
+      const_iterator operator++(int)
+      {
+        iterator copy = *this;
+        ++this;
+        return copy;
+      }
+
+      bool operator==(const const_iterator &o) const
+      {
+        return _l == o._l && _current == o._current;
+      }
+
+      bool operator!=(const const_iterator &o) const
+      {
+        return !(*this == o);
+      }
+
+      const T &operator*() const
+      {
+        return _l->_nodes[_current]._t;
+      }
+    };
+
+  private:
+    vector<node, S> _nodes;
+    S _first = static_cast<S>(-1);
+    S _last = static_cast<S>(-1);
+
+  public:
+    ~list() = default;
+    list() = default;
+    list(const list &o) = default;
+    list &operator=(const list &) = default;
+    list &operator=(list &&) = default;
+
+  public:
+    void push_back(T &&t)
+    {
+      _nodes.push_back(node(move(t)));
+
+      if (_last == static_cast<S>(-1))
+      {
+        _first = 0;
+        _last = 0;
+      }
+      else
+      {
+        _nodes[_last]._next = _nodes.size() - 1;
+        _last = _nodes.size() - 1;
+      }
+    }
+
+    void push_back(const T &t)
+    {
+      push_back(T(t));
+    }
+
+    void push_front(T &&t)
+    {
+      _nodes.push_back(node(move(t)));
+
+      if (_first == static_cast<S>(-1))
+      {
+        _first = 0;
+        _last = 0;
+      }
+      else
+      {
+        _nodes[_nodes.size() - 1]._next = _first;
+        _first = _nodes.size() - 1;
+      }
+    }
+
+    void push_front(const T &t)
+    {
+      push_front(T(t));
+    }
+
+  public:
+    S size() const
+    {
+      return _nodes.size();
+    }
+
+    bool empty() const
+    {
+      return _nodes.empty();
+    }
+
+  public:
+    auto begin()
+    {
+      return iterator{this, _first};
+    }
+
+    auto end()
+    {
+      return iterator{this, static_cast<S>(-1)};
+    }
+
+    auto begin() const
+    { return const_iterator{this, _first};
+    }
+
+    auto end() const
+    {
+      return const_iterator{this, static_cast<S>(-1)};
+    }
+  };
+
+  //----------------------------
+  //
+  // String classes
+  //
+  //----------------------------
+
+  struct string_end_marker
+  {
+    template <typename C, size_t N>
+    static constexpr size_t length(C (&s)[N])
+    {
+      return N - 1;
+    }
+  };
+
+  template <character C>
+  using basic_string_view = vector_view<C>;
 
   using string_view = basic_string_view<char>;
   using wstring_view = basic_string_view<wchar_t>;
@@ -2314,21 +2536,6 @@ namespace stew
       string_view_buildable<S, C> ||
       string_view_castable<S, C>;
 
-  //----------------------------
-  //
-  // String classes
-  //
-  //----------------------------
-
-  struct string_end_marker
-  {
-    template <typename C, size_t N>
-    static constexpr size_t length(C (&s)[N])
-    {
-      return N - 1;
-    }
-  };
-
   template <character C>
   using basic_fixed_string = fixed_vector<C, size_t, string_end_marker>;
 
@@ -2340,6 +2547,16 @@ namespace stew
 
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
+
+  constexpr string_view operator"" _s(const char *s, size_t n)
+  {
+    return string_view(s, n);
+  }
+
+  constexpr wstring_view operator"" _s(const wchar_t *s, size_t n)
+  {
+    return wstring_view(s, n);
+  }
 
   //------------------------------
   //
