@@ -220,24 +220,22 @@ namespace stew
         (requires(F f) { T(f); })));
 
   template <typename T, typename R, typename... A>
-  concept callable = requires(T t, A &&...a)
-  {
-    {
-      t(a...)
-      } -> convertible_to<R>;
-  };
+  concept callable = requires(T t, A &&...a) {
+                       {
+                         t(a...)
+                         } -> convertible_to<R>;
+                     };
 
   template <typename P, typename... A>
   concept predicate = callable<P, bool, A...>;
 
   template <typename T, typename O>
   concept equal_comparable =
-      requires(const T &t, const O &o)
-  {
-    {
-      t == o
-      } -> convertible_to<bool>;
-  };
+      requires(const T &t, const O &o) {
+        {
+          t == o
+          } -> convertible_to<bool>;
+      };
 
   //-----------------------------------
   //
@@ -343,37 +341,34 @@ namespace stew
 
   template <typename T>
   concept forward_iterator =
-      requires(T i)
-  {
-    ++i;
-    i++;
-    i != i;
-    i == i;
-    *i;
-  };
+      requires(T i) {
+        ++i;
+        i++;
+        i != i;
+        i == i;
+        *i;
+      };
 
   template <typename T>
   concept backward_iterator =
-      requires(T i)
-  {
-    --i;
-    i--;
-    i != i;
-    i == i;
-    *i;
-  };
+      requires(T i) {
+        --i;
+        i--;
+        i != i;
+        i == i;
+        *i;
+      };
 
   template <typename C>
   concept range =
-      requires(C &c)
-  {
-    {
-      c.begin()
-      } -> forward_iterator;
-    {
-      c.end()
-      } -> forward_iterator;
-  };
+      requires(C &c) {
+        {
+          c.begin()
+          } -> forward_iterator;
+        {
+          c.end()
+          } -> forward_iterator;
+      };
 
   template <range R>
   struct range_traits
@@ -409,10 +404,9 @@ namespace stew
        });
 
   template <typename T>
-  concept random_accessible = requires(T t)
-  {
-    t[0];
-  };
+  concept random_accessible = requires(T t) {
+                                t[0];
+                              };
 
   template <typename T>
   concept random_access_collection =
@@ -739,19 +733,22 @@ namespace stew
     }
 
     auto operator*() const
-        -> decltype(auto) requires(!native_array_like<T>)
+        -> decltype(auto)
+      requires(!native_array_like<T>)
     {
       return (*_ptr);
     }
 
     auto operator->() const
-        -> decltype(auto) requires(!native_array_like<T>)
+        -> decltype(auto)
+      requires(!native_array_like<T>)
     {
       return _ptr;
     }
 
     auto operator[](size_t i) const
-        -> decltype(auto) requires(native_array_like<T>)
+        -> decltype(auto)
+      requires(native_array_like<T>)
     {
       return _ptr[i];
     }
@@ -864,19 +861,22 @@ namespace stew
     }
 
     auto operator*() const
-        -> decltype(auto) requires(!native_array_like<T>)
+        -> decltype(auto)
+      requires(!native_array_like<T>)
     {
       return (*_ptr);
     }
 
     auto operator->() const
-        -> decltype(auto) requires(!native_array_like<T>)
+        -> decltype(auto)
+      requires(!native_array_like<T>)
     {
       return _ptr;
     }
 
     auto operator[](size_t i) const
-        -> decltype(auto) requires native_array_like<T>
+        -> decltype(auto)
+      requires native_array_like<T>
     {
       return _ptr[i];
     }
@@ -1328,7 +1328,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator+(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator+(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1337,7 +1338,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator-(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator-(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1346,7 +1348,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator/(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator/(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1355,7 +1358,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator*(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator*(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1364,7 +1368,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator%(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator%(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1373,7 +1378,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator|(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator|(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1382,7 +1388,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator&(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator&(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1391,7 +1398,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator^(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator^(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1400,7 +1408,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator||(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator||(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1409,7 +1418,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator&&(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator&&(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1418,7 +1428,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator<<(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<<(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1427,7 +1438,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator>>(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>>(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1436,7 +1448,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator==(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator==(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1445,7 +1458,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator!=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator!=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1454,7 +1468,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator<(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1463,7 +1478,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator>(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1472,7 +1488,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator<=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1481,7 +1498,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator>=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1490,7 +1508,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator<=>(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<=>(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1499,7 +1518,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator+=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator+=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1508,7 +1528,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator-=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator-=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1517,7 +1538,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator/=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator/=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1526,7 +1548,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator*=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator*=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1535,7 +1558,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator%=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator%=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1544,7 +1568,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator&=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator&=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1553,7 +1578,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator|=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator|=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1562,7 +1588,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator^=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator^=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1571,7 +1598,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator>>=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator>>=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1580,7 +1608,8 @@ namespace stew
   }
 
   template <typename P0, typename P1>
-  requires(placeholder_like<P0> || placeholder_like<P1>) constexpr auto operator<<=(P0 p0, P1 p1) -> decltype(auto)
+    requires(placeholder_like<P0> || placeholder_like<P1>)
+  constexpr auto operator<<=(P0 p0, P1 p1) -> decltype(auto)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -1986,7 +2015,7 @@ namespace stew
     }
 
   public:
-    template<convertible_to<T> U>
+    template <convertible_to<T> U>
     constexpr void push_back(U &&u)
     {
       if (!full())
@@ -2121,7 +2150,7 @@ namespace stew
     }
 
   public:
-        template<convertible_to<T> U>
+    template <convertible_to<T> U>
     constexpr void push_back(U &&u)
     {
       if (_data.full())
@@ -2370,6 +2399,14 @@ namespace stew
       }
     }
 
+    constexpr void push_back(const range auto &&r)
+    {
+      for (auto &&i : forward<decltype(r)>(r))
+      {
+        push_back(forward<decltype(i)>(i));
+      }
+    }
+
     template <convertible_to<T> U>
     void push_front(U &&u)
     {
@@ -2387,9 +2424,12 @@ namespace stew
       }
     }
 
-    void push_front(const T &t)
+    constexpr void push_front(const range auto &&r)
     {
-      push_front(T(t));
+      for (auto &&i : forward<decltype(r)>(r))
+      {
+        push_front(forward<decltype(i)>(i));
+      }
     }
 
   public:
@@ -2459,18 +2499,16 @@ namespace stew
   template <typename S, typename C>
   concept string_view_castable =
       character<C> &&
-      requires(const S &s)
-  {
-    static_cast<basic_string_view<C>>(s);
-  };
+      requires(const S &s) {
+        static_cast<basic_string_view<C>>(s);
+      };
 
   template <typename S, typename C>
   concept string_view_buildable =
       character<C> &&
-      requires(const S &s)
-  {
-    basic_string_view<C>(s);
-  };
+      requires(const S &s) {
+        basic_string_view<C>(s);
+      };
 
   template <typename S, typename C>
   concept string_view_like =
@@ -2510,19 +2548,17 @@ namespace stew
 
   template <typename O>
   concept char_ostream =
-      requires(O &o, char c, string_view s)
-  {
-    o.push_back(c);
-    o.push_back(s);
-  };
+      requires(O &o, char c, string_view s) {
+        o.push_back(c);
+        o.push_back(s);
+      };
 
   template <typename O>
   concept wchar_ostream =
-      requires(O &o, wchar_t c, wstring_view s)
-  {
-    o.push_back(c);
-    o.push_back(s);
-  };
+      requires(O &o, wchar_t c, wstring_view s) {
+        o.push_back(c);
+        o.push_back(s);
+      };
 
   template <typename O>
   concept ostream = char_ostream<O> || wchar_ostream<O>;
@@ -2558,7 +2594,8 @@ namespace stew
   }
 
   template <size_t N>
-  requires(N > 0) constexpr auto make_isequence()
+    requires(N > 0)
+  constexpr auto make_isequence()
   {
     return impl::make_isequence<N - 1>();
   }
@@ -3114,7 +3151,8 @@ namespace stew
     }
 
     template <duration_type Tp>
-    void timedlock(duration_spec<Tp> spec) requires is_timed<T>
+    void timedlock(duration_spec<Tp> spec)
+      requires is_timed<T>
     {
       if (_lockable)
       {
