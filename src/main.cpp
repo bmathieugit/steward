@@ -11,7 +11,7 @@ int main()
   fstring v1("coucou");
 
   list<int> l;
-  
+
   for (int i = 0; i < 100; ++i)
     l.push_back(i);
 

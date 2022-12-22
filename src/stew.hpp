@@ -1804,6 +1804,22 @@ namespace stew
   }
 
   template <typename T, size_t N>
+  class static_vector
+  {
+  private:
+    array<T, N> _data;
+
+  public:
+    ~static_vector() = default;
+    static_vector() = default;
+    static_vector(const static_vector &) = default;
+    static_vector(static_vector &&) = default;
+    static_vector &operator=(const static_vector &) = default;
+    static_vector &operator=(static_vector &&) = default;
+    
+  };
+
+  template <typename T, size_t N>
   class stack_array
   {
   private:
@@ -2371,6 +2387,10 @@ namespace stew
       }
     };
 
+    template <typename I>
+    concept list_iterator =
+        same_one_of<I, iterator, const_iterator>;
+
   private:
     vector<node, S> _nodes;
     S _first = static_cast<S>(-1);
@@ -2401,7 +2421,7 @@ namespace stew
       }
     }
 
-    constexpr void push_back(const range auto &&r)
+    void push_back(const range auto &&r)
     {
       for (auto &&i : forward<decltype(r)>(r))
       {
@@ -2426,12 +2446,18 @@ namespace stew
       }
     }
 
-    constexpr void push_front(const range auto &&r)
+    void push_front(const range auto &&r)
     {
       for (auto &&i : forward<decltype(r)>(r))
       {
         push_front(forward<decltype(i)>(i));
       }
+    }
+
+    template <list_iterator I, convertible_to<T> U>
+    void insert(I i, U &&u)
+    {
+      // TODO: faire la fonction insert
     }
 
   public:
@@ -2466,6 +2492,71 @@ namespace stew
       return const_iterator{this, static_cast<S>(-1)};
     }
   };
+
+  namespace todo
+  {
+    template <typename T, typename S = size_t>
+    class set
+    {
+    private:
+      vector<T, S> _data;
+
+    public:
+      ~set() = default;
+      set() = default;
+      set(const set &) = default;
+      set(set &&) = default;
+      set &operator=(const set &) = default;
+      set &operator=(set &&) = default;
+
+    public:
+      auto size() const
+      {
+        return _data.size();
+      }
+
+      auto empty() const
+      {
+        return _data.empty();
+      }
+
+    public:
+      auto begin()
+      {
+        return _data.begin();
+      }
+
+      auto end()
+      {
+        return _data.end();
+      }
+
+      auto begin() const
+      {
+        return _data.begin();
+      }
+
+      auto end() const
+      {
+        return _data.end();
+      }
+
+    public:
+      template <convertible_to<T> U>
+      void push(U &&u)
+      {
+        if (find(_data, forward<U>(u)) == _data.end())
+        {
+          _data.push_back(forward<U>(u));
+        }
+      }
+
+      template <convertible_to<T> U>
+      void pop(const U &u)
+      {
+      }
+    };
+  }
 
   //----------------------------
   //
