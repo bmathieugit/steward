@@ -413,43 +413,7 @@ namespace stew
       collection<T> &&
       random_accessible<T>;
 
-  template <typename I>
-  class frame
-  {
-  private:
-    I _begin;
-    I _end;
-
-  public:
-    constexpr ~frame() = default;
-    constexpr frame() = default;
-    constexpr frame(I b, I e) : _begin(b), _end(e) {}
-    constexpr frame(const frame &) = default;
-    constexpr frame(frame &&) = default;
-    constexpr frame &operator=(const frame &) = default;
-    constexpr frame &operator=(frame &&) = default;
-
-  public:
-    constexpr auto begin()
-    {
-      return _begin;
-    }
-
-    constexpr auto end()
-    {
-      return _end;
-    }
-
-    constexpr auto begin() const
-    {
-      return _begin;
-    }
-
-    constexpr auto end() const
-    {
-      return _end;
-    }
-  };
+ 
 
   template <range R1, range R2>
   constexpr bool equals(const R1 &r1, const R2 &r2)
@@ -1734,7 +1698,45 @@ namespace stew
   // Containers
   //
   // ---------------------------------
+  
+  template <typename I>
+  class frame
+  {
+  private:
+    I _begin;
+    I _end;
 
+  public:
+    constexpr ~frame() = default;
+    constexpr frame() = default;
+    constexpr frame(I b, I e) : _begin(b), _end(e) {}
+    constexpr frame(const frame &) = default;
+    constexpr frame(frame &&) = default;
+    constexpr frame &operator=(const frame &) = default;
+    constexpr frame &operator=(frame &&) = default;
+
+  public:
+    constexpr auto begin()
+    {
+      return _begin;
+    }
+
+    constexpr auto end()
+    {
+      return _end;
+    }
+
+    constexpr auto begin() const
+    {
+      return _begin;
+    }
+
+    constexpr auto end() const
+    {
+      return _end;
+    }
+  };
+ 
   template <class T, size_t N>
   struct array
   {
