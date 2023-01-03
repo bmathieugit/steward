@@ -8,6 +8,9 @@ int main()
 {
 
   using namespace stew;
+  
+  static_assert(native_array_like<const char(&)[12]>);
+  
   fstring v1("coucou");
 
   list<int> l;

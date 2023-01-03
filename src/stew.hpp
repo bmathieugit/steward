@@ -281,6 +281,13 @@ namespace stew
 
     template <typename T>
     constexpr bool native_array_like<T[]> = true;
+
+    template <typename T, size_t N>
+    constexpr bool native_array_like<T[N]> = true;
+
+    template <typename T, size_t N>
+    constexpr bool native_array_like<T (&)[N]> = true;
+
   }
 
   template <typename T>
@@ -315,349 +322,6 @@ namespace stew
   {
     forward<T0>(t0) = forward<T1>(t1);
     forward<T1>(t1) = forward<T2>(t2);
-  }
-
-  //---------------------------
-  //
-  // Algorithm facilities
-  //
-  //---------------------------
-
-  template <typename T>
-  concept forward_iterator =
-      requires(T i) {
-        ++i;
-        i++;
-        i != i;
-        i == i;
-        *i;
-      };
-
-  template <typename T>
-  concept backward_iterator =
-      requires(T i) {
-        --i;
-        i--;
-        i != i;
-        i == i;
-        *i;
-      };
-
-  template <typename C>
-  concept range =
-      requires(C &c) {
-        {
-          c.begin()
-          } -> forward_iterator;
-        {
-          c.end()
-          } -> forward_iterator;
-      };
-
-  template <range R>
-  struct range_traits
-  {
-    using value_type = rm_cvref<decltype(*(R{}.begin()))>;
-    using reference = value_type &;
-    using pointer = value_type *;
-    using const_reference = const value_type &;
-  };
-
-  template <range R>
-  using range_value_type = typename range_traits<R>::value_type;
-
-  template <range R>
-  using range_reference = typename range_traits<R>::reference;
-
-  template <range R>
-  using range_pointer = typename range_traits<R>::pointer;
-
-  template <range R>
-  using range_const_reference = typename range_traits<R>::const_reference;
-
-  template <typename T>
-  concept collection =
-      (range<T> &&
-       requires(T t) {
-         {
-           t.size()
-           } -> convertible_to<size_t>;
-         {
-           t.empty()
-           } -> convertible_to<bool>;
-       });
-
-  template <typename T>
-  concept random_accessible = requires(T t) {
-                                t[0];
-                              };
-
-  template <typename T>
-  concept random_access_collection =
-      collection<T> &&
-      random_accessible<T>;
-
-  template <typename I>
-  class frame
-  {
-  private:
-    I _begin;
-    I _end;
-
-  public:
-    constexpr ~frame() = default;
-    constexpr frame() = default;
-    constexpr frame(I b, I e) : _begin(b), _end(e) {}
-    constexpr frame(const frame &) = default;
-    constexpr frame(frame &&) = default;
-    constexpr frame &operator=(const frame &) = default;
-    constexpr frame &operator=(frame &&) = default;
-
-  public:
-    constexpr auto begin()
-    {
-      return _begin;
-    }
-
-    constexpr auto end()
-    {
-      return _end;
-    }
-
-    constexpr auto begin() const
-    {
-      return _begin;
-    }
-
-    constexpr auto end() const
-    {
-      return _end;
-    }
-  };
-
-  template <range R1, range R2>
-  constexpr bool equals(const R1 &r1, const R2 &r2)
-  {
-    if (&r1 == &r2)
-    {
-      return true;
-    }
-    else
-    {
-      auto b1 = r1.begin();
-      auto b2 = r2.begin();
-
-      auto e1 = r1.end();
-      auto e2 = r2.end();
-
-      while (b1 != e1 &&
-             b2 != e2 &&
-             *b1 == *b2)
-      {
-        ++b1;
-        ++b2;
-      }
-
-      return b1 == e1 && b2 == e2;
-    }
-  }
-
-  template <range R1, range R2>
-  bool operator==(const R1 &r1, const R2 &r2)
-  {
-    return stew::equals(r1, r2);
-  }
-
-  template <range R1, range R2>
-  bool operator!=(const R1 &r1, const R2 &r2)
-  {
-    return !stew::equals(r1, r2);
-  }
-
-  template <range R1, range R2>
-  constexpr bool starts_with(const R1 &r1, const R2 &r2)
-  {
-    auto b1 = r1.begin();
-    auto b2 = r2.begin();
-
-    auto e1 = r1.end();
-    auto e2 = r2.end();
-
-    while (b1 != e1 &&
-           b2 != e2 &&
-           *b1 == *b2)
-    {
-      ++b1;
-      ++b2;
-    }
-
-    return b2 == e2;
-  }
-
-  template <range R, typename T>
-  constexpr bool starts_with(const R &r, const T &t)
-  {
-    auto b = r.begin();
-    auto e = r.end();
-
-    return b != e && *b == t;
-  }
-
-  template <range R, typename T>
-  constexpr auto find(R &r, const T &t)
-  {
-    auto b = r.begin();
-    auto e = r.end();
-
-    while (b != e && *b != t)
-    {
-      ++b;
-    }
-
-    return b;
-  }
-
-  template <range R1, range R2>
-  constexpr auto find(R1 &r1, const R2 &r2)
-  {
-    auto b1 = r1.begin();
-    auto e1 = r1.end();
-
-    while (b1 != e1 && !starts_with(frame<decltype(b1)>(b1, e1), r2))
-    {
-      ++b1;
-    }
-
-    return b1;
-  }
-
-  template <range R1, predicate<range_const_reference<R1>> P>
-  constexpr auto find(R1 &r1, P &&pred)
-  {
-    auto b = r1.begin();
-    auto e = r1.end();
-
-    while (b != e && !forward<P>(pred)(*b))
-    {
-      ++b;
-    }
-
-    return b;
-  }
-
-  template <range R, equal_comparable<range_value_type<R>> T>
-  constexpr size_t count(const R &r, T &&t)
-  {
-    size_t c = 0;
-
-    for (const auto &i : r)
-    {
-      if (i == forward<T>(t))
-      {
-        ++c;
-      }
-    }
-
-    return c;
-  }
-
-  template <range R, predicate<range_const_reference<R>> P>
-  constexpr size_t count(const R &r, P &&pred)
-  {
-    size_t c = 0;
-
-    for (const auto &i : r)
-    {
-      if (forward<P>(pred)(i))
-      {
-        ++c;
-      }
-    }
-
-    return c;
-  }
-
-  template <range R, typename T>
-  constexpr bool contains(R &r, const T &t)
-  {
-    return find(r, t) != r.end();
-  }
-
-  template <range R1, range R2>
-  constexpr bool contains(const R1 &r1, const R2 &r2)
-  {
-    return find(r1, r2) != r1.end();
-  }
-
-  template <forward_iterator I>
-  struct around_pair
-  {
-    bool _found;
-    frame<I> _bef;
-    frame<I> _aft;
-  };
-
-  template <range R, typename T>
-  constexpr auto around(R &r, const T &sep) -> decltype(auto)
-  {
-    auto pos = find(r, sep);
-
-    if (pos != r.end())
-    {
-      return around_pair<decltype(r.begin())>{
-          true,
-          {r.begin(), pos},
-          {pos + 2, r.end()}};
-    }
-    else
-    {
-      return around_pair<decltype(r.begin())>{
-          false,
-          {r.begin(), r.begin()},
-          {r.begin(), r.end()}};
-    }
-  }
-
-  template <range R1, predicate<range_const_reference<R1>> P>
-  constexpr bool all_of(const R1 &r, P &&p)
-  {
-    for (const auto &i : r)
-    {
-      if (!p(i))
-      {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  template <range R1, predicate<range_const_reference<R1>> P>
-  constexpr bool any_of(const R1 &r, P &&p)
-  {
-    for (const auto &i : r)
-    {
-      if (p(i))
-      {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  template <range R1, predicate<range_const_reference<R1>> P>
-  constexpr bool none_of(const R1 &r, P &&p)
-  {
-    for (const auto &i : r)
-    {
-      if (p(i))
-      {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   //---------------------------------
@@ -1177,6 +841,119 @@ namespace stew
 
   //----------------------------------
   //
+  // Tuple container
+  //
+  //----------------------------------
+
+  template <typename... T>
+  class tuple;
+
+  template <>
+  class tuple<>
+  {
+  };
+
+  template <typename T0, typename... Tn>
+  class tuple<T0, Tn...> : public tuple<Tn...>
+  {
+  private:
+    forward_reference<T0> _t;
+
+  public:
+    constexpr ~tuple() = default;
+    constexpr tuple() = default;
+    constexpr tuple(const tuple &) = default;
+    constexpr tuple(tuple &&) = default;
+    constexpr tuple &operator=(const tuple &) = default;
+    constexpr tuple &operator=(tuple &&) = default;
+
+  public:
+    template <convertible_to<T0> U0, convertible_to<Tn>... Un>
+    constexpr tuple(U0 &&u0, Un &&...un)
+        : _t{forward<U0>(u0)}, tuple<Tn...>(forward<Un>(un)...)
+    {
+    }
+
+  public:
+    template <size_t I>
+    constexpr auto get() & -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return _t.get();
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+
+    template <size_t I>
+    constexpr auto get() && -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return _t.get();
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+
+    template <size_t I>
+    constexpr auto get() const & -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return _t.get();
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+
+    template <size_t I>
+    constexpr auto get() const && -> decltype(auto)
+    {
+      if constexpr (I == 0)
+      {
+        return _t.get();
+      }
+      else
+      {
+        return (tuple<Tn...>::template get<I - 1>());
+      }
+    }
+  };
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(tuple<T0, Tn...> &t) -> decltype(auto)
+  {
+    return t.template get<I>();
+  }
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(tuple<T0, Tn...> &&t) -> decltype(auto)
+  {
+    return t.template get<I>();
+  }
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(const tuple<T0, Tn...> &t) -> decltype(auto)
+  {
+    return t.template get<I>();
+  }
+
+  template <size_t I, typename T0, typename... Tn>
+  constexpr auto get(const tuple<T0, Tn...> &&t) -> decltype(auto)
+  {
+    return t.template get<I>();
+  }
+
+  //----------------------------------
+  //
   // Functionnal utilities
   //
   //----------------------------------
@@ -1600,117 +1377,376 @@ namespace stew
       return p0(forward<A>(args)...) <<= p1(forward<A>(args)...);
     };
   }
-  //----------------------------------
-  //
-  // Tuple container
-  //
-  //----------------------------------
 
-  template <typename... T>
-  class tuple;
+  //---------------------------
+  //
+  // Algorithm facilities
+  //
+  //---------------------------
 
-  template <>
-  class tuple<>
+  template <typename T>
+  concept forward_iterator =
+      requires(T i) {
+        ++i;
+        i++;
+        i != i;
+        i == i;
+        *i;
+      };
+
+  template <typename T>
+  concept backward_iterator =
+      requires(T i) {
+        --i;
+        i--;
+        i != i;
+        i == i;
+        *i;
+      };
+
+  template <typename C>
+  concept strict_range =
+      requires(C &c) {
+        { c.begin() } -> forward_iterator;
+        { c.end() } -> forward_iterator; };
+
+  template <typename C>
+  concept range =
+      native_array_like<C> ||
+      strict_range<C>;
+
+  template <range R>
+  struct range_traits
   {
+    using value_type = rm_cvref<decltype(*(R{}.begin()))>;
+    using reference = value_type &;
+    using pointer = value_type *;
+    using const_reference = const value_type &;
   };
 
-  template <typename T0, typename... Tn>
-  class tuple<T0, Tn...> : public tuple<Tn...>
+  template <range R>
+  using range_value_type = typename range_traits<R>::value_type;
+
+  template <range R>
+  using range_reference = typename range_traits<R>::reference;
+
+  template <range R>
+  using range_pointer = typename range_traits<R>::pointer;
+
+  template <range R>
+  using range_const_reference = typename range_traits<R>::const_reference;
+
+  template <typename T>
+  concept collection =
+      (range<T> &&
+       requires(T t) {
+         { t.size() } -> convertible_to<size_t>;
+         { t.empty() } -> convertible_to<bool>; });
+
+  template <typename T>
+  concept random_accessible =
+      requires(T t) { t[0]; };
+
+  template <typename T>
+  concept random_access_collection =
+      collection<T> && random_accessible<T>;
+
+  template <strict_range R>
+  constexpr auto begin(R &&r)
+  {
+    return forward<R>(r).begin();
+  }
+
+  template <strict_range R>
+  constexpr auto end(R &&r)
+  {
+    return forward<R>(r).end();
+  }
+
+  template <typename T, size_t N>
+  constexpr auto begin(T (&t)[N])
+  {
+    return t;
+  }
+
+  template <typename T, size_t N>
+  constexpr auto end(T (&t)[N])
+  {
+    return t + N;
+  }
+
+  template <typename I>
+  class frame
   {
   private:
-    forward_reference<T0> _t;
+    I _begin;
+    I _end;
 
   public:
-    constexpr ~tuple() = default;
-    constexpr tuple() = default;
-    constexpr tuple(const tuple &) = default;
-    constexpr tuple(tuple &&) = default;
-    constexpr tuple &operator=(const tuple &) = default;
-    constexpr tuple &operator=(tuple &&) = default;
+    constexpr ~frame() = default;
+    constexpr frame() = default;
+
+    constexpr frame(I b, I e)
+        : _begin(b),
+          _end(e) {}
+
+    template <range R>
+    constexpr frame(R &&r)
+        : frame(stew::begin(r), stew::end(r)) {}
+
+    constexpr frame(const frame &) = default;
+    constexpr frame(frame &&) = default;
+    constexpr frame &operator=(const frame &) = default;
+    constexpr frame &operator=(frame &&) = default;
 
   public:
-    template <convertible_to<T0> U0, convertible_to<Tn>... Un>
-    constexpr tuple(U0 &&u0, Un &&...un)
-        : _t{forward<U0>(u0)}, tuple<Tn...>(forward<Un>(un)...)
+    constexpr auto begin()
     {
+      return _begin;
     }
 
-  public:
-    template <size_t I>
-    constexpr auto get() & -> decltype(auto)
+    constexpr auto end()
     {
-      if constexpr (I == 0)
-      {
-        return _t.get();
-      }
-      else
-      {
-        return (tuple<Tn...>::template get<I - 1>());
-      }
+      return _end;
     }
 
-    template <size_t I>
-    constexpr auto get() && -> decltype(auto)
+    constexpr auto begin() const
     {
-      if constexpr (I == 0)
-      {
-        return _t.get();
-      }
-      else
-      {
-        return (tuple<Tn...>::template get<I - 1>());
-      }
+      return _begin;
     }
 
-    template <size_t I>
-    constexpr auto get() const & -> decltype(auto)
+    constexpr auto end() const
     {
-      if constexpr (I == 0)
-      {
-        return _t.get();
-      }
-      else
-      {
-        return (tuple<Tn...>::template get<I - 1>());
-      }
-    }
-
-    template <size_t I>
-    constexpr auto get() const && -> decltype(auto)
-    {
-      if constexpr (I == 0)
-      {
-        return _t.get();
-      }
-      else
-      {
-        return (tuple<Tn...>::template get<I - 1>());
-      }
+      return _end;
     }
   };
 
-  template <size_t I, typename T0, typename... Tn>
-  constexpr auto get(tuple<T0, Tn...> &t) -> decltype(auto)
+  template <range R>
+  frame(R &&r) -> frame<decltype(begin(forward<R>(r)))>;
+
+  template <range R1, range R2>
+  constexpr bool equals(const R1 &r1, const R2 &r2)
   {
-    return t.template get<I>();
+    if (&r1 == &r2)
+    {
+      return true;
+    }
+    else
+    {
+      auto b1 = begin(r1);
+      auto b2 = begin(r2);
+
+      auto e1 = end(r1);
+      auto e2 = end(r2);
+
+      while (b1 != e1 &&
+             b2 != e2 &&
+             *b1 == *b2)
+      {
+        ++b1;
+        ++b2;
+      }
+
+      return b1 == e1 && b2 == e2;
+    }
   }
 
-  template <size_t I, typename T0, typename... Tn>
-  constexpr auto get(tuple<T0, Tn...> &&t) -> decltype(auto)
+  template <range R1, range R2>
+  bool operator==(const R1 &r1, const R2 &r2)
   {
-    return t.template get<I>();
+    return stew::equals(r1, r2);
   }
 
-  template <size_t I, typename T0, typename... Tn>
-  constexpr auto get(const tuple<T0, Tn...> &t) -> decltype(auto)
+  template <range R1, range R2>
+  bool operator!=(const R1 &r1, const R2 &r2)
   {
-    return t.template get<I>();
+    return !stew::equals(r1, r2);
   }
 
-  template <size_t I, typename T0, typename... Tn>
-  constexpr auto get(const tuple<T0, Tn...> &&t) -> decltype(auto)
+  template <range R1, range R2>
+  constexpr bool starts_with(const R1 &r1, const R2 &r2)
   {
-    return t.template get<I>();
+    auto b1 = begin(r1);
+    auto b2 = begin(r2);
+
+    auto e1 = end(r1);
+    auto e2 = end(r2);
+
+    while (b1 != e1 &&
+           b2 != e2 &&
+           *b1 == *b2)
+    {
+      ++b1;
+      ++b2;
+    }
+
+    return b2 == e2;
+  }
+
+  template <range R, typename T>
+  constexpr bool starts_with(const R &r, const T &t)
+  {
+    auto b = begin(r);
+    auto e = end(r);
+
+    return b != e && *b == t;
+  }
+
+  template <range R, typename T>
+  constexpr auto find(R &r, const T &t)
+  {
+    auto b = begin(r);
+    auto e = end(r);
+
+    while (b != e && *b != t)
+    {
+      ++b;
+    }
+
+    return b;
+  }
+
+  template <range R1, range R2>
+  constexpr auto find(R1 &r1, const R2 &r2)
+  {
+    auto b1 = begin(r1);
+    auto e1 = end(r1);
+
+    while (b1 != e1 && !starts_with(frame(b1, e1), r2))
+    {
+      ++b1;
+    }
+
+    return b1;
+  }
+
+  template <range R, predicate<range_const_reference<R>> P>
+  constexpr auto find(R &r, P &&pred)
+  {
+    auto b = begin(r);
+    auto e = end(r);
+
+    while (b != e && !forward<P>(pred)(*b))
+    {
+      ++b;
+    }
+
+    return b;
+  }
+
+  template <range R, equal_comparable<range_value_type<R>> T>
+  constexpr size_t count(const R &r, T &&t)
+  {
+    size_t c = 0;
+
+    for (const auto &i : r)
+    {
+      if (i == forward<T>(t))
+      {
+        ++c;
+      }
+    }
+
+    return c;
+  }
+
+  template <range R, predicate<range_const_reference<R>> P>
+  constexpr size_t count(const R &r, P &&pred)
+  {
+    size_t c = 0;
+
+    for (const auto &i : r)
+    {
+      if (forward<P>(pred)(i))
+      {
+        ++c;
+      }
+    }
+
+    return c;
+  }
+
+  template <range R, typename T>
+  constexpr bool contains(R &r, const T &t)
+  {
+    return find(r, t) != end(r);
+  }
+
+  template <range R1, range R2>
+  constexpr bool contains(const R1 &r1, const R2 &r2)
+  {
+    return find(r1, r2) != end(r1);
+  }
+
+  template <forward_iterator I>
+  struct around_pair
+  {
+    bool _found;
+    frame<I> _bef;
+    frame<I> _aft;
+  };
+
+  template <range R, typename T>
+  constexpr auto around(R &r, const T &sep) -> decltype(auto)
+  {
+    auto pos = find(r, sep);
+
+    if (pos != end(r))
+    {
+      return around_pair<decltype(begin(r))>{
+          true,
+          {begin(r), pos},
+          {pos + 2, end(r)}};
+    }
+    else
+    {
+      return around_pair<decltype(begin(r))>{
+          false,
+          {begin(r), begin(r)},
+          {begin(r), end(r)}};
+    }
+  }
+
+  template <range R1, predicate<range_const_reference<R1>> P>
+  constexpr bool all_of(const R1 &r, P &&p)
+  {
+    for (const auto &i : r)
+    {
+      if (!p(i))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  template <range R1, predicate<range_const_reference<R1>> P>
+  constexpr bool any_of(const R1 &r, P &&p)
+  {
+    for (const auto &i : r)
+    {
+      if (p(i))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  template <range R1, predicate<range_const_reference<R1>> P>
+  constexpr bool none_of(const R1 &r, P &&p)
+  {
+    for (const auto &i : r)
+    {
+      if (p(i))
+      {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   // ---------------------------------
@@ -1907,21 +1943,9 @@ namespace stew
     }
 
     constexpr fixed_vector(range auto &&r)
-        : fixed_vector(r.end() - r.begin())
+        : fixed_vector(stew::end(r) - stew::begin(r))
     {
       push_back(r);
-    }
-
-    template <size_t N>
-    constexpr fixed_vector(T (&t)[N])
-        : fixed_vector(frame(t, t + N))
-    {
-    }
-
-    template <size_t N>
-    constexpr fixed_vector(const T (&t)[N])
-        : fixed_vector(frame(t, t + N))
-    {
     }
 
     constexpr fixed_vector &operator=(fixed_vector o)
@@ -1936,18 +1960,6 @@ namespace stew
     constexpr fixed_vector &operator=(range auto &&r)
     {
       return (*this = move(fixed_vector(r)));
-    }
-
-    template <size_t N>
-    constexpr fixed_vector &operator=(const T (&t)[N])
-    {
-      return (*this = move(fixed_vector(t)));
-    }
-
-    template <size_t N>
-    constexpr fixed_vector &operator=(T (&t)[N])
-    {
-      return (*this = move(fixed_vector(t)));
     }
 
   public:
@@ -2018,9 +2030,10 @@ namespace stew
       }
     }
 
-    constexpr void push_back(range auto &&r)
+    template <range R>
+    constexpr void push_back(R &&r)
     {
-      for (auto &&i : forward<decltype(r)>(r))
+      for (auto &&i : frame(forward<R>(r)))
       {
         push_back(forward<decltype(i)>(i));
       }
@@ -2047,12 +2060,6 @@ namespace stew
     constexpr vector() = default;
     constexpr vector(size_t max) : _data(max) {}
 
-    template <size_t N>
-    constexpr vector(T (&t)[N]) : _data(t) {}
-
-    template <size_t N>
-    constexpr vector(const T (&t)[N]) : _data(t) {}
-
     constexpr vector(range auto &&r)
         : vector(r.end() - r.begin())
     {
@@ -2067,18 +2074,6 @@ namespace stew
     constexpr vector &operator=(range auto &&r)
     {
       return (*this = move(fixed_vector(r)));
-    }
-
-    template <size_t N>
-    constexpr vector &operator=(const T (&t)[N])
-    {
-      return (*this = move(fixed_vector(t)));
-    }
-
-    template <size_t N>
-    constexpr vector &operator=(T (&t)[N])
-    {
-      return (*this = move(fixed_vector(t)));
     }
 
   public:
@@ -2158,7 +2153,7 @@ namespace stew
 
     constexpr void push_back(const range auto &&r)
     {
-      for (auto &&i : forward<decltype(r)>(r))
+      for (auto &&i : frame(forward<decltype(r)>(r)))
       {
         push_back(forward<decltype(i)>(i));
       }
