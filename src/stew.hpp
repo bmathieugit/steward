@@ -86,21 +86,6 @@ namespace stew
   namespace impl
   {
     template <typename T>
-    constexpr bool lvalue_reference_like = false;
-
-    template <typename T>
-    constexpr bool lvalue_reference_like<T &> = true;
-  }
-
-  template <typename T>
-  concept lvalue_reference_like = impl::lvalue_reference_like<T>;
-
-  template <typename T>
-  concept not_lvalue_reference_like = (!lvalue_reference_like<T>);
-
-  namespace impl
-  {
-    template <typename T>
     struct rm_ref : struct_type<T>
     {
     };
@@ -144,13 +129,35 @@ namespace stew
     struct rm_array<T[]> : struct_type<T>
     {
     };
+
+    template <typename T>
+    struct rm_pointer : struct_type<T>
+    {
+    };
+
+    template <typename T>
+    struct rm_pointer<T *> : struct_type<T>
+    {
+    };
   }
+
+  template <typename T>
+  using add_const = const T;
 
   template <typename T>
   using rm_const = type<impl::rm_const<T>>;
 
   template <typename T>
+  using add_volatile = volatile T;
+
+  template <typename T>
   using rm_volatile = type<impl::rm_volatile<T>>;
+
+  template <typename T>
+  using add_lref = T &;
+
+  template <typename T>
+  using add_rref = T &&;
 
   template <typename T>
   using rm_ref = type<impl::rm_ref<T>>;
@@ -159,7 +166,49 @@ namespace stew
   using rm_cvref = rm_const<rm_volatile<rm_ref<T>>>;
 
   template <typename T>
+  using add_array = T[];
+
+  template <typename T>
   using rm_array = type<impl::rm_array<T>>;
+
+  template <typename T>
+  using add_pointer = T *;
+
+  template <typename T>
+  using rm_pointer = type<impl::rm_pointer<T>>;
+
+  //-----------------------------------
+  //
+  // Generals concepts
+  //
+  //-----------------------------------
+
+  namespace impl
+  {
+    template <typename T>
+    constexpr bool lvalue_reference_like = false;
+
+    template <typename T>
+    constexpr bool lvalue_reference_like<T &> = true;
+  }
+
+  template <typename T>
+  concept lvalue_reference_like = impl::lvalue_reference_like<T>;
+
+  template <typename T>
+  concept not_lvalue_reference_like = (!lvalue_reference_like<T>);
+
+  namespace impl
+  {
+    template <typename T>
+    constexpr bool pointer_like = false;
+
+    template <typename T>
+    constexpr bool pointer_like<T *> = true;
+  }
+
+  template <typename T>
+  concept pointer_like = impl::pointer_like<T>;
 
   namespace impl
   {
@@ -181,6 +230,31 @@ namespace stew
 
   template <typename T, size_t N>
   concept size_lesseq_than = (sizeof(T) <= N);
+
+  template <typename F, typename T>
+  concept convertible_to =
+      (!same_as<F, void> &&
+       !same_as<T, void> &&
+       ((requires(F f) { static_cast<T>(f); }) ||
+        (requires(F f) { T(f); })));
+
+  template <typename T, typename R, typename... A>
+  concept callable = requires(T t, A &&...a) {
+                       {
+                         t(a...)
+                         } -> convertible_to<R>;
+                     };
+
+  template <typename P, typename... A>
+  concept predicate = callable<P, bool, A...>;
+
+  template <typename T, typename O>
+  concept equal_comparable =
+      requires(const T &t, const O &o) {
+        {
+          t == o
+          } -> convertible_to<bool>;
+      };
 
   template <typename T>
   concept character = same_one_of<T, char, wchar_t>;
@@ -212,31 +286,6 @@ namespace stew
   template <typename T>
   concept native_array_like = impl::native_array_like<T>;
 
-  template <typename F, typename T>
-  concept convertible_to =
-      (!same_as<F, void> &&
-       !same_as<T, void> &&
-       ((requires(F f) { static_cast<T>(f); }) ||
-        (requires(F f) { T(f); })));
-
-  template <typename T, typename R, typename... A>
-  concept callable = requires(T t, A &&...a) {
-                       {
-                         t(a...)
-                         } -> convertible_to<R>;
-                     };
-
-  template <typename P, typename... A>
-  concept predicate = callable<P, bool, A...>;
-
-  template <typename T, typename O>
-  concept equal_comparable =
-      requires(const T &t, const O &o) {
-        {
-          t == o
-          } -> convertible_to<bool>;
-      };
-
   //-----------------------------------
   //
   // Utilities functions
@@ -267,78 +316,6 @@ namespace stew
     forward<T0>(t0) = forward<T1>(t1);
     forward<T1>(t1) = forward<T2>(t2);
   }
-
-  //-----------------------------------
-  //
-  // Result
-  //
-  //-----------------------------------
-
-  template <typename S, typename E>
-  class result
-  {
-  private:
-    union
-    {
-      S _success;
-      E _error;
-    };
-
-    bool _who;
-
-  public:
-    ~result() = default;
-    result() = delete;
-    result(const S &s) : _success(s), _who(true) {}
-    result(S &&s) : _success(s), _who(true) {}
-    result(const E &e) : _error(e), _who(false) {}
-    result(E &&e) : _error(e), _who(false) {}
-    result(const result &) = default;
-    result(result &&) = default;
-    result &operator=(const result &) = default;
-    result &operator=(result &&) = default;
-
-  public:
-    const S &success() const &
-    {
-      return _success;
-    }
-
-    S &&success() &&
-    {
-      return _success;
-    }
-
-    S &success() &
-    {
-      return _success;
-    }
-
-    const E &error() const &
-    {
-      return _error;
-    }
-
-    E &&error() &&
-    {
-      return _error;
-    }
-
-    E &error() &
-    {
-      return _error;
-    }
-
-  public:
-    operator bool() const
-    {
-      return _who;
-    }
-  };
-
-  struct basic_success
-  {
-  };
 
   //---------------------------
   //
