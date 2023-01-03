@@ -1392,6 +1392,7 @@ namespace stew
         i != i;
         i == i;
         *i;
+        i - i;
       };
 
   template <typename T>
@@ -1402,6 +1403,7 @@ namespace stew
         i != i;
         i == i;
         *i;
+        i - i;
       };
 
   template <typename C>
@@ -1942,10 +1944,15 @@ namespace stew
       o._data = nullptr;
     }
 
-    constexpr fixed_vector(range auto &&r)
-        : fixed_vector(stew::end(r) - stew::begin(r))
+    template <range R>
+    constexpr fixed_vector(R &&r)
+        : fixed_vector(stew::end(forward<R>(r)) -
+                       stew::begin(forward<R>(r)))
     {
-      push_back(r);
+      for (auto &&i : forward<R>(r))
+      {
+        push_back(forward<decltype(i)>(i));
+      }
     }
 
     constexpr fixed_vector &operator=(fixed_vector o)
@@ -2030,15 +2037,6 @@ namespace stew
       }
     }
 
-    template <range R>
-    constexpr void push_back(R &&r)
-    {
-      for (auto &&i : frame(forward<R>(r)))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
-    }
-
     constexpr void pop_back()
     {
       if (_size != 0)
@@ -2059,11 +2057,15 @@ namespace stew
     constexpr ~vector() = default;
     constexpr vector() = default;
     constexpr vector(size_t max) : _data(max) {}
-
-    constexpr vector(range auto &&r)
-        : vector(r.end() - r.begin())
+    template <range R>
+    constexpr vector(R &&r)
+        : vector(stew::end(forward<R>(r)) -
+                 stew::begin(forward<R>(r)))
     {
-      push_back(r);
+      for (auto &&i : forward<R>(r))
+      {
+        push_back(forward<R>(r));
+      }
     }
 
     constexpr vector(const vector &) = default;
@@ -2151,53 +2153,37 @@ namespace stew
       _data.push_back(forward<U>(u));
     }
 
-    constexpr void push_back(const range auto &&r)
-    {
-      for (auto &&i : frame(forward<decltype(r)>(r)))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
-    }
-
     constexpr void pop_back()
     {
       _data.pop_back();
     }
   };
 
-  template <typename T>
-  class vector_view
+  template <forward_iterator I>
+  class view
   {
   private:
-    const T *_begin = nullptr;
-    const T *_end = nullptr;
+    I _begin;
+    I _end;
 
   public:
-    constexpr ~vector_view() = default;
+    constexpr ~view() = default;
+    constexpr view() = default;
+    constexpr view(I b, I e)
+        : _begin(b), _end(e) {}
 
-    constexpr vector_view(const T *b, const T *e)
-    {
-      _begin = b;
-      _end = e;
-    }
-
-    constexpr vector_view(const T *b, size_t s)
-    {
-      _begin = b;
-      _end = b + s;
-    }
-
-    template <size_t N>
-    constexpr vector_view(const T (&s)[N])
-        : vector_view(s, N)
+    template <range R>
+    constexpr view(const R &r)
+        : view(stew::begin(r),
+               stew::end(r))
     {
     }
 
-    constexpr vector_view() = default;
-    constexpr vector_view(const vector_view &) = default;
-    constexpr vector_view(vector_view &&) = default;
-    constexpr vector_view &operator=(const vector_view &) = default;
-    constexpr vector_view &operator=(vector_view &&) = default;
+    constexpr view(const view &) = default;
+    constexpr view(view &&) = default;
+
+    constexpr view &operator=(const view &) = default;
+    constexpr view &operator=(view &&) = default;
 
   public:
     constexpr auto begin() const
@@ -2208,11 +2194,6 @@ namespace stew
     constexpr auto end() const
     {
       return _end;
-    }
-
-    constexpr auto data() const
-    {
-      return _begin;
     }
 
   public:
@@ -2231,11 +2212,15 @@ namespace stew
       return !empty();
     }
 
-    constexpr T operator[](size_t i) const
+    constexpr const auto &operator[](size_t i) const
+      requires random_accessible<I>
     {
-      return _begin[i];
+      return (_begin[i]);
     }
   };
+
+  template <range R>
+  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
   template <typename T, unsigned_integral S = size_t>
   class list
@@ -2537,19 +2522,19 @@ namespace stew
   };
 
   template <character C>
-  using basic_string_view = vector_view<C>;
+  using basic_string_view = view<const C *>;
 
   using string_view = basic_string_view<char>;
   using wstring_view = basic_string_view<wchar_t>;
 
   constexpr string_view operator"" _sv(const char *s, size_t n)
   {
-    return string_view(s, n);
+    return string_view(s, s + n);
   }
 
   constexpr wstring_view operator"" _sv(const wchar_t *s, size_t n)
   {
-    return wstring_view(s, n);
+    return wstring_view(s, s + n);
   }
 
   template <typename S, typename C>
@@ -2583,14 +2568,14 @@ namespace stew
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
 
-  constexpr string_view operator"" _s(const char *s, size_t n)
+  string operator"" _s(const char *s, size_t n)
   {
-    return string_view(s, n);
+    return string(string_view(s, s + n));
   }
 
-  constexpr wstring_view operator"" _s(const wchar_t *s, size_t n)
+  wstring operator"" _s(const wchar_t *s, size_t n)
   {
-    return wstring_view(s, n);
+    return wstring(wstring_view(s, s + n));
   }
 
   //------------------------------
@@ -2702,12 +2687,12 @@ namespace stew
 
         if (found)
         {
-          fmt = basic_string_view<C>(aft.begin(), aft.end());
-          part = basic_string_view<C>(bef.begin(), bef.end());
+          fmt = basic_string_view<C>(aft);
+          part = basic_string_view<C>(bef);
         }
         else
         {
-          part = basic_string_view<C>(aft.begin(), aft.end());
+          part = basic_string_view<C>(aft);
           break;
         }
       }
@@ -2862,7 +2847,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, bool b)
     {
-      formatter<basic_string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
+      formatter<basic_string_view<char>>::to(o, b ? string_view("true") : string_view("false"));
     }
   };
 
