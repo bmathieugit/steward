@@ -261,6 +261,13 @@ namespace stew
     return static_cast<T &&>(t);
   }
 
+  template <typename T0, typename T1, typename T2>
+  constexpr void transfer(T0 &&t0, T1 &&t1, T2 &&t2)
+  {
+    forward<T0>(t0) = forward<T1>(t1);
+    forward<T1>(t1) = forward<T2>(t2);
+  }
+
   //-----------------------------------
   //
   // Result
@@ -413,7 +420,43 @@ namespace stew
       collection<T> &&
       random_accessible<T>;
 
- 
+  template <typename I>
+  class frame
+  {
+  private:
+    I _begin;
+    I _end;
+
+  public:
+    constexpr ~frame() = default;
+    constexpr frame() = default;
+    constexpr frame(I b, I e) : _begin(b), _end(e) {}
+    constexpr frame(const frame &) = default;
+    constexpr frame(frame &&) = default;
+    constexpr frame &operator=(const frame &) = default;
+    constexpr frame &operator=(frame &&) = default;
+
+  public:
+    constexpr auto begin()
+    {
+      return _begin;
+    }
+
+    constexpr auto end()
+    {
+      return _end;
+    }
+
+    constexpr auto begin() const
+    {
+      return _begin;
+    }
+
+    constexpr auto end() const
+    {
+      return _end;
+    }
+  };
 
   template <range R1, range R2>
   constexpr bool equals(const R1 &r1, const R2 &r2)
@@ -1698,45 +1741,7 @@ namespace stew
   // Containers
   //
   // ---------------------------------
-  
-  template <typename I>
-  class frame
-  {
-  private:
-    I _begin;
-    I _end;
 
-  public:
-    constexpr ~frame() = default;
-    constexpr frame() = default;
-    constexpr frame(I b, I e) : _begin(b), _end(e) {}
-    constexpr frame(const frame &) = default;
-    constexpr frame(frame &&) = default;
-    constexpr frame &operator=(const frame &) = default;
-    constexpr frame &operator=(frame &&) = default;
-
-  public:
-    constexpr auto begin()
-    {
-      return _begin;
-    }
-
-    constexpr auto end()
-    {
-      return _end;
-    }
-
-    constexpr auto begin() const
-    {
-      return _begin;
-    }
-
-    constexpr auto end() const
-    {
-      return _end;
-    }
-  };
- 
   template <class T, size_t N>
   struct array
   {
@@ -1803,21 +1808,60 @@ namespace stew
     return a[I];
   }
 
-  template <typename T, size_t N>
-  class static_vector
+  namespace todo
   {
-  private:
-    array<T, N> _data;
+    template <typename T, size_t N>
+    class static_vector
+    {
+    private:
+      array<T, N> _data;
+      size_t _size = 0;
 
-  public:
-    ~static_vector() = default;
-    static_vector() = default;
-    static_vector(const static_vector &) = default;
-    static_vector(static_vector &&) = default;
-    static_vector &operator=(const static_vector &) = default;
-    static_vector &operator=(static_vector &&) = default;
-    
-  };
+    public:
+      ~static_vector() = default;
+      static_vector() = default;
+      template <size_t Nd>
+      static_vector(const T (&d)[Nd])
+        requires requires { Nd <= N; }
+      {
+      }
+      static_vector(const static_vector &) = default;
+      static_vector(static_vector &&) = default;
+      static_vector &operator=(const static_vector &) = default;
+      static_vector &operator=(static_vector &&) = default;
+
+    public:
+      auto begin()
+      {
+        return _data.begin();
+      }
+
+      auto end()
+      {
+        return _data.begin() + _size;
+      }
+
+      auto begin() const
+      {
+        return _data.begin();
+      }
+
+      auto end() const
+      {
+        return _data.begin() + _size;
+      }
+
+      constexpr T &operator[](size_t i)
+      {
+        return _data[i];
+      }
+
+      constexpr const T &operator[](size_t i) const
+      {
+        return _data[i];
+      }
+    };
+  }
 
   template <typename T, size_t N>
   class stack_array
@@ -1857,59 +1901,28 @@ namespace stew
     }
   };
 
-  template <typename T,
-            unsigned_integral S = size_t,
-            typename EM = basic_end_marker>
+  template <typename T, typename EM = basic_end_marker>
   class fixed_vector
   {
   private:
-    S _size{0};
-    S _max{0};
+    size_t _size{0};
+    size_t _max{0};
     owning<T[]> _data;
 
   public:
     constexpr ~fixed_vector() = default;
     constexpr fixed_vector() = default;
 
-    constexpr fixed_vector(S max) : _size{0}, _max{max}, _data{new T[_max]}
+    constexpr fixed_vector(size_t max)
+        : _size{0}, _max{max},
+          _data{new T[_max]}
     {
-    }
-
-    template <S N>
-    constexpr fixed_vector(T (&t)[N]) : fixed_vector(N)
-    {
-      for (S i{0}; i < N; ++i)
-      {
-        _data[i] = t[i];
-      }
-
-      _size = EM::length(t);
-    }
-
-    template <S N>
-    constexpr fixed_vector(const T (&t)[N]) : fixed_vector(N)
-    {
-      for (S i{0}; i < N; ++i)
-      {
-        _data[i] = t[i];
-      }
-
-      _size = EM::length(t);
-    }
-
-    constexpr fixed_vector(const fixed_vector &o)
-        : fixed_vector(o._max)
-    {
-      for (S i{0}; i < _size; ++i)
-      {
-        _data[i] = o._data[i];
-      }
-
-      _size = o._size;
     }
 
     constexpr fixed_vector(fixed_vector &&o)
-        : _size{o._size}, _max{o._max}, _data{move(o._data)}
+        : _size{o._size},
+          _max{o._max},
+          _data{move(o._data)}
     {
       o._size = 0;
       o._max = 0;
@@ -1922,57 +1935,42 @@ namespace stew
       push_back(r);
     }
 
-    constexpr fixed_vector &operator=(const fixed_vector &o)
+    template <size_t N>
+    constexpr fixed_vector(T (&t)[N])
+        : fixed_vector(frame(t, t + N))
     {
-      if (this != &o)
-      {
-        _size = o._size;
-        _max = o._max;
-        _data = new T[_max];
-
-        for (S i{0}; i < _size; ++i)
-        {
-          _data[i] = o._data[i];
-        }
-      }
-
-      return *this;
     }
 
-    constexpr fixed_vector &operator=(fixed_vector &&o)
+    template <size_t N>
+    constexpr fixed_vector(const T (&t)[N])
+        : fixed_vector(frame(t, t + N))
     {
-      if (this != &o)
-      {
-        _size = o._size;
-        _max = o._max;
-        _data = move(o._data);
+    }
 
-        o._size = 0;
-        o._max = 0;
-        o._data = nullptr;
-      }
+    constexpr fixed_vector &operator=(fixed_vector o)
+    {
+      transfer(_size, o._size, 0);
+      transfer(_max, o._max, 0);
+      transfer(_data, move(o._data), nullptr);
 
       return *this;
     }
 
     constexpr fixed_vector &operator=(range auto &&r)
     {
-      *this = move(fixed_vector(r));
-      return *this;
+      return (*this = move(fixed_vector(r)));
     }
 
-    template <S N>
+    template <size_t N>
     constexpr fixed_vector &operator=(const T (&t)[N])
     {
-      *this = move(fixed_vector(t));
-      return *this;
+      return (*this = move(fixed_vector(t)));
     }
 
-    template <S N>
+    template <size_t N>
     constexpr fixed_vector &operator=(T (&t)[N])
     {
-      *this = move(fixed_vector(t));
-      return *this;
+      return (*this = move(fixed_vector(t)));
     }
 
   public:
@@ -1996,12 +1994,12 @@ namespace stew
       return begin() + _size;
     }
 
-    constexpr T &operator[](S i)
+    constexpr T &operator[](size_t i)
     {
       return _data[i];
     }
 
-    constexpr const T &operator[](S i) const
+    constexpr const T &operator[](size_t i) const
     {
       return _data[i];
     }
@@ -2043,7 +2041,7 @@ namespace stew
       }
     }
 
-    constexpr void push_back(const range auto &&r)
+    constexpr void push_back(range auto &&r)
     {
       for (auto &&i : forward<decltype(r)>(r))
       {
@@ -2061,22 +2059,21 @@ namespace stew
   };
 
   template <typename T,
-            unsigned_integral S = size_t,
             typename EM = basic_end_marker>
   class vector
   {
   private:
-    fixed_vector<T, S, EM> _data;
+    fixed_vector<T, EM> _data;
 
   public:
     constexpr ~vector() = default;
     constexpr vector() = default;
-    constexpr vector(S max) : _data{max} {}
+    constexpr vector(size_t max) : _data(max) {}
 
-    template <S N>
+    template <size_t N>
     constexpr vector(T (&t)[N]) : _data(t) {}
 
-    template <S N>
+    template <size_t N>
     constexpr vector(const T (&t)[N]) : _data(t) {}
 
     constexpr vector(range auto &&r)
@@ -2092,22 +2089,19 @@ namespace stew
 
     constexpr vector &operator=(range auto &&r)
     {
-      *this = move(fixed_vector(r));
-      return *this;
+      return (*this = move(fixed_vector(r)));
     }
 
-    template <S N>
+    template <size_t N>
     constexpr vector &operator=(const T (&t)[N])
     {
-      *this = move(fixed_vector(t));
-      return *this;
+      return (*this = move(fixed_vector(t)));
     }
 
-    template <S N>
+    template <size_t N>
     constexpr vector &operator=(T (&t)[N])
     {
-      *this = move(fixed_vector(t));
-      return *this;
+      return (*this = move(fixed_vector(t)));
     }
 
   public:
@@ -2131,12 +2125,12 @@ namespace stew
       return _data.end();
     }
 
-    constexpr T &operator[](S i)
+    constexpr T &operator[](size_t i)
     {
       return _data[i];
     }
 
-    constexpr const T &operator[](S i) const
+    constexpr const T &operator[](size_t i) const
     {
       return _data[i];
     }
@@ -2173,8 +2167,8 @@ namespace stew
     {
       if (_data.full())
       {
-        fixed_vector<T, S> tmp(move(_data));
-        _data = fixed_vector<T, S>(tmp.size() * 2 + 10);
+        fixed_vector<T, EM> tmp(move(_data));
+        _data = fixed_vector<T, EM>(tmp.size() * 2 + 10);
 
         for (T &i : move(tmp))
         {
@@ -2387,10 +2381,6 @@ namespace stew
       }
     };
 
-    template <typename I>
-    concept list_iterator =
-        same_one_of<I, iterator, const_iterator>;
-
   private:
     vector<node, S> _nodes;
     S _first = static_cast<S>(-1);
@@ -2454,7 +2444,8 @@ namespace stew
       }
     }
 
-    template <list_iterator I, convertible_to<T> U>
+    template <typename I, convertible_to<T> U>
+      requires same_one_of<I, iterator, const_iterator>
     void insert(I i, U &&u)
     {
       // TODO: faire la fonction insert
@@ -2609,13 +2600,13 @@ namespace stew
       string_view_castable<S, C>;
 
   template <character C>
-  using basic_fixed_string = fixed_vector<C, size_t, string_end_marker>;
+  using basic_fixed_string = fixed_vector<C, string_end_marker>;
 
   using fstring = basic_fixed_string<char>;
   using wfstring = basic_fixed_string<wchar_t>;
 
   template <character C>
-  using basic_string = vector<C, size_t, string_end_marker>;
+  using basic_string = vector<C, string_end_marker>;
 
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
@@ -2635,9 +2626,6 @@ namespace stew
   // Formatting
   //
   //------------------------------
-
-  template <typename T>
-  class formatter;
 
   template <typename O>
   concept char_ostream =
@@ -2756,6 +2744,9 @@ namespace stew
     }
   };
 
+  template <typename T>
+  class formatter;
+
   namespace fmt
   {
     template <ostream O, character C, typename A>
@@ -2785,11 +2776,11 @@ namespace stew
     fmt::format_to(o, fmt, a...);
   }
 
-  // template <ostream O, typename... A>
-  // constexpr void format_to(O &o, basic_format_string<wchar_t, type_identity_t<A>...> fmt, const A &...a)
-  // {
-  //   fmt::format_to(o, fmt, a...);
-  // }
+  template <ostream O, typename... A>
+  constexpr void format_to(O &o, basic_format_string<wchar_t, type_identity_t<A>...> fmt, const A &...a)
+  {
+    fmt::format_to(o, fmt, a...);
+  }
 
   template <character C>
   class formatter<C>

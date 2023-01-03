@@ -17,7 +17,7 @@ int main()
 
   for (auto &&i : l)
   {
-    cout.printfln("{}", i);
+    cout.printfln("{}  {}", i);
   }
 
   return EXIT_SUCCESS;
