@@ -295,7 +295,7 @@ namespace stew
   template <typename D, typename B>
   constexpr bool derived_from =
       requires { dynamic_cast<B *>(static_cast<D *>(nullptr)); } &&
-      requires { dynamic_cast<B &>(*static_cast<D *>(nullptr)); } ;
+      requires { dynamic_cast<B &>(*static_cast<D *>(nullptr)); };
 
   //-----------------------------------
   //
@@ -2042,10 +2042,7 @@ namespace stew
         : fixed_vector(stew::end(forward<R>(r)) -
                        stew::begin(forward<R>(r)))
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
+      push_back(forward<R>(r));
     }
 
     constexpr fixed_vector &operator=(fixed_vector o)
@@ -2127,6 +2124,15 @@ namespace stew
       {
         _data[_size] = forward<U>(u);
         _size += 1;
+      }
+    }
+
+    template <range R>
+    constexpr void push_back(R &&r)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push_back(forward<decltype(i)>(i));
       }
     }
 
@@ -2247,19 +2253,28 @@ namespace stew
       _data.push_back(forward<U>(u));
     }
 
+    template <range R>
+    constexpr void push_back(R &&r)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push_back(forward<decltype(i)>(i));
+      }
+    }
+
     constexpr void pop_back()
     {
       _data.pop_back();
     }
   };
 
-  template <typename T, unsigned_integral S = size_t>
+  template <typename T>
   class list
   {
     struct node
     {
       T _t;
-      S _next = static_cast<S>(-1);
+      size_t _next = static_cast<size_t>(-1);
 
     public:
       ~node() = default;
@@ -2283,11 +2298,11 @@ namespace stew
     struct iterator
     {
       non_owning<list> _l;
-      S _current = static_cast<S>(-1);
+      size_t _current = static_cast<size_t>(-1);
 
       iterator &operator++()
       {
-        if (_current != static_cast<S>(-1))
+        if (_current != static_cast<size_t>(-1))
         {
           _current = _l->_nodes[_current]._next;
         }
@@ -2321,11 +2336,11 @@ namespace stew
     struct const_iterator
     {
       non_owning<const list> _l;
-      S _current = static_cast<S>(-1);
+      size_t _current = static_cast<size_t>(-1);
 
       const_iterator &operator++()
       {
-        if (_current != static_cast<S>(-1))
+        if (_current != static_cast<size_t>(-1))
         {
           _current = _l->_nodes[_current]._next;
         }
@@ -2357,9 +2372,9 @@ namespace stew
     };
 
   private:
-    vector<node, S> _nodes;
-    S _first = static_cast<S>(-1);
-    S _last = static_cast<S>(-1);
+    vector<node> _nodes;
+    size_t _first = static_cast<size_t>(-1);
+    size_t _last = static_cast<size_t>(-1);
 
   public:
     ~list() = default;
@@ -2374,7 +2389,7 @@ namespace stew
     {
       _nodes.push_back(node(forward<U>(u)));
 
-      if (_last == static_cast<S>(-1))
+      if (_last == static_cast<size_t>(-1))
       {
         _first = 0;
         _last = 0;
@@ -2386,9 +2401,10 @@ namespace stew
       }
     }
 
-    void push_back(const range auto &&r)
+    template<range R>
+    void push_back(R &&r)
     {
-      for (auto &&i : forward<decltype(r)>(r))
+      for (auto &&i : forward<R>(r))
       {
         push_back(forward<decltype(i)>(i));
       }
@@ -2399,7 +2415,7 @@ namespace stew
     {
       _nodes.push_back(node(forward<U>(u)));
 
-      if (_first == static_cast<S>(-1))
+      if (_first == static_cast<size_t>(-1))
       {
         _first = 0;
         _last = 0;
@@ -2411,9 +2427,11 @@ namespace stew
       }
     }
 
-    void push_front(const range auto &&r)
+
+    template<range R>
+    void push_front(R &&r)
     {
-      for (auto &&i : forward<decltype(r)>(r))
+      for (auto &&i : forward<R>(r))
       {
         push_front(forward<decltype(i)>(i));
       }
@@ -2427,7 +2445,7 @@ namespace stew
     }
 
   public:
-    S size() const
+    auto size() const
     {
       return _nodes.size();
     }
@@ -2445,7 +2463,7 @@ namespace stew
 
     auto end()
     {
-      return iterator{this, static_cast<S>(-1)};
+      return iterator{this, static_cast<size_t>(-1)};
     }
 
     auto begin() const
@@ -2455,17 +2473,17 @@ namespace stew
 
     auto end() const
     {
-      return const_iterator{this, static_cast<S>(-1)};
+      return const_iterator{this, static_cast<size_t>(-1)};
     }
   };
 
   namespace todo
   {
-    template <typename T, typename S = size_t>
+    template <typename T>
     class set
     {
     private:
-      vector<T, S> _data;
+      vector<T> _data;
 
     public:
       ~set() = default;
@@ -2739,7 +2757,7 @@ namespace stew
 
       I tmp = neg ? -i : i;
 
-      stack_array<char, 40> tbuff;
+      stack_array<char, 20> tbuff;
 
       if (tmp == 0)
       {
@@ -2773,7 +2791,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, I i)
     {
-      stack_array<char, 40> tbuff;
+      stack_array<char, 20> tbuff;
       I tmp = i;
 
       if (tmp == 0)
