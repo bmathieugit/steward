@@ -952,6 +952,62 @@ namespace stew
     return t.template get<I>();
   }
 
+
+  template <class T>
+  struct type_identity
+  {
+    using type = T;
+  };
+
+  template <typename T>
+  using type_identity_t = typename type_identity<T>::type;
+
+  template <size_t... I>
+  struct isequence
+  {
+  };
+
+  namespace impl
+  {
+    template <size_t I0, size_t... In>
+    consteval auto make_isequence()
+    {
+      if constexpr (I0 == 0)
+      {
+        return isequence<I0, In...>{};
+      }
+      else
+      {
+        return make_isequence<I0 - 1, I0, In...>();
+      }
+    }
+  }
+
+  template <size_t N>
+    requires(N > 0)
+  constexpr auto make_isequence()
+  {
+    return impl::make_isequence<N - 1>();
+  }
+
+  template <typename T>
+  constexpr size_t array_size = 0;
+
+  template <typename... T>
+  constexpr size_t array_size<tuple<T...>> = sizeof...(T);
+
+  template <typename T, typename F, size_t... I>
+  consteval auto apply(T &&t, F &&f, isequence<I...>) -> decltype(auto)
+  {
+    return forward<F>(f)(get<I>(forward<T>(t))...);
+  }
+
+  template <typename T, typename F>
+  consteval auto apply(T &&t, F &&f) -> decltype(auto)
+  {
+    return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
+  }
+
   //----------------------------------
   //
   // Functionnal utilities
@@ -2583,63 +2639,6 @@ namespace stew
   template <typename O>
   concept ostream = char_ostream<O> || wchar_ostream<O>;
 
-  template <class T>
-  struct type_identity
-  {
-    using type = T;
-  };
-
-  template <typename T>
-  using type_identity_t = typename type_identity<T>::type;
-
-  template <size_t... I>
-  struct isequence
-  {
-  };
-
-  namespace impl
-  {
-    template <size_t I0, size_t... In>
-    consteval auto make_isequence()
-    {
-      if constexpr (I0 == 0)
-      {
-        return isequence<I0, In...>{};
-      }
-      else
-      {
-        return make_isequence<I0 - 1, I0, In...>();
-      }
-    }
-  }
-
-  template <size_t N>
-    requires(N > 0)
-  constexpr auto make_isequence()
-  {
-    return impl::make_isequence<N - 1>();
-  }
-
-  template <typename T>
-  constexpr size_t array_size = 0;
-
-  template <typename T, size_t N>
-  constexpr size_t array_size<array<T, N>> = N;
-
-  template <typename... T>
-  constexpr size_t array_size<tuple<T...>> = sizeof...(T);
-
-  template <typename T, typename F, size_t... I>
-  consteval auto apply(T &&t, F &&f, isequence<I...>) -> decltype(auto)
-  {
-    return forward<F>(f)(get<I>(forward<T>(t))...);
-  }
-
-  template <typename T, typename F>
-  consteval auto apply(T &&t, F &&f) -> decltype(auto)
-  {
-    return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
-  }
 
   template <typename T>
   class formatter;

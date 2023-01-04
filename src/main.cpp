@@ -9,7 +9,7 @@ int main()
 
   using namespace stew;
 
-  cout.printf("coucou tout le monde {} todo {}", 1, 2);
+  cout.printfln("coucou tout le monde {} todo {}", 1, 2);
 
   return EXIT_SUCCESS;
 }
