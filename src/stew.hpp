@@ -1489,8 +1489,7 @@ namespace stew
     constexpr frame() = default;
 
     constexpr frame(I b, I e)
-        : _begin(b),
-          _end(e) {}
+        : _begin(b), _end(e) {}
 
     template <range R>
     constexpr frame(R &&r)
@@ -1589,9 +1588,7 @@ namespace stew
   constexpr bool starts_with(const R &r, const T &t)
   {
     auto b = begin(r);
-    auto e = end(r);
-
-    return b != e && *b == t;
+    return b != end(r) && *b == t;
   }
 
   template <range R, typename T>
@@ -1822,6 +1819,68 @@ namespace stew
   {
     return a[I];
   }
+
+  template <forward_iterator I>
+  class view
+  {
+  private:
+    I _begin;
+    I _end;
+
+  public:
+    constexpr ~view() = default;
+    constexpr view() = default;
+    constexpr view(I b, I e)
+        : _begin(b), _end(e) {}
+
+    template <range R>
+    constexpr view(const R &r)
+        : view(stew::begin(r), stew::end(r))
+    {
+    }
+
+    constexpr view(const view &) = default;
+    constexpr view(view &&) = default;
+
+    constexpr view &operator=(const view &) = default;
+    constexpr view &operator=(view &&) = default;
+
+  public:
+    constexpr auto begin() const
+    {
+      return _begin;
+    }
+
+    constexpr auto end() const
+    {
+      return _end;
+    }
+
+  public:
+    constexpr auto size() const
+    {
+      return _begin == nullptr ? 0 : _end - _begin;
+    }
+
+    constexpr auto empty() const
+    {
+      return size() == 0;
+    }
+
+    constexpr operator bool() const
+    {
+      return !empty();
+    }
+
+    constexpr const auto &operator[](size_t i) const
+      requires random_accessible<I>
+    {
+      return (_begin[i]);
+    }
+  };
+
+  template <range R>
+  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
   namespace todo
   {
@@ -2057,6 +2116,7 @@ namespace stew
     constexpr ~vector() = default;
     constexpr vector() = default;
     constexpr vector(size_t max) : _data(max) {}
+
     template <range R>
     constexpr vector(R &&r)
         : vector(stew::end(forward<R>(r)) -
@@ -2064,7 +2124,7 @@ namespace stew
     {
       for (auto &&i : forward<R>(r))
       {
-        push_back(forward<R>(r));
+        push_back(forward<decltype(i)>(i));
       }
     }
 
@@ -2158,69 +2218,6 @@ namespace stew
       _data.pop_back();
     }
   };
-
-  template <forward_iterator I>
-  class view
-  {
-  private:
-    I _begin;
-    I _end;
-
-  public:
-    constexpr ~view() = default;
-    constexpr view() = default;
-    constexpr view(I b, I e)
-        : _begin(b), _end(e) {}
-
-    template <range R>
-    constexpr view(const R &r)
-        : view(stew::begin(r),
-               stew::end(r))
-    {
-    }
-
-    constexpr view(const view &) = default;
-    constexpr view(view &&) = default;
-
-    constexpr view &operator=(const view &) = default;
-    constexpr view &operator=(view &&) = default;
-
-  public:
-    constexpr auto begin() const
-    {
-      return _begin;
-    }
-
-    constexpr auto end() const
-    {
-      return _end;
-    }
-
-  public:
-    constexpr auto size() const
-    {
-      return _begin == nullptr ? 0 : _end - _begin;
-    }
-
-    constexpr auto empty() const
-    {
-      return size() == 0;
-    }
-
-    constexpr operator bool() const
-    {
-      return !empty();
-    }
-
-    constexpr const auto &operator[](size_t i) const
-      requires random_accessible<I>
-    {
-      return (_begin[i]);
-    }
-  };
-
-  template <range R>
-  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
   template <typename T, unsigned_integral S = size_t>
   class list
@@ -2538,23 +2535,8 @@ namespace stew
   }
 
   template <typename S, typename C>
-  concept string_view_castable =
-      character<C> &&
-      requires(const S &s) {
-        static_cast<basic_string_view<C>>(s);
-      };
-
-  template <typename S, typename C>
-  concept string_view_buildable =
-      character<C> &&
-      requires(const S &s) {
-        basic_string_view<C>(s);
-      };
-
-  template <typename S, typename C>
   concept string_view_like =
-      string_view_buildable<S, C> ||
-      string_view_castable<S, C>;
+      character<C> && convertible_to<S, basic_string_view<C>>;
 
   template <character C>
   using basic_fixed_string = fixed_vector<C, string_end_marker>;
@@ -2659,82 +2641,45 @@ namespace stew
     return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
   }
 
-  template <character C, typename... A>
-  struct basic_format_string
-  {
-  private:
-    using sview = basic_string_view<C>;
-
-  public:
-    sview _fmt;
-    array<sview, sizeof...(A) + 1> _fmtsplit;
-
-    template <size_t N>
-    consteval basic_format_string(const char (&s)[N])
-        : _fmt(s), _fmtsplit(split(_fmt)) {}
-
-    consteval basic_format_string(sview s)
-        : _fmt(s), _fmtsplit(split(_fmt)) {}
-
-  private:
-    consteval array<sview, sizeof...(A) + 1> split(sview fmt)
-    {
-      array<sview, sizeof...(A) + 1> parts;
-
-      for (auto &part : parts)
-      {
-        auto [found, bef, aft] = around(fmt, "{}"_sv);
-
-        if (found)
-        {
-          fmt = basic_string_view<C>(aft);
-          part = basic_string_view<C>(bef);
-        }
-        else
-        {
-          part = basic_string_view<C>(aft);
-          break;
-        }
-      }
-
-      return parts;
-    }
-  };
-
   template <typename T>
   class formatter;
 
   namespace fmt
   {
-    template <ostream O, character C, typename A>
-    constexpr void format_one_to(O &o, basic_string_view<C> bef, const A &a)
+    template <ostream O, character C, typename H, typename... T>
+    constexpr void format_to(O &o, basic_string_view<C> fmt, const H &h, const T &...t)
     {
-      formatter<basic_string_view<C>>::to(o, bef);
-      formatter<A>::to(o, a);
-    }
+      auto [f, bef, aft] = around(fmt, "{}"_sv);
 
-    template <ostream O, character C, size_t... I, typename... A>
-    constexpr void format_to(O &o, const basic_format_string<C, A...> &fmt, isequence<I...>, const A &...a)
-    {
-      (format_one_to(o, fmt._fmtsplit[I], a), ...);
-    }
+      if (f)
+      {
+        formatter<basic_string_view<C>>::to(o, basic_string_view<C>(bef));
+        formatter<H>::to(o, h);
 
-    template <ostream O, character C, typename... A>
-    constexpr void format_to(O &o, const basic_format_string<C, A...> &fmt, const A &...a)
-    {
-      format_to(o, fmt, make_isequence<sizeof...(A)>(), a...);
-      formatter<basic_string_view<C>>::to(o, fmt._fmtsplit[sizeof...(A)]);
+        if constexpr (sizeof...(T) > 0)
+        {
+          format_to(o, basic_string_view<C>(aft), t...);
+        }
+        else
+        {
+          formatter<basic_string_view<C>>::to(o, basic_string_view<C>(aft));
+        }
+      }
+      else
+      {
+        formatter<basic_string_view<C>>::to(o, basic_string_view<C>(fmt));
+      }
     }
   }
 
   template <ostream O, typename... A>
-  constexpr void format_to(O &o, basic_format_string<char, type_identity_t<A>...> fmt, const A &...a)
+  constexpr void format_to(O &o, basic_string_view<char> fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
   }
 
   template <ostream O, typename... A>
-  constexpr void format_to(O &o, basic_format_string<wchar_t, type_identity_t<A>...> fmt, const A &...a)
+  constexpr void format_to(O &o, basic_string_view<wchar_t> fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
   }
@@ -2750,26 +2695,27 @@ namespace stew
     }
   };
 
-  template <string_view_like<char> S>
-  class formatter<S>
+  template <character C>
+  class formatter<basic_string_view<C>>
   {
   public:
     template <ostream O>
-    constexpr static void to(O &os, const S &o)
+    constexpr static void to(O &os, basic_string_view<C> o)
     {
       os.push_back(o);
     }
   };
 
-  template <string_view_like<wchar_t> S>
-  class formatter<S>
+  template <character C>
+  class formatter<basic_fixed_string<C>>
+      : public formatter<basic_string_view<C>>
   {
-  public:
-    template <ostream O>
-    constexpr static void to(O &os, const S &o)
-    {
-      os.push_back(o);
-    }
+  };
+
+  template <character C>
+  class formatter<basic_string<C>>
+      : public formatter<basic_string_view<C>>
+  {
   };
 
   template <signed_integral I>
@@ -2847,7 +2793,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, bool b)
     {
-      formatter<basic_string_view<char>>::to(o, b ? string_view("true") : string_view("false"));
+      formatter<basic_string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
     }
   };
 
@@ -3361,7 +3307,7 @@ namespace stew
       putc(c, _out);
     }
 
-    void push_back(const string_view_like<C> auto &s)
+    void push_back(basic_string_view<C> s)
     {
       fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
     }
@@ -3379,13 +3325,13 @@ namespace stew
 
   public:
     template <typename... T>
-    void printf(basic_format_string<C, type_identity_t<T>...> fmt, const T &...t)
+    void printf(basic_string_view<C> fmt, const T &...t)
     {
       format_to(*this, fmt, t...);
     }
 
     template <typename... T>
-    void printfln(basic_format_string<C, type_identity_t<T>...> fmt, const T &...t)
+    void printfln(basic_string_view<C> fmt, const T &...t)
     {
       printf(fmt, t...);
       push_back('\n');
