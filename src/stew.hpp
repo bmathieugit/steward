@@ -487,11 +487,10 @@ namespace stew
     template <typename U>
     owning &operator=(owning<U> &&o)
     {
-      if (this != &o)
-      {
-        _ptr = o._ptr;
-        o._ptr = nullptr;
-      }
+      assert(this != &o);
+
+      _ptr = o._ptr;
+      o._ptr = nullptr;
 
       return *this;
     }
@@ -787,39 +786,10 @@ namespace stew
       o._func = nullptr;
     }
 
-    function &operator=(R (*f)(A...))
+    function &operator=(function f)
     {
-      _func = f;
-      return *this;
-    }
-
-    template <typename F>
-    function &operator=(F &&f)
-    {
-      _handler = new function_handler<F>(forward<F>(f));
-      return *this;
-    }
-
-    function &operator=(const function &o)
-    {
-      if (this != &o)
-      {
-        _handler = o._handler == nullptr ? nullptr : o._handler->clone();
-        _func = o._func;
-      }
-
-      return *this;
-    }
-
-    function &operator=(function &&o)
-    {
-      if (this != &o)
-      {
-        _handler = move(o._handler);
-        _func = move(o._func);
-        o._handler = nullptr;
-        o._func = nullptr;
-      }
+      _func = f._func;
+      _handler = f._handler;
 
       return *this;
     }
@@ -952,59 +922,63 @@ namespace stew
     return t.template get<I>();
   }
 
-  template <class T>
-  struct type_identity
+  namespace todo
   {
-    using type = T;
-  };
 
-  template <typename T>
-  using type_identity_t = typename type_identity<T>::type;
-
-  template <size_t... I>
-  struct isequence
-  {
-  };
-
-  namespace impl
-  {
-    template <size_t I0, size_t... In>
-    consteval auto make_isequence()
+    template <class T>
+    struct type_identity
     {
-      if constexpr (I0 == 0)
+      using type = T;
+    };
+
+    template <typename T>
+    using type_identity_t = typename type_identity<T>::type;
+
+    template <size_t... I>
+    struct isequence
+    {
+    };
+
+    namespace impl
+    {
+      template <size_t I0, size_t... In>
+      consteval auto make_isequence()
       {
-        return isequence<I0, In...>{};
-      }
-      else
-      {
-        return make_isequence<I0 - 1, I0, In...>();
+        if constexpr (I0 == 0)
+        {
+          return isequence<I0, In...>{};
+        }
+        else
+        {
+          return make_isequence<I0 - 1, I0, In...>();
+        }
       }
     }
-  }
 
-  template <size_t N>
-    requires(N > 0)
-  constexpr auto make_isequence()
-  {
-    return impl::make_isequence<N - 1>();
-  }
+    template <size_t N>
+      requires(N > 0)
+    constexpr auto make_isequence()
+    {
+      return impl::make_isequence<N - 1>();
+    }
 
-  template <typename T>
-  constexpr size_t array_size = 0;
+    template <typename T>
+    constexpr size_t array_size = 0;
 
-  template <typename... T>
-  constexpr size_t array_size<tuple<T...>> = sizeof...(T);
+    template <typename... T>
+    constexpr size_t array_size<tuple<T...>> = sizeof...(T);
 
-  template <typename T, typename F, size_t... I>
-  consteval auto apply(T &&t, F &&f, isequence<I...>) -> decltype(auto)
-  {
-    return forward<F>(f)(get<I>(forward<T>(t))...);
-  }
+    template <typename T, typename F, size_t... I>
+    consteval auto apply(T &&t, F &&f, isequence<I...>) -> decltype(auto)
+    {
+      return forward<F>(f)(get<I>(forward<T>(t))...);
+    }
 
-  template <typename T, typename F>
-  consteval auto apply(T &&t, F &&f) -> decltype(auto)
-  {
-    return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
+    template <typename T, typename F>
+    consteval auto apply(T &&t, F &&f) -> decltype(auto)
+    {
+      return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
+    }
   }
 
   //----------------------------------
@@ -2289,28 +2263,15 @@ namespace stew
       template <convertible_to<T> U>
       node(U &&u) : _t(forward<U>(u)) {}
       node(const node &o) : _t(o._t), _next(o._next) {}
-      node(node &&o) : _t(move(o._t)), _next(o._next) {}
-
-      node &operator=(const node &o)
+      node(node &&o) : _t(move(o._t)), _next(o._next)
       {
-        if (this != &o)
-        {
-          _t = o._t;
-          _next = o._next;
-        }
-
-        return *this;
+        o._next = static_cast<size_t>(-1);
       }
 
-      node &operator=(node &&o)
+      node &operator=(node o)
       {
-        if (this != &o)
-        {
-          _t = move(o._t);
-          _next = o._next;
-          o._next = static_cast<S>(-1);
-        }
-
+        _t = move(o._t);
+        _next = move(o._next);
         return *this;
       }
     };
@@ -3388,6 +3349,7 @@ namespace stew
 
   fostream cout(stdout);
   fostream cerr(stderr);
+
 }
 
 #endif

@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <threads.h>
+#include <assert.h>
 
 
 namespace stew::c
