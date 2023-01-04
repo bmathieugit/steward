@@ -287,11 +287,15 @@ namespace stew
 
     template <typename T, size_t N>
     constexpr bool native_array_like<T (&)[N]> = true;
-
   }
 
   template <typename T>
   concept native_array_like = impl::native_array_like<T>;
+
+  template <typename D, typename B>
+  constexpr bool derived_from =
+      requires { dynamic_cast<B *>(static_cast<D *>(nullptr)); } &&
+      requires { dynamic_cast<B &>(*static_cast<D *>(nullptr)); } ;
 
   //-----------------------------------
   //
