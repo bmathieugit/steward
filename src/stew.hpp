@@ -236,11 +236,8 @@ namespace stew
       requires { static_cast<rm_cvref<To>>(*((rm_cvref<From> *)nullptr)); };
 
   template <typename T, typename R, typename... A>
-  concept callable = requires(T t, A &&...a) {
-                       {
-                         t(a...)
-                         } -> convertible_to<R>;
-                     };
+  concept callable = requires(T t, A &&...a) { 
+    {t(a...)} -> convertible_to<R>; };
 
   template <typename P, typename... A>
   concept predicate = callable<P, bool, A...>;
@@ -1831,11 +1828,6 @@ namespace stew
       return size() == 0;
     }
 
-    constexpr operator bool() const
-    {
-      return !empty();
-    }
-
     constexpr const auto &operator[](size_t i) const
       requires random_accessible<I>
     {
@@ -1937,10 +1929,7 @@ namespace stew
     template <range R>
     constexpr static_stack &operator=(R &&r)
     {
-      _idx = N;
-      push_back(forward<R>(r));
-
-      return *this;
+      return (*this = move(static_stack(forward<R>(r))));
     }
 
   public:
@@ -1998,6 +1987,202 @@ namespace stew
         push(forward<decltype(i)>(i));
       }
     }
+
+    constexpr T &pop()
+    {
+      return _data[_idx++];
+    }
+  };
+
+  template <typename T>
+  class fixed_stack
+  {
+  private:
+    size_t _max{0};
+    size_t _idx{_max};
+    owning<T[]> _data;
+
+  public:
+    constexpr ~fixed_stack() = default;
+    constexpr fixed_stack() = default;
+
+    constexpr fixed_stack(size_t max)
+        : _max(max), _idx(max), _data(new T[max]) {}
+
+    template <range R>
+    constexpr fixed_stack(R &&r)
+        : fixed_stack(stew::end(r) - stew::begin(r))
+    {
+      push(forward<R>(r));
+    }
+
+    constexpr fixed_stack(const fixed_stack &) = default;
+    constexpr fixed_stack(fixed_stack &&) = default;
+    constexpr fixed_stack &operator=(const fixed_stack &) = default;
+    constexpr fixed_stack &operator=(fixed_stack &&) = default;
+
+    template <range R>
+    constexpr fixed_stack &operator=(R &&r)
+    {
+      return (*this = move(fixed_stack(forward<R>(r))));
+    }
+
+  public:
+    constexpr auto size() const
+    {
+      return _max - _idx;
+    }
+
+    constexpr auto empty() const
+    {
+      return _idx == _max;
+    }
+
+    constexpr auto full() const
+    {
+      return _idx == 0;
+    }
+
+  public:
+    constexpr auto begin()
+    {
+      return _data.get() + _idx;
+    }
+
+    constexpr auto end()
+    {
+      return _data.get() + _max;
+    }
+
+    constexpr auto begin() const
+    {
+      return _data.get() + _idx;
+    }
+
+    constexpr auto end() const
+    {
+      return _data.get() + _max;
+    }
+
+  public:
+    template <convertible_to<T> U>
+    constexpr void push(U &&u)
+    {
+      if (!full())
+      {
+        _data[--_idx] = forward<U>(u);
+      }
+    }
+
+    template <range R>
+    constexpr void push(R &&r)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push(forward<decltype(i)>(i));
+      }
+    }
+
+    constexpr T &pop()
+    {
+      return _data[_idx++];
+    }
+  };
+
+  template <typename T>
+  class stack
+  {
+  private:
+    fixed_stack<T> _data;
+
+  public:
+    constexpr ~stack() = default;
+    constexpr stack() = default;
+    constexpr stack(size_t max) : _data(max) {}
+    template <range R>
+    constexpr stack(R &&r)
+        : stack(stew::end(r) - stew::begin(r))
+    {
+      push_back(forward<R>(r));
+    }
+
+    constexpr stack(const stack &) = default;
+    constexpr stack(stack &&) = default;
+
+    constexpr stack &operator=(const stack &) = default;
+    constexpr stack &operator=(stack &&) = default;
+
+    template <range R>
+    constexpr stack &operator=(R &&r)
+    {
+      return (*this = move(stack(forward<R>(r))));
+    }
+
+  public:
+    constexpr auto size() const
+    {
+      return _data.size();
+    }
+
+    constexpr auto empty() const
+    {
+      return _data.empty();
+    }
+
+    constexpr auto full() const
+    {
+      return _data.full();
+    }
+
+  public:
+    constexpr auto begin()
+    {
+      return _data.begin();
+    }
+
+    constexpr auto end()
+    {
+      return _data.end();
+    }
+
+    constexpr auto begin() const
+    {
+      return _data.begin();
+    }
+
+    constexpr auto end() const
+    {
+      return _data.end();
+    }
+
+  public:
+    template <convertible_to<T> U>
+    constexpr void push(U &&u)
+    {
+      if (_data.full())
+      {
+        fixed_stack<T> tmp(_data.size());
+        tmp.push(_data);
+        _data = fixed_stack<T>(tmp.size() * 2 + 10);
+        _data.push(move(tmp));
+      }
+
+      _data.push(forward<U>(u));
+    }
+
+    template <range R>
+    constexpr void push(R &&r)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push(forward<decltype(i)>(i));
+      }
+    }
+
+    constexpr T &pop()
+    {
+      return _data.pop();
+    }
   };
 
   template <typename T, size_t N>
@@ -2014,16 +2199,19 @@ namespace stew
     template <range R>
     constexpr static_vector(R &&r)
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
+      push_back(forward<R>(r));
     }
 
     constexpr static_vector(const static_vector &) = default;
     constexpr static_vector(static_vector &&) = default;
     constexpr static_vector &operator=(const static_vector &) = default;
     constexpr static_vector &operator=(static_vector &&) = default;
+
+    template <range R>
+    constexpr static_vector &operator=(R &&r)
+    {
+      return (*this = move(static_vector(forward<R>(r))));
+    }
 
   public:
     constexpr auto size() const
@@ -2147,9 +2335,10 @@ namespace stew
       return *this;
     }
 
-    constexpr fixed_vector &operator=(range auto &&r)
+    template <range R>
+    constexpr fixed_vector &operator=(R &&r)
     {
-      return (*this = move(fixed_vector(r)));
+      return (*this = move(fixed_vector(forward<R>(r))));
     }
 
   public:
@@ -2197,11 +2386,6 @@ namespace stew
     constexpr auto size() const
     {
       return _size;
-    }
-
-    constexpr auto cap() const
-    {
-      return _max;
     }
 
   public:
@@ -2257,9 +2441,10 @@ namespace stew
     constexpr vector &operator=(const vector &) = default;
     constexpr vector &operator=(vector &&) = default;
 
-    constexpr vector &operator=(range auto &&r)
+    template <range R>
+    constexpr vector &operator=(R &&r)
     {
-      return (*this = move(fixed_vector(r)));
+      return (*this = move(vector(forward<R>(r))));
     }
 
   public:
@@ -2294,6 +2479,11 @@ namespace stew
     }
 
   public:
+    constexpr auto size() const
+    {
+      return _data.size();
+    }
+
     constexpr auto empty() const
     {
       return _data.empty();
@@ -2304,18 +2494,8 @@ namespace stew
       return _data.full();
     }
 
-    constexpr auto size() const
-    {
-      return _data.size();
-    }
-
-    constexpr auto cap() const
-    {
-      return _data.cap();
-    }
-
   public:
-    template <typename U>
+    template <convertible_to<T> U>
     constexpr void push_back(U &&u)
     {
       if (_data.full())
@@ -2347,216 +2527,216 @@ namespace stew
     }
   };
 
-  template <typename T>
-  class list
-  {
-    struct node
-    {
-      T _t;
-      size_t _next = static_cast<size_t>(-1);
-
-    public:
-      ~node() = default;
-      node() = default;
-      template <convertible_to<T> U>
-      node(U &&u) : _t(forward<U>(u)) {}
-      node(const node &o) : _t(o._t), _next(o._next) {}
-      node(node &&o) : _t(move(o._t)), _next(o._next)
-      {
-        o._next = static_cast<size_t>(-1);
-      }
-
-      node &operator=(node o)
-      {
-        _t = move(o._t);
-        _next = move(o._next);
-        return *this;
-      }
-    };
-
-    struct iterator
-    {
-      non_owning<list> _l;
-      size_t _current = static_cast<size_t>(-1);
-
-      iterator &operator++()
-      {
-        if (_current != static_cast<size_t>(-1))
-        {
-          _current = _l->_nodes[_current]._next;
-        }
-
-        return *this;
-      }
-
-      iterator operator++(int)
-      {
-        iterator copy = *this;
-        ++this;
-        return copy;
-      }
-
-      bool operator==(const iterator &o) const
-      {
-        return _l == o._l && _current == o._current;
-      }
-
-      bool operator!=(const iterator &o) const
-      {
-        return !(*this == o);
-      }
-
-      T &operator*() const
-      {
-        return _l->_nodes[_current]._t;
-      }
-    };
-
-    struct const_iterator
-    {
-      non_owning<const list> _l;
-      size_t _current = static_cast<size_t>(-1);
-
-      const_iterator &operator++()
-      {
-        if (_current != static_cast<size_t>(-1))
-        {
-          _current = _l->_nodes[_current]._next;
-        }
-
-        return *this;
-      }
-
-      const_iterator operator++(int)
-      {
-        iterator copy = *this;
-        ++this;
-        return copy;
-      }
-
-      bool operator==(const const_iterator &o) const
-      {
-        return _l == o._l && _current == o._current;
-      }
-
-      bool operator!=(const const_iterator &o) const
-      {
-        return !(*this == o);
-      }
-
-      const T &operator*() const
-      {
-        return _l->_nodes[_current]._t;
-      }
-    };
-
-  private:
-    vector<node> _nodes;
-    size_t _first = static_cast<size_t>(-1);
-    size_t _last = static_cast<size_t>(-1);
-
-  public:
-    ~list() = default;
-    list() = default;
-    list(const list &o) = default;
-    list &operator=(const list &) = default;
-    list &operator=(list &&) = default;
-
-  public:
-    template <convertible_to<T> U>
-    void push_back(U &&u)
-    {
-      _nodes.push_back(node(forward<U>(u)));
-
-      if (_last == static_cast<size_t>(-1))
-      {
-        _first = 0;
-        _last = 0;
-      }
-      else
-      {
-        _nodes[_last]._next = _nodes.size() - 1;
-        _last = _nodes.size() - 1;
-      }
-    }
-
-    template <range R>
-    void push_back(R &&r)
-    {
-      for (auto &&i : forward<R>(r))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
-    }
-
-    template <convertible_to<T> U>
-    void push_front(U &&u)
-    {
-      _nodes.push_back(node(forward<U>(u)));
-
-      if (_first == static_cast<size_t>(-1))
-      {
-        _first = 0;
-        _last = 0;
-      }
-      else
-      {
-        _nodes[_nodes.size() - 1]._next = _first;
-        _first = _nodes.size() - 1;
-      }
-    }
-
-    template <range R>
-    void push_front(R &&r)
-    {
-      for (auto &&i : forward<R>(r))
-      {
-        push_front(forward<decltype(i)>(i));
-      }
-    }
-
-    template <typename I, convertible_to<T> U>
-      requires same_one_of<I, iterator, const_iterator>
-    void insert(I i, U &&u)
-    {
-      // TODO: faire la fonction insert
-    }
-
-  public:
-    auto size() const
-    {
-      return _nodes.size();
-    }
-
-    bool empty() const
-    {
-      return _nodes.empty();
-    }
-
-  public:
-    auto begin()
-    {
-      return iterator{this, _first};
-    }
-
-    auto end()
-    {
-      return iterator{this, static_cast<size_t>(-1)};
-    }
-
-    auto begin() const
-    {
-      return const_iterator{this, _first};
-    }
-
-    auto end() const
-    {
-      return const_iterator{this, static_cast<size_t>(-1)};
-    }
-  };
-
   namespace todo
   {
+    template <typename T>
+    class list
+    {
+      struct node
+      {
+        T _t;
+        size_t _next = static_cast<size_t>(-1);
+
+      public:
+        ~node() = default;
+        node() = default;
+        template <convertible_to<T> U>
+        node(U &&u) : _t(forward<U>(u)) {}
+        node(const node &o) : _t(o._t), _next(o._next) {}
+        node(node &&o) : _t(move(o._t)), _next(o._next)
+        {
+          o._next = static_cast<size_t>(-1);
+        }
+
+        node &operator=(node o)
+        {
+          _t = move(o._t);
+          _next = move(o._next);
+          return *this;
+        }
+      };
+
+      struct iterator
+      {
+        non_owning<list> _l;
+        size_t _current = static_cast<size_t>(-1);
+
+        iterator &operator++()
+        {
+          if (_current != static_cast<size_t>(-1))
+          {
+            _current = _l->_nodes[_current]._next;
+          }
+
+          return *this;
+        }
+
+        iterator operator++(int)
+        {
+          iterator copy = *this;
+          ++this;
+          return copy;
+        }
+
+        bool operator==(const iterator &o) const
+        {
+          return _l == o._l && _current == o._current;
+        }
+
+        bool operator!=(const iterator &o) const
+        {
+          return !(*this == o);
+        }
+
+        T &operator*() const
+        {
+          return _l->_nodes[_current]._t;
+        }
+      };
+
+      struct const_iterator
+      {
+        non_owning<const list> _l;
+        size_t _current = static_cast<size_t>(-1);
+
+        const_iterator &operator++()
+        {
+          if (_current != static_cast<size_t>(-1))
+          {
+            _current = _l->_nodes[_current]._next;
+          }
+
+          return *this;
+        }
+
+        const_iterator operator++(int)
+        {
+          iterator copy = *this;
+          ++this;
+          return copy;
+        }
+
+        bool operator==(const const_iterator &o) const
+        {
+          return _l == o._l && _current == o._current;
+        }
+
+        bool operator!=(const const_iterator &o) const
+        {
+          return !(*this == o);
+        }
+
+        const T &operator*() const
+        {
+          return _l->_nodes[_current]._t;
+        }
+      };
+
+    private:
+      vector<node> _nodes;
+      size_t _first = static_cast<size_t>(-1);
+      size_t _last = static_cast<size_t>(-1);
+
+    public:
+      ~list() = default;
+      list() = default;
+      list(const list &o) = default;
+      list &operator=(const list &) = default;
+      list &operator=(list &&) = default;
+
+    public:
+      template <convertible_to<T> U>
+      void push_back(U &&u)
+      {
+        _nodes.push_back(node(forward<U>(u)));
+
+        if (_last == static_cast<size_t>(-1))
+        {
+          _first = 0;
+          _last = 0;
+        }
+        else
+        {
+          _nodes[_last]._next = _nodes.size() - 1;
+          _last = _nodes.size() - 1;
+        }
+      }
+
+      template <range R>
+      void push_back(R &&r)
+      {
+        for (auto &&i : forward<R>(r))
+        {
+          push_back(forward<decltype(i)>(i));
+        }
+      }
+
+      template <convertible_to<T> U>
+      void push_front(U &&u)
+      {
+        _nodes.push_back(node(forward<U>(u)));
+
+        if (_first == static_cast<size_t>(-1))
+        {
+          _first = 0;
+          _last = 0;
+        }
+        else
+        {
+          _nodes[_nodes.size() - 1]._next = _first;
+          _first = _nodes.size() - 1;
+        }
+      }
+
+      template <range R>
+      void push_front(R &&r)
+      {
+        for (auto &&i : forward<R>(r))
+        {
+          push_front(forward<decltype(i)>(i));
+        }
+      }
+
+      template <typename I, convertible_to<T> U>
+        requires same_one_of<I, iterator, const_iterator>
+      void insert(I i, U &&u)
+      {
+        // TODO: faire la fonction insert
+      }
+
+    public:
+      auto size() const
+      {
+        return _nodes.size();
+      }
+
+      bool empty() const
+      {
+        return _nodes.empty();
+      }
+
+    public:
+      auto begin()
+      {
+        return iterator{this, _first};
+      }
+
+      auto end()
+      {
+        return iterator{this, static_cast<size_t>(-1)};
+      }
+
+      auto begin() const
+      {
+        return const_iterator{this, _first};
+      }
+
+      auto end() const
+      {
+        return const_iterator{this, static_cast<size_t>(-1)};
+      }
+    };
+
     template <typename T>
     class set
     {
@@ -2619,6 +2799,84 @@ namespace stew
       }
     };
   }
+
+  //----------------------------
+  //
+  // Sequences
+  //
+  //----------------------------
+
+  template <typename T, typename U>
+  concept generator = callable<T, U, size_t>;
+
+  template <typename T, generator<T> G>
+  class sequence
+  {
+  private:
+    size_t _first = 0;
+    size_t _last = 0;
+
+  public:
+    class iterator
+    {
+    private:
+      size_t _current;
+
+    public:
+      constexpr ~iterator() = default;
+      constexpr iterator() = delete;
+      constexpr iterator(size_t current) : _current(current) {}
+      constexpr iterator(const iterator &) = default;
+      constexpr iterator(iterator &&) = default;
+      constexpr iterator &operator=(const iterator &) = default;
+      constexpr iterator &operator=(iterator &&) = default;
+
+    public:
+      constexpr auto operator==(const iterator &o) const
+      {
+        return _current == o._current;
+      }
+
+      constexpr iterator &operator++()
+      {
+        ++_current;
+        return *this;
+      }
+
+      constexpr iterator operator++(int)
+      {
+        iterator copy = *this;
+        ++this;
+        return copy;
+      }
+
+      constexpr T operator*()
+      {
+        return G{}(_current);
+      }
+    };
+
+  public:
+    constexpr ~sequence() = default;
+    constexpr sequence() = default;
+    constexpr sequence(size_t first, size_t last)
+        : _first(first), _last(last) {}
+    constexpr sequence(const sequence &) = default;
+    constexpr sequence(sequence &&) = default;
+    constexpr sequence &operator=(const sequence &) = default;
+    constexpr sequence &operator=(sequence &&) = default;
+
+  public:
+    constexpr auto begin() const
+    {
+      return iterator(_first);
+    }
+
+    constexpr auto end() const
+    {
+      return iterator(_last);
+    }
+  };
 
   //----------------------------
   //

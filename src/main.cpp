@@ -8,11 +8,17 @@ int main()
 {
   using namespace stew;
 
-  cout.printfln("{} {}"_sv,  123);
-  
+  stack<int> is(100);
 
-  vector<char> sv = "coucou";
-  cout.printfln("{}"_sv, sv);
+  for (int i = 0; i < 1000; i++)
+  {
+    is.push(i);
+  }
+
+  for (int i : is)
+  {
+    printf("%d\n", i);
+  }
 
   return EXIT_SUCCESS;
 }
