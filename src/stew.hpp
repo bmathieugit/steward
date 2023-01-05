@@ -1117,7 +1117,7 @@ namespace stew
 
   template <typename P0, typename P1>
     requires(placeholder_like<P0> || placeholder_like<P1>)
-  constexpr auto operator+(P0 p0, P1 p1) -> decltype(auto)
+  constexpr auto operator+(P0 p0, P1 p1)
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
@@ -2806,26 +2806,25 @@ namespace stew
   //
   //----------------------------
 
-  template <typename T, typename U>
-  concept generator = callable<T, U, size_t>;
-
-  template <typename T, generator<T> G>
+  template <typename G>
   class sequence
   {
   private:
     size_t _first = 0;
     size_t _last = 0;
+    G _gener;
 
   public:
     class iterator
     {
     private:
       size_t _current;
+      G _gener;
 
     public:
       constexpr ~iterator() = default;
       constexpr iterator() = delete;
-      constexpr iterator(size_t current) : _current(current) {}
+      constexpr iterator(size_t current, G gener) : _current(current), _gener(gener) {}
       constexpr iterator(const iterator &) = default;
       constexpr iterator(iterator &&) = default;
       constexpr iterator &operator=(const iterator &) = default;
@@ -2835,6 +2834,11 @@ namespace stew
       constexpr auto operator==(const iterator &o) const
       {
         return _current == o._current;
+      }
+
+      constexpr auto operator!=(const iterator &o) const
+      {
+        return !(*this == o);
       }
 
       constexpr iterator &operator++()
@@ -2850,17 +2854,17 @@ namespace stew
         return copy;
       }
 
-      constexpr T operator*()
+      constexpr auto operator*()
       {
-        return G{}(_current);
+        return _gener(_current);
       }
     };
 
   public:
     constexpr ~sequence() = default;
     constexpr sequence() = default;
-    constexpr sequence(size_t first, size_t last)
-        : _first(first), _last(last) {}
+    constexpr sequence(size_t first, size_t last, G gener)
+        : _first(first), _last(last), _gener(gener) {}
     constexpr sequence(const sequence &) = default;
     constexpr sequence(sequence &&) = default;
     constexpr sequence &operator=(const sequence &) = default;
@@ -2869,14 +2873,17 @@ namespace stew
   public:
     constexpr auto begin() const
     {
-      return iterator(_first);
+      return iterator(_first, _gener);
     }
 
     constexpr auto end() const
     {
-      return iterator(_last);
+      return iterator(_last, _gener);
     }
   };
+
+
+
 
   //----------------------------
   //

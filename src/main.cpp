@@ -10,7 +10,7 @@ int main()
 
   stack<int> is(100);
 
-  for (int i = 0; i < 1000; i++)
+  for (int i : sequence(0, 1000, (p0 + val(1))))
   {
     is.push(i);
   }
