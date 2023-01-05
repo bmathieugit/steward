@@ -1912,88 +1912,184 @@ namespace stew
   template <range R>
   view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
-  namespace todo
-  {
-    template <typename T, size_t N>
-    class static_vector
-    {
-    private:
-      array<T, N> _data;
-      size_t _size = 0;
-
-    public:
-      ~static_vector() = default;
-      static_vector() = default;
-      template <size_t Nd>
-      static_vector(const T (&d)[Nd])
-        requires requires { Nd <= N; }
-      {
-      }
-
-      static_vector(const static_vector &) = default;
-      static_vector(static_vector &&) = default;
-      static_vector &operator=(const static_vector &) = default;
-      static_vector &operator=(static_vector &&) = default;
-
-    public:
-      auto begin()
-      {
-        return _data.begin();
-      }
-
-      auto end()
-      {
-        return _data.begin() + _size;
-      }
-
-      auto begin() const
-      {
-        return _data.begin();
-      }
-
-      auto end() const
-      {
-        return _data.begin() + _size;
-      }
-
-      constexpr T &operator[](size_t i)
-      {
-        return _data[i];
-      }
-
-      constexpr const T &operator[](size_t i) const
-      {
-        return _data[i];
-      }
-    };
-  }
-
   template <typename T, size_t N>
-  class stack_array
+  class static_stack
   {
   private:
     array<T, N> _data;
-    int _idx = -1;
+    size_t _idx = N;
 
   public:
-    constexpr void push(const T &c)
+    constexpr ~static_stack() = default;
+    constexpr static_stack() = default;
+
+    template <range R>
+    constexpr static_stack(R &&r)
     {
-      _data[++_idx] = c;
+      push_back(forward<R>(r));
     }
 
-    constexpr void push(T &&c)
+    constexpr static_stack(const static_stack &) = default;
+    constexpr static_stack(static_stack &&) = default;
+    constexpr static_stack &operator=(const static_stack &) = default;
+    constexpr static_stack &operator=(static_stack &&) = default;
+
+    template <range R>
+    constexpr static_stack &operator=(R &&r)
     {
-      _data[++_idx] = move(c);
+      _idx = N;
+      push_back(forward<R>(r));
+
+      return *this;
     }
 
-    constexpr T &&pop()
+  public:
+    constexpr auto size() const
     {
-      return move(_data[_idx--]);
+      return N - _idx;
     }
 
-    constexpr bool empty() const
+    constexpr auto empty() const
     {
-      return _idx == -1;
+      return _idx == N;
+    }
+
+    constexpr auto full() const
+    {
+      return _idx == 0;
+    }
+
+  public:
+    constexpr auto begin()
+    {
+      return _data.begin() + _idx;
+    }
+
+    constexpr auto end()
+    {
+      return _data.end();
+    }
+
+    constexpr auto begin() const
+    {
+      return _data.begin() + _idx;
+    }
+
+    constexpr auto end() const
+    {
+      return _data.end();
+    }
+
+  public:
+    template <convertible_to<T> U>
+    constexpr void push(U &&u)
+    {
+      if (!full())
+      {
+        _data[--_idx] = forward<U>(u);
+      }
+    }
+
+    template <range R>
+    constexpr void push(R &&r)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push(forward<decltype(i)>(i));
+      }
+    }
+  };
+
+  template <typename T, size_t N>
+  class static_vector
+  {
+  private:
+    array<T, N> _data;
+    size_t _size = 0;
+
+  public:
+    constexpr ~static_vector() = default;
+    constexpr static_vector() = default;
+
+    template <range R>
+    constexpr static_vector(R &&r)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push_back(forward<decltype(i)>(i));
+      }
+    }
+
+    constexpr static_vector(const static_vector &) = default;
+    constexpr static_vector(static_vector &&) = default;
+    constexpr static_vector &operator=(const static_vector &) = default;
+    constexpr static_vector &operator=(static_vector &&) = default;
+
+  public:
+    constexpr auto size() const
+    {
+      return _size;
+    }
+
+    constexpr auto empty() const
+    {
+      return _size == 0;
+    }
+
+    constexpr auto full() const
+    {
+      return _size == N;
+    }
+
+  public:
+    constexpr auto begin()
+    {
+      return _data.begin();
+    }
+
+    constexpr auto end()
+    {
+      return _data.begin() + _size;
+    }
+
+    constexpr auto begin() const
+    {
+      return _data.begin();
+    }
+
+    constexpr auto end() const
+    {
+      return _data.begin() + _size;
+    }
+
+    constexpr T &operator[](size_t i)
+    {
+      return _data[i];
+    }
+
+    constexpr const T &operator[](size_t i) const
+    {
+      return _data[i];
+    }
+
+  public:
+    template <convertible_to<T> U>
+    constexpr void push_back(U &&u)
+    {
+      if (!full())
+      {
+        _data[_size] = forward<U>(u);
+        ++_size;
+      }
+    }
+
+    template <range R>
+    constexpr void push_back(R &&r)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push_back(forward<decltype(i)>(i));
+      }
     }
   };
 
@@ -2763,7 +2859,7 @@ namespace stew
 
       I tmp = neg ? -i : i;
 
-      stack_array<char, 20> tbuff;
+      static_stack<char, 20> tbuff;
 
       if (tmp == 0)
       {
@@ -2783,10 +2879,7 @@ namespace stew
         formatter<char>::to(o, '-');
       }
 
-      while (!tbuff.empty())
-      {
-        formatter<char>::to(o, tbuff.pop());
-      }
+      formatter<basic_string_view<char>>::to(o, tbuff);
     }
   };
 
@@ -2797,7 +2890,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, I i)
     {
-      stack_array<char, 20> tbuff;
+      static_stack<char, 20> tbuff;
       I tmp = i;
 
       if (tmp == 0)
@@ -2813,10 +2906,7 @@ namespace stew
         }
       }
 
-      while (!tbuff.empty())
-      {
-        formatter<char>::to(o, tbuff.pop());
-      }
+      formatter<basic_string_view<char>>::to(o,tbuff);
     }
   };
 
