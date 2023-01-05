@@ -1784,6 +1784,68 @@ namespace stew
   //
   // ---------------------------------
 
+  template <forward_iterator I>
+  class view
+  {
+  private:
+    I _begin;
+    I _end;
+
+  public:
+    constexpr ~view() = default;
+    constexpr view() = default;
+    constexpr view(I b, I e)
+        : _begin(b), _end(e) {}
+
+    template <range R>
+    constexpr view(const R &r)
+        : view(stew::begin(r), stew::end(r))
+    {
+    }
+
+    constexpr view(const view &) = default;
+    constexpr view(view &&) = default;
+
+    constexpr view &operator=(const view &) = default;
+    constexpr view &operator=(view &&) = default;
+
+  public:
+    constexpr auto begin() const
+    {
+      return _begin;
+    }
+
+    constexpr auto end() const
+    {
+      return _end;
+    }
+
+  public:
+    constexpr auto size() const
+    {
+      return _begin == nullptr ? 0 : _end - _begin;
+    }
+
+    constexpr auto empty() const
+    {
+      return size() == 0;
+    }
+
+    constexpr operator bool() const
+    {
+      return !empty();
+    }
+
+    constexpr const auto &operator[](size_t i) const
+      requires random_accessible<I>
+    {
+      return (_begin[i]);
+    }
+  };
+
+  template <range R>
+  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
+
   template <class T, size_t N>
   struct array
   {
@@ -1849,68 +1911,6 @@ namespace stew
   {
     return a[I];
   }
-
-  template <forward_iterator I>
-  class view
-  {
-  private:
-    I _begin;
-    I _end;
-
-  public:
-    constexpr ~view() = default;
-    constexpr view() = default;
-    constexpr view(I b, I e)
-        : _begin(b), _end(e) {}
-
-    template <range R>
-    constexpr view(const R &r)
-        : view(stew::begin(r), stew::end(r))
-    {
-    }
-
-    constexpr view(const view &) = default;
-    constexpr view(view &&) = default;
-
-    constexpr view &operator=(const view &) = default;
-    constexpr view &operator=(view &&) = default;
-
-  public:
-    constexpr auto begin() const
-    {
-      return _begin;
-    }
-
-    constexpr auto end() const
-    {
-      return _end;
-    }
-
-  public:
-    constexpr auto size() const
-    {
-      return _begin == nullptr ? 0 : _end - _begin;
-    }
-
-    constexpr auto empty() const
-    {
-      return size() == 0;
-    }
-
-    constexpr operator bool() const
-    {
-      return !empty();
-    }
-
-    constexpr const auto &operator[](size_t i) const
-      requires random_accessible<I>
-    {
-      return (_begin[i]);
-    }
-  };
-
-  template <range R>
-  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
   template <typename T, size_t N>
   class static_stack
@@ -2906,7 +2906,7 @@ namespace stew
         }
       }
 
-      formatter<basic_string_view<char>>::to(o,tbuff);
+      formatter<basic_string_view<char>>::to(o, tbuff);
     }
   };
 
