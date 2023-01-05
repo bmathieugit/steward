@@ -231,12 +231,9 @@ namespace stew
   template <typename T, size_t N>
   concept size_lesseq_than = (sizeof(T) <= N);
 
-  template <typename F, typename T>
+  template <typename From, typename To>
   concept convertible_to =
-      (!same_as<F, void> &&
-       !same_as<T, void> &&
-       ((requires(F f) { static_cast<T>(f); }) ||
-        (requires(F f) { T(f); })));
+      requires { static_cast<rm_cvref<To>>(*((rm_cvref<From> *)nullptr)); };
 
   template <typename T, typename R, typename... A>
   concept callable = requires(T t, A &&...a) {
@@ -2009,7 +2006,7 @@ namespace stew
     }
   };
 
-  template <typename T, typename EM = basic_end_marker>
+  template <typename T>
   class fixed_vector
   {
   private:
@@ -2111,11 +2108,6 @@ namespace stew
       return _max;
     }
 
-    constexpr operator bool() const
-    {
-      return !empty();
-    }
-
   public:
     template <convertible_to<T> U>
     constexpr void push_back(U &&u)
@@ -2145,12 +2137,11 @@ namespace stew
     }
   };
 
-  template <typename T,
-            typename EM = basic_end_marker>
+  template <typename T>
   class vector
   {
   private:
-    fixed_vector<T, EM> _data;
+    fixed_vector<T> _data;
 
   public:
     constexpr ~vector() = default;
@@ -2162,10 +2153,7 @@ namespace stew
         : vector(stew::end(forward<R>(r)) -
                  stew::begin(forward<R>(r)))
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
+      push_back(forward<R>(r));
     }
 
     constexpr vector(const vector &) = default;
@@ -2230,19 +2218,14 @@ namespace stew
       return _data.cap();
     }
 
-    constexpr operator bool() const
-    {
-      return static_cast<bool>(_data);
-    }
-
   public:
-    template <convertible_to<T> U>
+    template <typename U>
     constexpr void push_back(U &&u)
     {
       if (_data.full())
       {
-        fixed_vector<T, EM> tmp(move(_data));
-        _data = fixed_vector<T, EM>(tmp.size() * 2 + 10);
+        fixed_vector<T> tmp(move(_data));
+        _data = fixed_vector<T>(tmp.size() * 2 + 10);
 
         for (T &i : move(tmp))
         {
@@ -2401,7 +2384,7 @@ namespace stew
       }
     }
 
-    template<range R>
+    template <range R>
     void push_back(R &&r)
     {
       for (auto &&i : forward<R>(r))
@@ -2427,8 +2410,7 @@ namespace stew
       }
     }
 
-
-    template<range R>
+    template <range R>
     void push_front(R &&r)
     {
       for (auto &&i : forward<R>(r))
@@ -2578,13 +2560,13 @@ namespace stew
       character<C> && convertible_to<S, basic_string_view<C>>;
 
   template <character C>
-  using basic_fixed_string = fixed_vector<C, string_end_marker>;
+  using basic_fixed_string = fixed_vector<C>;
 
   using fstring = basic_fixed_string<char>;
   using wfstring = basic_fixed_string<wchar_t>;
 
   template <character C>
-  using basic_string = vector<C, string_end_marker>;
+  using basic_string = vector<C>;
 
   using string = basic_string<char>;
   using wstring = basic_string<wchar_t>;
@@ -2732,6 +2714,30 @@ namespace stew
     {
       os.push_back(o);
     }
+  };
+
+  template <character C, size_t N>
+  class formatter<const C (&)[N]>
+      : public formatter<basic_string_view<C>>
+  {
+  };
+
+  template <character C, size_t N>
+  class formatter<C (&)[N]>
+      : public formatter<basic_string_view<C>>
+  {
+  };
+
+  template <character C, size_t N>
+  class formatter<const C[N]>
+      : public formatter<basic_string_view<C>>
+  {
+  };
+
+  template <character C, size_t N>
+  class formatter<C[N]>
+      : public formatter<basic_string_view<C>>
+  {
   };
 
   template <character C>
