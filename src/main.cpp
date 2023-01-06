@@ -34,11 +34,20 @@ void test_fixed_vector()
   fixed_vector<int> ints2 = transfer(ints1);
 
   cout.printfln("size ints1 {}, size int2 {}", ints1.size(), ints2.size());
+
+  for (int i : ints1)
+  {
+    cout.printf("{}", i);
+  }
 }
 
 int main()
 {
-  //test_transfer();
-//  test_fixed_vector();
+  test_transfer();
+  test_fixed_vector();
+
+  string_view v = "coucou";
+  string s = v;
+  cout.printfln("{} {} {}", v, v.size(), s.size());
   return 0;
 }

@@ -3,7 +3,6 @@
 
 #include <clibs.hpp>
 
-
 namespace stew
 {
   using nullptr_t = decltype(nullptr);
@@ -775,8 +774,8 @@ namespace stew
 
     function &operator=(function f)
     {
-      _func = f._func;
-      _handler = f._handler;
+      _func = transfer(f._func);
+      _handler = transfer(f._handler);
 
       return *this;
     }
@@ -911,7 +910,6 @@ namespace stew
 
   namespace todo
   {
-
     template <class T>
     struct type_identity
     {
@@ -1493,28 +1491,30 @@ namespace stew
     return t + N;
   }
 
-  template <typename I>
-  class frame
+  template <forward_iterator I>
+  class view
   {
   private:
     I _begin;
     I _end;
 
   public:
-    constexpr ~frame() = default;
-    constexpr frame() = default;
-
-    constexpr frame(I b, I e)
+    constexpr ~view() = default;
+    constexpr view() = default;
+    constexpr view(I b, I e)
         : _begin(b), _end(e) {}
 
     template <range R>
-    constexpr frame(R &&r)
-        : frame(stew::begin(r), stew::end(r)) {}
+    constexpr view(const R &r)
+        : view(stew::begin(r), stew::end(r))
+    {
+    }
 
-    constexpr frame(const frame &) = default;
-    constexpr frame(frame &&) = default;
-    constexpr frame &operator=(const frame &) = default;
-    constexpr frame &operator=(frame &&) = default;
+    constexpr view(const view &) = default;
+    constexpr view(view &&) = default;
+
+    constexpr view &operator=(const view &) = default;
+    constexpr view &operator=(view &&) = default;
 
   public:
     constexpr auto begin()
@@ -1536,10 +1536,27 @@ namespace stew
     {
       return _end;
     }
+
+  public:
+    constexpr auto size() const
+    {
+      return _begin == nullptr ? 0 : _end - _begin;
+    }
+
+    constexpr auto empty() const
+    {
+      return size() == 0;
+    }
+
+    constexpr const auto &operator[](size_t i) const
+      requires random_accessible<I>
+    {
+      return (_begin[i]);
+    }
   };
 
   template <range R>
-  frame(R &&r) -> frame<decltype(begin(forward<R>(r)))>;
+  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
   template <range R1, range R2>
   constexpr bool equals(const R1 &r1, const R2 &r2)
@@ -1627,7 +1644,7 @@ namespace stew
     auto b1 = begin(r1);
     auto e1 = end(r1);
 
-    while (b1 != e1 && !starts_with(frame(b1, e1), r2))
+    while (b1 != e1 && !starts_with(view(b1, e1), r2))
     {
       ++b1;
     }
@@ -1697,8 +1714,8 @@ namespace stew
   struct around_pair
   {
     bool _found;
-    frame<I> _bef;
-    frame<I> _aft;
+    view<I> _bef;
+    view<I> _aft;
   };
 
   template <range R, typename T>
@@ -1769,63 +1786,6 @@ namespace stew
   // Containers
   //
   // ---------------------------------
-
-  template <forward_iterator I>
-  class view
-  {
-  private:
-    I _begin;
-    I _end;
-
-  public:
-    constexpr ~view() = default;
-    constexpr view() = default;
-    constexpr view(I b, I e)
-        : _begin(b), _end(e) {}
-
-    template <range R>
-    constexpr view(const R &r)
-        : view(stew::begin(r), stew::end(r))
-    {
-    }
-
-    constexpr view(const view &) = default;
-    constexpr view(view &&) = default;
-
-    constexpr view &operator=(const view &) = default;
-    constexpr view &operator=(view &&) = default;
-
-  public:
-    constexpr auto begin() const
-    {
-      return _begin;
-    }
-
-    constexpr auto end() const
-    {
-      return _end;
-    }
-
-  public:
-    constexpr auto size() const
-    {
-      return _begin == nullptr ? 0 : _end - _begin;
-    }
-
-    constexpr auto empty() const
-    {
-      return size() == 0;
-    }
-
-    constexpr const auto &operator[](size_t i) const
-      requires random_accessible<I>
-    {
-      return (_begin[i]);
-    }
-  };
-
-  template <range R>
-  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
   template <class T, size_t N>
   struct array
@@ -3076,8 +3036,8 @@ namespace stew
       formatter<basic_string_view<C>>::to(o, get<sizeof...(T) + 1>(fmt.items()));
     }
 
-    template<ostream O, character C>
-    constexpr void format_to(O &o, const basic_format_string<C, 1>& fmt)
+    template <ostream O, character C>
+    constexpr void format_to(O &o, const basic_format_string<C, 1> &fmt)
     {
       formatter<basic_string_view<C>>::to(o, get<0>(fmt.items()));
     }
