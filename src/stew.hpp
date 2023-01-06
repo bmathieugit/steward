@@ -2,7 +2,7 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
-#include <memory>
+
 
 namespace stew
 {
@@ -2285,18 +2285,10 @@ namespace stew
   private:
     size_t _size{0};
     size_t _max{0};
-    T *_data;
+    owning<T[]> _data;
 
   public:
-    constexpr ~fixed_vector()
-    {
-      if (_data != nullptr)
-      {
-        delete[] _data;
-        _data = nullptr;
-      }
-    }
-
+    constexpr ~fixed_vector() = default;
     constexpr fixed_vector() = default;
 
     constexpr fixed_vector(size_t max)
@@ -2343,7 +2335,7 @@ namespace stew
   public:
     constexpr auto begin()
     {
-      return _data;
+      return _data.get();
     }
 
     constexpr auto end()
@@ -2353,7 +2345,7 @@ namespace stew
 
     constexpr auto begin() const
     {
-      return _data;
+      return _data.get();
     }
 
     constexpr auto end() const
@@ -3082,6 +3074,12 @@ namespace stew
     {
       format_to_one<0>(o, fmt, h, t...);
       formatter<basic_string_view<C>>::to(o, get<sizeof...(T) + 1>(fmt.items()));
+    }
+
+    template<ostream O, character C>
+    constexpr void format_to(O &o, const basic_format_string<C, 1>& fmt)
+    {
+      formatter<basic_string_view<C>>::to(o, get<0>(fmt.items()));
     }
   }
 
