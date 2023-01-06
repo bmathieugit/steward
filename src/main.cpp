@@ -44,7 +44,7 @@ void test_fixed_vector()
 void test_copy_algorithm()
 {
   fixed_vector<int> ints(upto(0, 10));
-  vector<int> ints2(10);
+  fixed_vector<int> ints2(10);
 
   copy(ints, push_back_inserter(ints2));
 
@@ -64,7 +64,8 @@ void test_copy_algorithm()
 
   fixed_stack<int> ints3(upto(0, 10));
   fixed_stack<int> ints4;
-  copy(ints3, push_inserter(ints4));
+  copy(transfer(ints3), push_inserter(ints4));
+
 
   for (int i : ints3)
   {

@@ -201,6 +201,30 @@ namespace stew
   namespace impl
   {
     template <typename T>
+    constexpr bool const_lvalue_reference_like = false;
+
+    template <typename T>
+    constexpr bool const_lvalue_reference_like<const T &> = true;
+  }
+
+  template <typename T>
+  concept const_lvalue_reference_like = impl::const_lvalue_reference_like<T>;
+
+  namespace impl
+  {
+    template <typename T>
+    constexpr bool rvalue_reference_like = false;
+
+    template <typename T>
+    constexpr bool rvalue_reference_like<T &&> = true;
+  }
+
+  template <typename T>
+  concept rvalue_reference_like = impl::rvalue_reference_like<T>;
+
+  namespace impl
+  {
+    template <typename T>
     constexpr bool pointer_like = false;
 
     template <typename T>
@@ -339,7 +363,7 @@ namespace stew
   template <native_number T>
   constexpr auto transfer(T &t)
   {
-    T copy = static_cast<T &&>(t);
+    T copy = static_cast<rm_ref<T> &&>(t);
     t = 0;
     return copy;
   }
@@ -1797,8 +1821,18 @@ namespace stew
     auto e = end(forward<R>(r));
 
     while (b != e)
-    {
-      *i = *b;
+    { 
+      if constexpr (rvalue_reference_like<R&&>)
+      {
+        printf("move\n");
+        *i = transfer(*b);
+      }
+      else
+      {
+        printf("copy\n");
+        *i = *b;
+      }
+
       ++i;
       ++b;
     }
@@ -2582,7 +2616,7 @@ namespace stew
     template <range R>
     constexpr void push_back(R &&r)
     {
-     copy(forward<R>(r), push_back_inserter(*this));
+      copy(forward<R>(r), push_back_inserter(*this));
     }
 
     constexpr void pop_back()
