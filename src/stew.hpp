@@ -2,6 +2,7 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
+#include <memory>
 
 namespace stew
 {
@@ -268,6 +269,27 @@ namespace stew
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
 
+  template <typename T>
+  concept floating_point = same_one_of<T, float, double, long double>;
+
+  template <typename T>
+  concept native_number = integral<T> ||
+                          character<T> ||
+                          floating_point<T> ||
+                          same_as<T, bool>;
+
+  namespace impl
+  {
+    template <typename T>
+    constexpr bool pointer = false;
+
+    template <typename T>
+    constexpr bool pointer<T *> = true;
+  }
+
+  template <typename T>
+  concept pointer = impl::pointer<T>;
+
   namespace impl
   {
     template <typename T>
@@ -298,12 +320,6 @@ namespace stew
   //-----------------------------------
 
   template <typename T>
-  constexpr rm_ref<T> &&move(T &&t) noexcept
-  {
-    return static_cast<rm_ref<T> &&>(t);
-  }
-
-  template <typename T>
   constexpr T &&forward(rm_ref<T> &t) noexcept
   {
     return static_cast<T &&>(t);
@@ -315,11 +331,26 @@ namespace stew
     return static_cast<T &&>(t);
   }
 
-  template <typename T0, typename T1, typename T2>
-  constexpr void transfer(T0 &&t0, T1 &&t1, T2 &&t2)
+  template <typename T>
+  constexpr rm_ref<T> &&transfer(T &&t)
   {
-    forward<T0>(t0) = forward<T1>(t1);
-    forward<T1>(t1) = forward<T2>(t2);
+    return static_cast<rm_ref<T> &&>(t);
+  }
+
+  template <native_number T>
+  constexpr auto transfer(T &t)
+  {
+    T copy = static_cast<T &&>(t);
+    t = 0;
+    return copy;
+  }
+
+  template <pointer T>
+  constexpr auto transfer(T &p)
+  {
+    auto copy = p;
+    p = nullptr;
+    return copy;
   }
 
   //---------------------------------
@@ -406,90 +437,55 @@ namespace stew
   private:
     rm_array<T> *_ptr = nullptr;
 
+  private:
+    void cleanup()
+    {
+      if (_ptr != nullptr)
+      {
+        if constexpr (native_array_like<T>)
+        {
+          delete[] _ptr;
+        }
+        else
+        {
+          delete _ptr;
+        }
+
+        _ptr = nullptr;
+      }
+    }
+
   public:
     ~owning()
     {
-      if (_ptr != nullptr)
-      {
-        if constexpr (native_array_like<T>)
-        {
-          delete[] _ptr;
-        }
-        else
-        {
-          delete _ptr;
-        }
-
-        _ptr = nullptr;
-      }
+      cleanup();
     }
 
     owning() = default;
-    owning(nullptr_t) : owning() {}
 
-    template <typename U>
-    owning(U *ptr) : _ptr(ptr) {}
+    owning(rm_array<T> *ptr)
+        : _ptr(ptr) {}
 
     owning(const owning &) = delete;
-
-    template <typename U>
-    owning(owning<U> &&o) : _ptr(o._ptr)
+    owning(owning &&o)
+        : _ptr(transfer(o._ptr))
     {
-      o._ptr = nullptr;
-    }
-
-    owning &operator=(nullptr_t)
-    {
-      if (_ptr != nullptr)
-      {
-        if constexpr (native_array_like<T>)
-        {
-          delete[] _ptr;
-        }
-        else
-        {
-          delete _ptr;
-        }
-
-        _ptr = nullptr;
-      }
-
-      return *this;
     }
 
     owning &operator=(const owning &) = delete;
-
-    template <typename U>
-    owning &operator=(U *ptr)
+    owning &operator=(owning &&o)
     {
-      if (_ptr != ptr)
-      {
-        if (_ptr != nullptr)
-        {
-          if constexpr (native_array_like<T>)
-          {
-            delete[] _ptr;
-          }
-          else
-          {
-            delete _ptr;
-          }
-        }
-
-        _ptr = ptr;
-      }
-
+      assert(this != &o);
+      cleanup();
+      _ptr = transfer(o._ptr);
       return *this;
     }
 
-    template <typename U>
-    owning &operator=(owning<U> &&o)
+    owning &operator=(rm_array<T> *ptr)
     {
-      assert(this != &o);
-
-      _ptr = o._ptr;
-      o._ptr = nullptr;
-
+      assert(_ptr != ptr);
+      cleanup();
+      _ptr = ptr;
       return *this;
     }
 
@@ -500,11 +496,6 @@ namespace stew
     }
 
   public:
-    operator bool() const
-    {
-      return _ptr != nullptr;
-    }
-
     auto operator*() const
         -> decltype(auto)
       requires(!native_array_like<T>)
@@ -777,11 +768,9 @@ namespace stew
     }
 
     function(function &&o)
-        : _handler(move(o._handler)),
-          _func(move(o._func))
+        : _handler(transfer(o._handler)),
+          _func(transfer(o._func))
     {
-      o._handler = nullptr;
-      o._func = nullptr;
     }
 
     function &operator=(function f)
@@ -1929,7 +1918,7 @@ namespace stew
     template <range R>
     constexpr static_stack &operator=(R &&r)
     {
-      return (*this = move(static_stack(forward<R>(r))));
+      return (*this = transfer(static_stack(forward<R>(r))));
     }
 
   public:
@@ -2024,7 +2013,7 @@ namespace stew
     template <range R>
     constexpr fixed_stack &operator=(R &&r)
     {
-      return (*this = move(fixed_stack(forward<R>(r))));
+      return (*this = transfer(fixed_stack(forward<R>(r))));
     }
 
   public:
@@ -2115,7 +2104,7 @@ namespace stew
     template <range R>
     constexpr stack &operator=(R &&r)
     {
-      return (*this = move(stack(forward<R>(r))));
+      return (*this = transfer(stack(forward<R>(r))));
     }
 
   public:
@@ -2164,7 +2153,7 @@ namespace stew
         fixed_stack<T> tmp(_data.size());
         tmp.push(_data);
         _data = fixed_stack<T>(tmp.size() * 2 + 10);
-        _data.push(move(tmp));
+        _data.push(transfer(tmp));
       }
 
       _data.push(forward<U>(u));
@@ -2210,7 +2199,7 @@ namespace stew
     template <range R>
     constexpr static_vector &operator=(R &&r)
     {
-      return (*this = move(static_vector(forward<R>(r))));
+      return (*this = transfer(static_vector(forward<R>(r))));
     }
 
   public:
@@ -2296,10 +2285,18 @@ namespace stew
   private:
     size_t _size{0};
     size_t _max{0};
-    owning<T[]> _data;
+    T *_data;
 
   public:
-    constexpr ~fixed_vector() = default;
+    constexpr ~fixed_vector()
+    {
+      if (_data != nullptr)
+      {
+        delete[] _data;
+        _data = nullptr;
+      }
+    }
+
     constexpr fixed_vector() = default;
 
     constexpr fixed_vector(size_t max)
@@ -2308,14 +2305,17 @@ namespace stew
     {
     }
 
-    constexpr fixed_vector(fixed_vector &&o)
-        : _size{o._size},
-          _max{o._max},
-          _data{move(o._data)}
+    constexpr fixed_vector(const fixed_vector &o)
+        : fixed_vector(o._max)
     {
-      o._size = 0;
-      o._max = 0;
-      o._data = nullptr;
+      push_back(o);
+    }
+
+    constexpr fixed_vector(fixed_vector &&o)
+        : _size{transfer(o._size)},
+          _max{transfer(o._max)},
+          _data{transfer(o._data)}
+    {
     }
 
     template <range R>
@@ -2328,23 +2328,22 @@ namespace stew
 
     constexpr fixed_vector &operator=(fixed_vector o)
     {
-      transfer(_size, o._size, 0);
-      transfer(_max, o._max, 0);
-      transfer(_data, move(o._data), nullptr);
-
+      _size = transfer(o._size);
+      _max = transfer(o._max);
+      _data = transfer(o._data);
       return *this;
     }
 
     template <range R>
     constexpr fixed_vector &operator=(R &&r)
     {
-      return (*this = move(fixed_vector(forward<R>(r))));
+      return (*this = transfer(fixed_vector(forward<R>(r))));
     }
 
   public:
     constexpr auto begin()
     {
-      return _data.get();
+      return _data;
     }
 
     constexpr auto end()
@@ -2354,7 +2353,7 @@ namespace stew
 
     constexpr auto begin() const
     {
-      return _data.get();
+      return _data;
     }
 
     constexpr auto end() const
@@ -2444,7 +2443,7 @@ namespace stew
     template <range R>
     constexpr vector &operator=(R &&r)
     {
-      return (*this = move(vector(forward<R>(r))));
+      return (*this = transfer(vector(forward<R>(r))));
     }
 
   public:
@@ -2500,12 +2499,12 @@ namespace stew
     {
       if (_data.full())
       {
-        fixed_vector<T> tmp(move(_data));
+        fixed_vector<T> tmp = transfer(_data);
         _data = fixed_vector<T>(tmp.size() * 2 + 10);
 
-        for (T &i : move(tmp))
+        for (T &i : transfer(tmp))
         {
-          _data.push_back(move(i));
+          _data.push_back(transfer(i));
         }
       }
 
@@ -2543,15 +2542,15 @@ namespace stew
         template <convertible_to<T> U>
         node(U &&u) : _t(forward<U>(u)) {}
         node(const node &o) : _t(o._t), _next(o._next) {}
-        node(node &&o) : _t(move(o._t)), _next(o._next)
+        node(node &&o) : _t(transfer(o._t)), _next(transfer(o._next))
         {
           o._next = static_cast<size_t>(-1);
         }
 
         node &operator=(node o)
         {
-          _t = move(o._t);
-          _next = move(o._next);
+          _t = transfer(o._t);
+          _next = transfer(o._next);
           return *this;
         }
       };
@@ -2802,88 +2801,131 @@ namespace stew
 
   //----------------------------
   //
-  // Sequences
+  // Iterator utilities
   //
   //----------------------------
 
-  template <typename G>
-  class sequence
+  template <integral I = size_t>
+  class incremental_iterator
   {
   private:
-    size_t _first = 0;
-    size_t _last = 0;
-    G _gener;
+    I _current = 0;
+    I _step = 1;
 
   public:
-    class iterator
+    constexpr ~incremental_iterator() = default;
+    constexpr incremental_iterator() = delete;
+    constexpr incremental_iterator(I current, I step) : _current(current), _step(step) {}
+    constexpr incremental_iterator(const incremental_iterator &) = default;
+    constexpr incremental_iterator(incremental_iterator &&) = default;
+    constexpr incremental_iterator &operator=(const incremental_iterator &) = default;
+    constexpr incremental_iterator &operator=(incremental_iterator &&) = default;
+
+  public:
+    constexpr auto operator==(const incremental_iterator &o) const
     {
-    private:
-      size_t _current;
-      G _gener;
-
-    public:
-      constexpr ~iterator() = default;
-      constexpr iterator() = delete;
-      constexpr iterator(size_t current, G gener) : _current(current), _gener(gener) {}
-      constexpr iterator(const iterator &) = default;
-      constexpr iterator(iterator &&) = default;
-      constexpr iterator &operator=(const iterator &) = default;
-      constexpr iterator &operator=(iterator &&) = default;
-
-    public:
-      constexpr auto operator==(const iterator &o) const
-      {
-        return _current == o._current;
-      }
-
-      constexpr auto operator!=(const iterator &o) const
-      {
-        return !(*this == o);
-      }
-
-      constexpr iterator &operator++()
-      {
-        ++_current;
-        return *this;
-      }
-
-      constexpr iterator operator++(int)
-      {
-        iterator copy = *this;
-        ++this;
-        return copy;
-      }
-
-      constexpr auto operator*()
-      {
-        return _gener(_current);
-      }
-    };
-
-  public:
-    constexpr ~sequence() = default;
-    constexpr sequence() = default;
-    constexpr sequence(size_t first, size_t last, G gener)
-        : _first(first), _last(last), _gener(gener) {}
-    constexpr sequence(const sequence &) = default;
-    constexpr sequence(sequence &&) = default;
-    constexpr sequence &operator=(const sequence &) = default;
-    constexpr sequence &operator=(sequence &&) = default;
-
-  public:
-    constexpr auto begin() const
-    {
-      return iterator(_first, _gener);
+      return _current == o._current;
     }
 
-    constexpr auto end() const
+    constexpr auto operator!=(const incremental_iterator &o) const
     {
-      return iterator(_last, _gener);
+      return !(*this == o);
+    }
+
+    constexpr incremental_iterator &operator++()
+    {
+      _current += _step;
+      return *this;
+    }
+
+    constexpr incremental_iterator operator++(int)
+    {
+      auto copy = *this;
+      ++*this;
+      return copy;
+    }
+
+    constexpr auto operator*()
+    {
+      return _current;
+    }
+
+    constexpr auto operator-(const incremental_iterator &o) const
+    {
+      return _current - o._current;
     }
   };
 
+  template <integral I>
+  constexpr view<incremental_iterator<I>> upto(I from, I to, I step = 1)
+  {
+    assert(from <= to);
+    assert((to - from) % step == 0);
+    return view<incremental_iterator<I>>(
+        incremental_iterator<I>(from, step),
+        incremental_iterator<I>(to, step));
+  }
 
+  template <integral I = size_t>
+  class decremental_iterator
+  {
+  private:
+    I _current = 0;
+    I _step = 1;
 
+  public:
+    constexpr ~decremental_iterator() = default;
+    constexpr decremental_iterator() = delete;
+    constexpr decremental_iterator(I current, I step) : _current(current), _step(step) {}
+    constexpr decremental_iterator(const decremental_iterator &) = default;
+    constexpr decremental_iterator(decremental_iterator &&) = default;
+    constexpr decremental_iterator &operator=(const decremental_iterator &) = default;
+    constexpr decremental_iterator &operator=(decremental_iterator &&) = default;
+
+  public:
+    constexpr auto operator==(const decremental_iterator &o) const
+    {
+      return _current == o._current;
+    }
+
+    constexpr auto operator!=(const decremental_iterator &o) const
+    {
+      return !(*this == o);
+    }
+
+    constexpr decremental_iterator &operator++()
+    {
+      _current -= _step;
+      return *this;
+    }
+
+    constexpr decremental_iterator operator++(int)
+    {
+      auto copy = *this;
+      ++*this;
+      return copy;
+    }
+
+    constexpr auto operator*()
+    {
+      return _current;
+    }
+
+    constexpr auto operator-(const decremental_iterator &o) const
+    {
+      return _current - o._current;
+    }
+  };
+
+  template <integral I>
+  constexpr view<decremental_iterator<I>> downto(I from, I to, I step = 1)
+  {
+    assert(from >= to);
+    assert((from - to) % step == 0);
+    return view<decremental_iterator<I>>(
+        decremental_iterator<I>(from, step),
+        decremental_iterator<I>(to, step));
+  }
 
   //----------------------------
   //
@@ -3183,6 +3225,17 @@ namespace stew
     constexpr static void to(O &o, bool b)
     {
       formatter<basic_string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
+    }
+  };
+
+  template <pointer P>
+  class formatter<P>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(O &os, P p)
+    {
+      formatter<size_t>::to(os, (size_t)(void *)(p));
     }
   };
 
