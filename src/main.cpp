@@ -41,13 +41,51 @@ void test_fixed_vector()
   }
 }
 
+void test_copy_algorithm()
+{
+  fixed_vector<int> ints(upto(0, 10));
+  vector<int> ints2(10);
+
+  copy(ints, push_back_inserter(ints2));
+
+  for (int i : ints)
+  {
+    cout.printf("{}", i);
+  }
+
+  cout.printf("\n");
+
+  for (int i : ints2)
+  {
+    cout.printf("{}", i);
+  }
+
+  cout.printf("\n");
+
+  fixed_stack<int> ints3(upto(0, 10));
+  fixed_stack<int> ints4;
+  copy(ints3, push_inserter(ints4));
+
+  for (int i : ints3)
+  {
+    cout.printf("{}", i);
+  }
+
+  cout.printf("\n");
+
+  for (int i : ints4)
+  {
+    cout.printf("{}", i);
+  }
+
+  cout.printf("\n");
+}
+
 int main()
 {
   test_transfer();
   test_fixed_vector();
+  test_copy_algorithm();
 
-  string_view v = "coucou";
-  string s = v;
-  cout.printfln("{} {} {}", v, v.size(), s.size());
   return 0;
 }

@@ -1431,6 +1431,26 @@ namespace stew
       native_array_like<C> ||
       strict_range<C>;
 
+  template <typename C>
+  concept push_back_range =
+      range<C> &&
+      requires(C &c,
+               const decltype(*c.begin()) &i1,
+               decltype(*c.begin()) &&i2) {
+        c.push_back(i1);
+        c.push_back(i2);
+      };
+
+  template <typename C>
+  concept push_range =
+      range<C> &&
+      requires(C &c,
+               const decltype(*c.begin()) &i1,
+               decltype(*c.begin()) &&i2) {
+        c.push(i1);
+        c.push(i2);
+      };
+
   template <range R>
   struct range_traits
   {
@@ -1453,19 +1473,8 @@ namespace stew
   using range_const_reference = typename range_traits<R>::const_reference;
 
   template <typename T>
-  concept collection =
-      (range<T> &&
-       requires(T t) {
-         { t.size() } -> convertible_to<size_t>;
-         { t.empty() } -> convertible_to<bool>; });
-
-  template <typename T>
   concept random_accessible =
       requires(T t) { t[0]; };
-
-  template <typename T>
-  concept random_access_collection =
-      collection<T> && random_accessible<T>;
 
   template <strict_range R>
   constexpr auto begin(R &&r)
@@ -1781,6 +1790,238 @@ namespace stew
     return true;
   }
 
+  template <range R, typename I>
+  constexpr void copy(R &&r, I i)
+  {
+    auto b = begin(forward<R>(r));
+    auto e = end(forward<R>(r));
+
+    while (b != e)
+    {
+      *i = *b;
+      ++i;
+      ++b;
+    }
+  }
+
+  //----------------------------
+  //
+  // Iterator utilities
+  //
+  //----------------------------
+
+  template <integral I = size_t>
+  class incremental_iterator
+  {
+  private:
+    I _current = 0;
+    I _step = 1;
+
+  public:
+    constexpr ~incremental_iterator() = default;
+    constexpr incremental_iterator() = delete;
+    constexpr incremental_iterator(I current, I step) : _current(current), _step(step) {}
+    constexpr incremental_iterator(const incremental_iterator &) = default;
+    constexpr incremental_iterator(incremental_iterator &&) = default;
+    constexpr incremental_iterator &operator=(const incremental_iterator &) = default;
+    constexpr incremental_iterator &operator=(incremental_iterator &&) = default;
+
+  public:
+    constexpr auto operator==(const incremental_iterator &o) const
+    {
+      return _current == o._current;
+    }
+
+    constexpr auto operator!=(const incremental_iterator &o) const
+    {
+      return !(*this == o);
+    }
+
+    constexpr incremental_iterator &operator++()
+    {
+      _current += _step;
+      return *this;
+    }
+
+    constexpr incremental_iterator operator++(int)
+    {
+      auto copy = *this;
+      ++*this;
+      return copy;
+    }
+
+    constexpr auto operator*()
+    {
+      return _current;
+    }
+
+    constexpr auto operator-(const incremental_iterator &o) const
+    {
+      return _current - o._current;
+    }
+  };
+
+  template <integral I>
+  constexpr view<incremental_iterator<I>> upto(I from, I to, I step = 1)
+  {
+    assert(from <= to);
+    assert((to - from) % step == 0);
+    return view<incremental_iterator<I>>(
+        incremental_iterator<I>(from, step),
+        incremental_iterator<I>(to, step));
+  }
+
+  template <integral I = size_t>
+  class decremental_iterator
+  {
+  private:
+    I _current = 0;
+    I _step = 1;
+
+  public:
+    constexpr ~decremental_iterator() = default;
+    constexpr decremental_iterator() = delete;
+    constexpr decremental_iterator(I current, I step) : _current(current), _step(step) {}
+    constexpr decremental_iterator(const decremental_iterator &) = default;
+    constexpr decremental_iterator(decremental_iterator &&) = default;
+    constexpr decremental_iterator &operator=(const decremental_iterator &) = default;
+    constexpr decremental_iterator &operator=(decremental_iterator &&) = default;
+
+  public:
+    constexpr auto operator==(const decremental_iterator &o) const
+    {
+      return _current == o._current;
+    }
+
+    constexpr auto operator!=(const decremental_iterator &o) const
+    {
+      return !(*this == o);
+    }
+
+    constexpr decremental_iterator &operator++()
+    {
+      _current -= _step;
+      return *this;
+    }
+
+    constexpr decremental_iterator operator++(int)
+    {
+      auto copy = *this;
+      ++*this;
+      return copy;
+    }
+
+    constexpr auto operator*()
+    {
+      return _current;
+    }
+
+    constexpr auto operator-(const decremental_iterator &o) const
+    {
+      return _current - o._current;
+    }
+  };
+
+  template <integral I>
+  constexpr view<decremental_iterator<I>> downto(I from, I to, I step = 1)
+  {
+    assert(from >= to);
+    assert((from - to) % step == 0);
+    return view<decremental_iterator<I>>(
+        decremental_iterator<I>(from, step),
+        decremental_iterator<I>(to, step));
+  }
+
+  template <push_back_range R>
+  class push_back_iterator
+  {
+  private:
+    R *_range = nullptr;
+
+  public:
+    constexpr push_back_iterator(R &range) : _range(&range)
+    {
+    }
+
+    template <typename T>
+    push_back_iterator &operator=(T &&t)
+    {
+      _range->push_back(forward<T>(t));
+      return *this;
+    }
+
+    push_back_iterator &operator*()
+    {
+      return *this;
+    }
+
+    push_back_iterator &operator++()
+    {
+      return *this;
+    }
+
+    push_back_iterator &operator++(int)
+    {
+      return *this;
+    }
+
+    auto operator==(const push_back_iterator &o)
+    {
+      return true;
+    }
+  };
+
+  template <push_back_range C>
+  push_back_iterator<C> push_back_inserter(C &c)
+  {
+    return push_back_iterator<C>(c);
+  }
+
+  template <push_range R>
+  class push_iterator
+  {
+  private:
+    R *_range = nullptr;
+
+  public:
+    constexpr push_iterator(R &range) : _range(&range)
+    {
+    }
+
+    template <typename T>
+    push_iterator &operator=(T &&t)
+    {
+      _range->push(forward<T>(t));
+      return *this;
+    }
+
+    push_iterator &operator*()
+    {
+      return *this;
+    }
+
+    push_iterator &operator++()
+    {
+      return *this;
+    }
+
+    push_iterator &operator++(int)
+    {
+      return *this;
+    }
+
+    auto operator==(const push_iterator &o)
+    {
+      return true;
+    }
+  };
+
+  template <push_range C>
+  push_iterator<C> push_inserter(C &c)
+  {
+    return push_iterator<C>(c);
+  }
+
   // ---------------------------------
   //
   // Containers
@@ -1931,10 +2172,7 @@ namespace stew
     template <range R>
     constexpr void push(R &&r)
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push(forward<decltype(i)>(i));
-      }
+      copy(forward<R>(r), push_inserter(*this));
     }
 
     constexpr T &pop()
@@ -2026,10 +2264,7 @@ namespace stew
     template <range R>
     constexpr void push(R &&r)
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push(forward<decltype(i)>(i));
-      }
+      copy(forward<R>(r), push_inserter(*this));
     }
 
     constexpr T &pop()
@@ -2122,10 +2357,7 @@ namespace stew
     template <range R>
     constexpr void push(R &&r)
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push(forward<decltype(i)>(i));
-      }
+      copy(forward<R>(r), push_inserter(*this));
     }
 
     constexpr T &pop()
@@ -2223,10 +2455,7 @@ namespace stew
     template <range R>
     constexpr void push_back(R &&r)
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
+      copy(forward<R>(r), push_back_inserter(*this));
     }
   };
 
@@ -2353,10 +2582,7 @@ namespace stew
     template <range R>
     constexpr void push_back(R &&r)
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
+     copy(forward<R>(r), push_back_inserter(*this));
     }
 
     constexpr void pop_back()
@@ -2453,11 +2679,7 @@ namespace stew
       {
         fixed_vector<T> tmp = transfer(_data);
         _data = fixed_vector<T>(tmp.size() * 2 + 10);
-
-        for (T &i : transfer(tmp))
-        {
-          _data.push_back(transfer(i));
-        }
+        _data.push_back(transfer(tmp));
       }
 
       _data.push_back(forward<U>(u));
@@ -2466,10 +2688,7 @@ namespace stew
     template <range R>
     constexpr void push_back(R &&r)
     {
-      for (auto &&i : forward<R>(r))
-      {
-        push_back(forward<decltype(i)>(i));
-      }
+      copy(forward<R>(r), push_back_inserter(*this));
     }
 
     constexpr void pop_back()
@@ -2749,134 +2968,6 @@ namespace stew
       {
       }
     };
-  }
-
-  //----------------------------
-  //
-  // Iterator utilities
-  //
-  //----------------------------
-
-  template <integral I = size_t>
-  class incremental_iterator
-  {
-  private:
-    I _current = 0;
-    I _step = 1;
-
-  public:
-    constexpr ~incremental_iterator() = default;
-    constexpr incremental_iterator() = delete;
-    constexpr incremental_iterator(I current, I step) : _current(current), _step(step) {}
-    constexpr incremental_iterator(const incremental_iterator &) = default;
-    constexpr incremental_iterator(incremental_iterator &&) = default;
-    constexpr incremental_iterator &operator=(const incremental_iterator &) = default;
-    constexpr incremental_iterator &operator=(incremental_iterator &&) = default;
-
-  public:
-    constexpr auto operator==(const incremental_iterator &o) const
-    {
-      return _current == o._current;
-    }
-
-    constexpr auto operator!=(const incremental_iterator &o) const
-    {
-      return !(*this == o);
-    }
-
-    constexpr incremental_iterator &operator++()
-    {
-      _current += _step;
-      return *this;
-    }
-
-    constexpr incremental_iterator operator++(int)
-    {
-      auto copy = *this;
-      ++*this;
-      return copy;
-    }
-
-    constexpr auto operator*()
-    {
-      return _current;
-    }
-
-    constexpr auto operator-(const incremental_iterator &o) const
-    {
-      return _current - o._current;
-    }
-  };
-
-  template <integral I>
-  constexpr view<incremental_iterator<I>> upto(I from, I to, I step = 1)
-  {
-    assert(from <= to);
-    assert((to - from) % step == 0);
-    return view<incremental_iterator<I>>(
-        incremental_iterator<I>(from, step),
-        incremental_iterator<I>(to, step));
-  }
-
-  template <integral I = size_t>
-  class decremental_iterator
-  {
-  private:
-    I _current = 0;
-    I _step = 1;
-
-  public:
-    constexpr ~decremental_iterator() = default;
-    constexpr decremental_iterator() = delete;
-    constexpr decremental_iterator(I current, I step) : _current(current), _step(step) {}
-    constexpr decremental_iterator(const decremental_iterator &) = default;
-    constexpr decremental_iterator(decremental_iterator &&) = default;
-    constexpr decremental_iterator &operator=(const decremental_iterator &) = default;
-    constexpr decremental_iterator &operator=(decremental_iterator &&) = default;
-
-  public:
-    constexpr auto operator==(const decremental_iterator &o) const
-    {
-      return _current == o._current;
-    }
-
-    constexpr auto operator!=(const decremental_iterator &o) const
-    {
-      return !(*this == o);
-    }
-
-    constexpr decremental_iterator &operator++()
-    {
-      _current -= _step;
-      return *this;
-    }
-
-    constexpr decremental_iterator operator++(int)
-    {
-      auto copy = *this;
-      ++*this;
-      return copy;
-    }
-
-    constexpr auto operator*()
-    {
-      return _current;
-    }
-
-    constexpr auto operator-(const decremental_iterator &o) const
-    {
-      return _current - o._current;
-    }
-  };
-
-  template <integral I>
-  constexpr view<decremental_iterator<I>> downto(I from, I to, I step = 1)
-  {
-    assert(from >= to);
-    assert((from - to) % step == 0);
-    return view<decremental_iterator<I>>(
-        decremental_iterator<I>(from, step),
-        decremental_iterator<I>(to, step));
   }
 
   //----------------------------
