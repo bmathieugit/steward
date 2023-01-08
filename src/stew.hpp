@@ -2493,15 +2493,6 @@ namespace stew
     }
   };
 
-  struct basic_end_marker
-  {
-    template <typename T, size_t N>
-    static constexpr size_t length(T (&t)[N])
-    {
-      return N;
-    }
-  };
-
   template <typename T>
   class fixed_vector
   {
@@ -3009,15 +3000,6 @@ namespace stew
   // String classes
   //
   //----------------------------
-
-  struct string_end_marker
-  {
-    template <typename C, size_t N>
-    static constexpr size_t length(C (&s)[N])
-    {
-      return N - 1;
-    }
-  };
 
   template <character C>
   using basic_string_view = view<const C *>;
