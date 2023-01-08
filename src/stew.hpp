@@ -1822,17 +1822,7 @@ namespace stew
 
     while (b != e)
     { 
-      if constexpr (rvalue_reference_like<R&&>)
-      {
-        printf("move\n");
-        *i = transfer(*b);
-      }
-      else
-      {
-        printf("copy\n");
-        *i = *b;
-      }
-
+      *i = *b;
       ++i;
       ++b;
     }
