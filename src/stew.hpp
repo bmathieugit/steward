@@ -259,6 +259,9 @@ namespace stew
   concept convertible_to =
       requires { static_cast<rm_cvref<To>>(*((rm_cvref<From> *)nullptr)); };
 
+  template <typename T, typename U>
+  concept not_convertible_to = (!convertible_to<T, U>);
+
   template <typename T, typename R, typename... A>
   concept callable = requires(T t, A &&...a) { 
     {t(a...)} -> convertible_to<R>; };
@@ -355,9 +358,9 @@ namespace stew
   }
 
   template <typename T>
-  constexpr rm_ref<T> &&transfer(T &&t)
+  constexpr add_rref<rm_ref<T>> transfer(T &&t)
   {
-    return static_cast<rm_ref<T> &&>(t);
+    return static_cast<add_rref<rm_ref<T>>>(t);
   }
 
   template <native_number T>
@@ -1591,6 +1594,9 @@ namespace stew
   template <range R>
   view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
+  template <forward_iterator I>
+  view(I b, I e) -> view<I>;
+
   template <range R1, range R2>
   constexpr bool equals(const R1 &r1, const R2 &r2)
   {
@@ -1821,7 +1827,7 @@ namespace stew
     auto e = end(forward<R>(r));
 
     while (b != e)
-    { 
+    {
       *i = *b;
       ++i;
       ++b;
@@ -2045,6 +2051,118 @@ namespace stew
   {
     return push_iterator<C>(c);
   }
+
+  template <typename I>
+  class transfer_iterator
+  {
+  private:
+    I _iter;
+
+  public:
+    constexpr ~transfer_iterator() = default;
+    constexpr transfer_iterator() = default;
+    constexpr transfer_iterator(I iter)
+        : _iter(iter) {}
+    constexpr transfer_iterator(const transfer_iterator &) = default;
+    constexpr transfer_iterator(transfer_iterator &&) = default;
+    constexpr transfer_iterator &operator=(const transfer_iterator &) = default;
+    constexpr transfer_iterator &operator=(transfer_iterator &&) = default;
+
+  public:
+    constexpr auto operator*() -> decltype(auto)
+    {
+      return transfer(*_iter);
+    }
+
+    constexpr bool operator==(const transfer_iterator &o) const
+    {
+      return _iter == o._iter;
+    }
+
+    constexpr transfer_iterator &operator++()
+    {
+      ++_iter;
+      return *this;
+    }
+
+    constexpr transfer_iterator operator++(int)
+    {
+      auto copy = *this;
+      ++*this;
+      return copy;
+    }
+
+    constexpr auto operator-(const transfer_iterator &o) const
+    {
+      return _iter - o._iter;
+    }
+  };
+
+  template <typename I>
+  using transfer_view = view<transfer_iterator<I>>;
+
+  template <typename I>
+  transfer_view<I> make_transfer_view(I b, I e)
+  {
+    return transfer_view<I>(
+        transfer_iterator<I>(b),
+        transfer_iterator<I>(e));
+  }
+
+  template <typename I>
+  class reverse_iterator
+  {
+  protected:
+    I _iter;
+
+  public:
+    constexpr reverse_iterator() = default;
+
+    constexpr reverse_iterator(I iter) : _iter(iter) {}
+
+    constexpr bool operator==(const reverse_iterator &o) const
+    {
+      return _iter == o._iter;
+    }
+
+    constexpr decltype(auto) operator*() const
+    {
+      auto copy = _iter;
+      --copy;
+      return *copy;
+    }
+
+    constexpr reverse_iterator &operator++()
+    {
+      --_iter;
+      return *this;
+    }
+    constexpr reverse_iterator operator++(int)
+    {
+      auto tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    constexpr reverse_iterator &operator--()
+    {
+      ++_iter;
+      return *this;
+    }
+
+    constexpr reverse_iterator operator--(int)
+    {
+      auto tmp = *this;
+      --(*this);
+      return tmp;
+    }
+
+
+    constexpr auto operator-(const reverse_iterator&o) const
+    {
+      return _iter - o._iter;
+    }
+  };
 
   // ---------------------------------
   //
@@ -2596,6 +2714,7 @@ namespace stew
 
     template <range R>
     constexpr void push_back(R &&r)
+      requires not_convertible_to<R, T>
     {
       copy(forward<R>(r), push_back_inserter(*this));
     }

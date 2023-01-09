@@ -66,7 +66,6 @@ void test_copy_algorithm()
   fixed_stack<int> ints4;
   copy(transfer(ints3), push_inserter(ints4));
 
-
   for (int i : ints3)
   {
     cout.printf("{}", i);
@@ -82,11 +81,83 @@ void test_copy_algorithm()
   cout.printf("\n");
 }
 
+struct boo
+{
+  int i;
+  ~boo() = default;
+  boo()
+  {
+  }
+
+  boo(int _i) : i(_i)
+  {
+  }
+
+  boo(const boo &o)
+  {
+    i = o.i;
+  }
+
+  boo(boo &&o)
+  {
+    i = transfer(o.i);
+  }
+
+  boo &operator=(const boo &o)
+  {
+    i = o.i;
+    return *this;
+  }
+
+  boo &operator=(boo &&o)
+  {
+    i = transfer(o.i);
+    return *this;
+  }
+};
+
+void test_move_view()
+{
+  fixed_vector<boo> ss(10);
+  ss.push_back(boo(1));
+  ss.push_back(boo(2));
+
+  cout.printfln("ss size {}", ss.size());
+
+  decltype(ss) ss2(ss.size());
+
+  copy(make_transfer_view(ss.begin(), ss.end()), push_back_inserter(ss2));
+
+  cout.printfln("ss size {}", ss.size());
+  cout.printfln("ss2 size {}", ss2.size());
+}
+
+void test_reverse_iterator()
+{
+  fixed_vector<int> is(upto(0, 10));
+
+  cout.printfln("uptosize {}", is.size());
+
+  for (int i : is)
+  {
+    cout.printfln(" is {}", i);
+  }
+
+  for (int i : view<reverse_iterator<decltype(is.begin())>>(
+           reverse_iterator<decltype(is.begin())>(is.begin()),
+           reverse_iterator<decltype(is.begin())>(is.end())))
+  {
+    cout.printfln(" reverse {}", i);
+  }
+}
+
 int main()
 {
   test_transfer();
   test_fixed_vector();
   test_copy_algorithm();
+  test_move_view();
+  test_reverse_iterator();
 
   return 0;
 }
