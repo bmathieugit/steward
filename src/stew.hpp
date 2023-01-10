@@ -1839,6 +1839,7 @@ namespace stew
   // Iterator utilities
   //
   //----------------------------
+  // FIXME: Improve constraints in iterator templates
 
   template <integral I = size_t>
   class incremental_iterator
@@ -2059,14 +2060,8 @@ namespace stew
     I _iter;
 
   public:
-    constexpr ~transfer_iterator() = default;
-    constexpr transfer_iterator() = default;
     constexpr transfer_iterator(I iter)
         : _iter(iter) {}
-    constexpr transfer_iterator(const transfer_iterator &) = default;
-    constexpr transfer_iterator(transfer_iterator &&) = default;
-    constexpr transfer_iterator &operator=(const transfer_iterator &) = default;
-    constexpr transfer_iterator &operator=(transfer_iterator &&) = default;
 
   public:
     constexpr auto operator*() -> decltype(auto)
@@ -2099,12 +2094,9 @@ namespace stew
   };
 
   template <typename I>
-  using transfer_view = view<transfer_iterator<I>>;
-
-  template <typename I>
-  transfer_view<I> make_transfer_view(I b, I e)
+  view<transfer_iterator<I>> transfer_view(I b, I e)
   {
-    return transfer_view<I>(
+    return view<transfer_iterator<I>>(
         transfer_iterator<I>(b),
         transfer_iterator<I>(e));
   }
@@ -2116,8 +2108,6 @@ namespace stew
     I _iter;
 
   public:
-    constexpr reverse_iterator() = default;
-
     constexpr reverse_iterator(I iter) : _iter(iter) {}
 
     constexpr bool operator==(const reverse_iterator &o) const
@@ -2157,12 +2147,132 @@ namespace stew
       return tmp;
     }
 
-
-    constexpr auto operator-(const reverse_iterator&o) const
+    constexpr auto operator-(const reverse_iterator &o) const
     {
       return _iter - o._iter;
     }
   };
+
+  template <typename I>
+  view<reverse_iterator<I>> reverse_view(I b, I e)
+  {
+    return view<reverse_iterator<I>>(
+        reverse_iterator<I>(e),
+        reverse_iterator<I>(b));
+  }
+
+  template <typename I, typename M>
+  class map_iterator
+  {
+  private:
+    I _iter;
+    M _map;
+
+  public:
+    constexpr map_iterator(I iter, M map)
+        : _iter(transfer(iter)),
+          _map(transfer(map))
+    {
+    }
+
+  public:
+    constexpr map_iterator &operator++()
+    {
+      ++_iter;
+      return *this;
+    }
+
+    constexpr map_iterator operator++(int)
+    {
+      auto copy = *this;
+      ++(*this);
+      return copy;
+    }
+
+    constexpr bool operator==(const map_iterator &o) const
+    {
+      return _iter == o._iter;
+    }
+
+    constexpr auto operator*() const
+    {
+      return _map(*_iter);
+    }
+
+    constexpr auto operator-(const map_iterator &o) const
+    {
+      return _iter - o._iter;
+    }
+  };
+
+  template <typename I, typename M>
+  view<map_iterator<I, M>> map_view(I b, I e, M map)
+  {
+    return view<map_iterator<I, M>>(
+        map_iterator<I, M>(b, map),
+        map_iterator<I, M>(e, map));
+  }
+
+  template <typename I, typename F>
+  class filter_iterator
+  {
+  private:
+    I _iter;
+    I _end;
+    F _filter;
+
+  public:
+    constexpr filter_iterator(I iter, I end, F filter)
+        : _iter(iter), _end(end), _filter(filter) {}
+
+  public:
+    constexpr filter_iterator &operator++()
+    {
+      ++_iter;
+
+      while (_iter != _end && !_filter(*_iter))
+      {
+        ++_iter;
+      }
+
+      return *this;
+    }
+
+    constexpr filter_iterator operator++(int)
+    {
+      auto copy = *this;
+      ++(*this);
+      return copy;
+    }
+
+    constexpr bool operator==(const filter_iterator &o) const
+    {
+      return _iter == o._iter;
+    }
+
+    constexpr auto operator*()
+    {
+      while (_iter != _end && !_filter(*_iter))
+      {
+        ++_iter;
+      }
+
+      return *_iter;
+    }
+
+    constexpr auto operator-(const filter_iterator &o) const
+    {
+      return _iter - o._iter;
+    }
+  };
+
+  template <typename I, typename F>
+  view<filter_iterator<I, F>> filter_view(I b, I e, F filter)
+  {
+    return view<filter_iterator<I, F>>(
+        filter_iterator<I, F>(b, e, filter),
+        filter_iterator<I, F>(e, e, filter));
+  }
 
   // ---------------------------------
   //

@@ -126,11 +126,10 @@ void test_move_view()
 
   decltype(ss) ss2(ss.size());
 
-  copy(make_transfer_view(ss.begin(), ss.end()), push_back_inserter(ss2));
+  copy(transfer_view(ss.begin(), ss.end()), push_back_inserter(ss2));
 
   cout.printfln("ss size {}", ss.size());
   cout.printfln("ss2 size {}", ss2.size());
-
 }
 
 void test_reverse_iterator()
@@ -152,6 +151,26 @@ void test_reverse_iterator()
   }
 }
 
+void test_map_iterator()
+{
+  fixed_vector<int> is(upto(0, 10));
+  for (int i : map_view(is.begin(), is.end(), [](int i)
+                        { return i + 2; }))
+  {
+    cout.printfln("map to : {}", i);
+  }
+}
+
+void test_filter_iterator()
+{
+  fixed_vector<int> is(upto(0, 10));
+  for (int i : filter_view(is.begin(), is.end(), [](const int &i)
+                           { return i % 2 == 0; }))
+  {
+    cout.printfln(" odd {}", i);
+  }
+}
+
 int main()
 {
   test_transfer();
@@ -159,6 +178,8 @@ int main()
   test_copy_algorithm();
   test_move_view();
   test_reverse_iterator();
+  test_map_iterator();
+  test_filter_iterator();
 
   return 0;
 }
