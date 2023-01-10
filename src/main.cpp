@@ -126,7 +126,7 @@ void test_move_view()
 
   decltype(ss) ss2(ss.size());
 
-  copy(transfer_view(ss.begin(), ss.end()), push_back_inserter(ss2));
+  copy(transfer_view(ss), push_back_inserter(ss2));
 
   cout.printfln("ss size {}", ss.size());
   cout.printfln("ss2 size {}", ss2.size());
@@ -143,9 +143,7 @@ void test_reverse_iterator()
     cout.printfln(" is {}", i);
   }
 
-  for (int i : view<reverse_iterator<decltype(is.begin())>>(
-           reverse_iterator<decltype(is.begin())>(is.end()),
-           reverse_iterator<decltype(is.begin())>(is.begin())))
+  for (int i : reverse_view(is))
   {
     cout.printfln(" reverse {}", i);
   }
@@ -154,7 +152,8 @@ void test_reverse_iterator()
 void test_map_iterator()
 {
   fixed_vector<int> is(upto(0, 10));
-  for (int i : map_view(is.begin(), is.end(), [](int i)
+
+  for (int i : map_view(is, [](int i)
                         { return i + 2; }))
   {
     cout.printfln("map to : {}", i);
@@ -164,7 +163,8 @@ void test_map_iterator()
 void test_filter_iterator()
 {
   fixed_vector<int> is(upto(0, 10));
-  for (int i : filter_view(is.begin(), is.end(), [](const int &i)
+
+  for (int i : filter_view(is, [](const int &i)
                            { return i % 2 == 0; }))
   {
     cout.printfln(" odd {}", i);

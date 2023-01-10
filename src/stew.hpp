@@ -3,6 +3,10 @@
 
 #include <clibs.hpp>
 
+#include <iterator>
+
+template <typename T>
+concept foo = std::input_iterator<T>;
 namespace stew
 {
   using nullptr_t = decltype(nullptr);
@@ -1426,26 +1430,53 @@ namespace stew
   //---------------------------
 
   template <typename T>
+  using with_ref = T &;
+
+  template <typename T>
+  concept can_reference =
+      requires { typename with_ref<T>; };
+
+  template <typename T>
+  concept forward_incrementable_iterator =
+      requires(T t) { {++t} -> same_as<T&>; } &&
+      requires(T t) { {t++} -> same_as<T>; };
+
+  template <typename T>
+  concept backward_incrementable_iterator =
+      requires(T t) { {--t} -> same_as<T&>; } &&
+      requires(T t) { {t--} -> same_as<T>; };
+
+  template <typename T>
+  concept input_or_output_iterator =
+      forward_incrementable_iterator<T> &&
+      requires(T t) { {*t} -> can_reference; };
+
+  template <typename T>
+  concept equaliy_comparable_iterator =
+      requires(T i) { {i != i} -> same_as<bool>; } &&
+      requires(T i) { {i == i} -> same_as<bool>; } &&
+      requires(T i) { {i - i}; };
+
+  template <typename T>
   concept forward_iterator =
-      requires(T i) {
-        ++i;
-        i++;
-        i != i;
-        i == i;
-        *i;
-        i - i;
-      };
+      input_or_output_iterator<T> &&
+      equaliy_comparable_iterator<T>;
 
   template <typename T>
   concept backward_iterator =
-      requires(T i) {
-        --i;
-        i--;
-        i != i;
-        i == i;
-        *i;
-        i - i;
-      };
+      input_or_output_iterator<T> &&
+      backward_incrementable_iterator<T> &&
+      equaliy_comparable_iterator<T>;
+
+  template <typename T>
+  concept bidirectional_iterator =
+      forward_iterator<T> &&
+      backward_iterator<T>;
+
+  template <typename T>
+  concept random_iterator =
+      bidirectional_iterator<T> &&
+      requires(T t) { { t[0] }; };
 
   template <typename C>
   concept strict_range =
@@ -2053,7 +2084,7 @@ namespace stew
     return push_iterator<C>(c);
   }
 
-  template <typename I>
+  template <forward_iterator I>
   class transfer_iterator
   {
   private:
@@ -2093,7 +2124,7 @@ namespace stew
     }
   };
 
-  template <typename I>
+  template <forward_iterator I>
   view<transfer_iterator<I>> transfer_view(I b, I e)
   {
     return view<transfer_iterator<I>>(
@@ -2101,7 +2132,15 @@ namespace stew
         transfer_iterator<I>(e));
   }
 
-  template <typename I>
+  template <range R>
+  auto transfer_view(R &&r)
+  {
+    return transfer_view(
+        forward<R>(r).begin(),
+        forward<R>(r).end());
+  }
+
+  template <bidirectional_iterator I>
   class reverse_iterator
   {
   protected:
@@ -2153,7 +2192,7 @@ namespace stew
     }
   };
 
-  template <typename I>
+  template <bidirectional_iterator I>
   view<reverse_iterator<I>> reverse_view(I b, I e)
   {
     return view<reverse_iterator<I>>(
@@ -2161,7 +2200,15 @@ namespace stew
         reverse_iterator<I>(b));
   }
 
-  template <typename I, typename M>
+  template <range R>
+  auto reverse_view(R &&r)
+  {
+    return reverse_view(
+        forward<R>(r).begin(),
+        forward<R>(r).end());
+  }
+
+  template <forward_iterator I, typename M>
   class map_iterator
   {
   private:
@@ -2205,7 +2252,7 @@ namespace stew
     }
   };
 
-  template <typename I, typename M>
+  template <forward_iterator I, typename M>
   view<map_iterator<I, M>> map_view(I b, I e, M map)
   {
     return view<map_iterator<I, M>>(
@@ -2213,7 +2260,15 @@ namespace stew
         map_iterator<I, M>(e, map));
   }
 
-  template <typename I, typename F>
+  template <range R, typename M>
+  auto map_view(R &&r, M map)
+  {
+    return map_view(
+        forward<R>(r).begin(),
+        forward<R>(r).end(), map);
+  }
+
+  template <forward_iterator I, typename F>
   class filter_iterator
   {
   private:
@@ -2266,12 +2321,20 @@ namespace stew
     }
   };
 
-  template <typename I, typename F>
+  template <forward_iterator I, typename F>
   view<filter_iterator<I, F>> filter_view(I b, I e, F filter)
   {
     return view<filter_iterator<I, F>>(
         filter_iterator<I, F>(b, e, filter),
         filter_iterator<I, F>(e, e, filter));
+  }
+
+  template <range R, typename F>
+  auto filter_view(R &&r, F filter)
+  {
+    return filter_view(
+        forward<R>(r).begin(),
+        forward<R>(r).end(), filter);
   }
 
   // ---------------------------------
