@@ -130,6 +130,7 @@ void test_move_view()
 
   cout.printfln("ss size {}", ss.size());
   cout.printfln("ss2 size {}", ss2.size());
+
 }
 
 void test_reverse_iterator()
@@ -144,8 +145,8 @@ void test_reverse_iterator()
   }
 
   for (int i : view<reverse_iterator<decltype(is.begin())>>(
-           reverse_iterator<decltype(is.begin())>(is.begin()),
-           reverse_iterator<decltype(is.begin())>(is.end())))
+           reverse_iterator<decltype(is.begin())>(is.end()),
+           reverse_iterator<decltype(is.begin())>(is.begin())))
   {
     cout.printfln(" reverse {}", i);
   }
