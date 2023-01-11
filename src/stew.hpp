@@ -3,10 +3,6 @@
 
 #include <clibs.hpp>
 
-#include <iterator>
-
-template <typename T>
-concept foo = std::input_iterator<T>;
 namespace stew
 {
   using nullptr_t = decltype(nullptr);
@@ -2277,12 +2273,12 @@ namespace stew
       return _data + N;
     }
 
-    constexpr auto begin() const
+    constexpr const auto begin() const
     {
       return _data;
     }
 
-    constexpr auto end() const
+    constexpr const auto end() const
     {
       return _data + N;
     }
@@ -2377,12 +2373,12 @@ namespace stew
       return _data.end();
     }
 
-    constexpr auto begin() const
+    constexpr const auto begin() const
     {
       return _data.begin() + _idx;
     }
 
-    constexpr auto end() const
+    constexpr const auto end() const
     {
       return _data.end();
     }
@@ -2469,12 +2465,12 @@ namespace stew
       return _data.get() + _max;
     }
 
-    constexpr auto begin() const
+    constexpr const auto begin() const
     {
       return _data.get() + _idx;
     }
 
-    constexpr auto end() const
+    constexpr const auto end() const
     {
       return _data.get() + _max;
     }
@@ -2557,12 +2553,12 @@ namespace stew
       return _data.end();
     }
 
-    constexpr auto begin() const
+    constexpr const auto begin() const
     {
       return _data.begin();
     }
 
-    constexpr auto end() const
+    constexpr const auto end() const
     {
       return _data.end();
     }
@@ -2649,12 +2645,12 @@ namespace stew
       return _data.begin() + _size;
     }
 
-    constexpr auto begin() const
+    constexpr const auto begin() const
     {
       return _data.begin();
     }
 
-    constexpr auto end() const
+    constexpr const auto end() const
     {
       return _data.begin() + _size;
     }
@@ -2751,12 +2747,12 @@ namespace stew
       return begin() + _size;
     }
 
-    constexpr auto begin() const
+    constexpr const auto begin() const
     {
       return _data.get();
     }
 
-    constexpr auto end() const
+    constexpr const auto end() const
     {
       return begin() + _size;
     }
@@ -2855,12 +2851,12 @@ namespace stew
       return _data.end();
     }
 
-    constexpr auto begin() const
+    constexpr const auto begin() const
     {
       return _data.begin();
     }
 
-    constexpr auto end() const
+    constexpr const auto end() const
     {
       return _data.end();
     }
@@ -3219,8 +3215,8 @@ namespace stew
   template <character C>
   using basic_fixed_string = fixed_vector<C>;
 
-  using fstring = basic_fixed_string<char>;
-  using wfstring = basic_fixed_string<wchar_t>;
+  using fixed_string = basic_fixed_string<char>;
+  using fixed_wstring = basic_fixed_string<wchar_t>;
 
   template <character C>
   using basic_string = vector<C>;
@@ -3979,11 +3975,7 @@ namespace stew
   public:
     ~basic_fostream()
     {
-      if (_out != nullptr)
-      {
-        fclose(_out);
-        _out = nullptr;
-      }
+      close();
     }
 
     basic_fostream() = default;
@@ -4021,8 +4013,11 @@ namespace stew
 
     void close()
     {
-      fclose(_out);
-      _out = nullptr;
+      if (_out != nullptr)
+      {
+        fclose(_out);
+        _out = nullptr;
+      }
     }
 
   public:
@@ -4068,11 +4063,7 @@ namespace stew
   public:
     ~basic_fistream()
     {
-      if (_in != nullptr)
-      {
-        fclose(_in);
-        _in = nullptr;
-      }
+      close();
     }
 
     basic_fistream() = default;
@@ -4093,6 +4084,15 @@ namespace stew
     basic_fistream &operator=(basic_fistream &) = default;
 
   public:
+    void close()
+    {
+      if (_in != nullptr)
+      {
+        fclose(_in);
+        _in = nullptr;
+      }
+    }
+
     size_t read(C &c)
     {
       if constexpr (same_as<C, char>)
@@ -4100,11 +4100,9 @@ namespace stew
         return (c = fgetc(_in)) != EOF ? 1 : 0;
       }
       else
-      {
-        return (c = fgetwc(_in)) != EOF ? 1 : 0;
-      }
+        return 0;
     }
-    
+
     template <ostream O>
     size_t read(O &o, C eol = '\n')
     {
