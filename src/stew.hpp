@@ -275,11 +275,7 @@ namespace stew
 
   template <typename T, typename O>
   concept equal_comparable =
-      requires(const T &t, const O &o) {
-        {
-          t == o
-          } -> convertible_to<bool>;
-      };
+      requires(const T &t, const O &o) { {t == o} -> convertible_to<bool>; };
 
   template <typename T>
   concept character = same_one_of<T, char, wchar_t>;
@@ -1452,21 +1448,26 @@ namespace stew
       requires(T t) { {*t} -> can_reference; };
 
   template <typename T>
+  concept differentiable_iterator =
+      requires(T i) { {i - i}; };
+
+  template <typename T>
   concept equaliy_comparable_iterator =
       requires(T i) { {i != i} -> same_as<bool>; } &&
-      requires(T i) { {i == i} -> same_as<bool>; } &&
-      requires(T i) { {i - i}; };
+      requires(T i) { {i == i} -> same_as<bool>; };
 
   template <typename T>
   concept forward_iterator =
       input_or_output_iterator<T> &&
-      equaliy_comparable_iterator<T>;
+      equaliy_comparable_iterator<T> &&
+      differentiable_iterator<T>;
 
   template <typename T>
   concept backward_iterator =
       input_or_output_iterator<T> &&
       backward_incrementable_iterator<T> &&
-      equaliy_comparable_iterator<T>;
+      equaliy_comparable_iterator<T> &&
+      differentiable_iterator<T>;
 
   template <typename T>
   concept bidirectional_iterator =
@@ -1558,7 +1559,7 @@ namespace stew
     return t + N;
   }
 
-  template <forward_iterator I>
+  template <typename I>
   class view
   {
   private:
@@ -1606,11 +1607,13 @@ namespace stew
 
   public:
     constexpr auto size() const
+      requires differentiable_iterator<I>
     {
       return _begin == nullptr ? 0 : _end - _begin;
     }
 
     constexpr auto empty() const
+      requires differentiable_iterator<I>
     {
       return size() == 0;
     }
@@ -2101,8 +2104,8 @@ namespace stew
   auto transfer_view(R &&r)
   {
     return transfer_view(
-        forward<R>(r).begin(),
-        forward<R>(r).end());
+        begin(forward<R>(r)),
+        end(forward<R>(r)));
   }
 
   template <bidirectional_iterator I>
@@ -2169,8 +2172,8 @@ namespace stew
   auto reverse_view(R &&r)
   {
     return reverse_view(
-        forward<R>(r).begin(),
-        forward<R>(r).end());
+        begin(forward<R>(r)),
+        end(forward<R>(r)));
   }
 
   template <forward_iterator I, typename M>
@@ -2229,11 +2232,11 @@ namespace stew
   auto map_view(R &&r, M map)
   {
     return map_view(
-        forward<R>(r).begin(),
-        forward<R>(r).end(), map);
+        begin(forward<R>(r)),
+        end(forward<R>(r)), map);
   }
 
-  template <forward_iterator I, typename F>
+  template <forward_iterator I, predicate<decltype(*I{})> F>
   class filter_iterator
   {
   private:
@@ -2298,8 +2301,8 @@ namespace stew
   auto filter_view(R &&r, F filter)
   {
     return filter_view(
-        forward<R>(r).begin(),
-        forward<R>(r).end(), filter);
+        begin(forward<R>(r)),
+        end(forward<R>(r)), filter);
   }
 
   // ---------------------------------
