@@ -82,7 +82,7 @@ namespace stew::ui
 
         if (!_value.empty())
         {
-          _value.pop_back();
+          _value.pop();
         }
 
         break;

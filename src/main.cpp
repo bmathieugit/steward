@@ -46,7 +46,7 @@ void test_copy_algorithm()
   fixed_vector<int> ints(upto(0, 10));
   fixed_vector<int> ints2(10);
 
-  copy(ints, push_back_inserter(ints2));
+  copy(ints, push_inserter(ints2));
 
   for (int i : ints)
   {
@@ -119,14 +119,14 @@ struct boo
 void test_move_view()
 {
   fixed_vector<boo> ss(10);
-  ss.push_back(boo(1));
-  ss.push_back(boo(2));
+  ss.push(boo(1));
+  ss.push(boo(2));
 
   cout.printfln("ss size {}", ss.size());
 
   decltype(ss) ss2(ss.size());
 
-  copy(transfer_view(ss), push_back_inserter(ss2));
+  copy(transfer_view(ss), push_inserter(ss2));
 
   cout.printfln("ss size {}", ss.size());
   cout.printfln("ss2 size {}", ss2.size());
@@ -181,10 +181,13 @@ int main()
   test_map_iterator();
   test_filter_iterator();
 
-  for (int i : downto(10, 0))
-  {
-    cout.println(i);
-  }
+  fstring buff(100);
+  cin.read(buff, '\n');
+  cout.println(buff);
+
+  fstring buff2(100);
+  cin.read(buff2, '\n');
+  cout.println(buff2);
 
   return 0;
 }

@@ -1491,16 +1491,6 @@ namespace stew
       strict_range<C>;
 
   template <typename C>
-  concept push_back_range =
-      range<C> &&
-      requires(C &c,
-               const decltype(*c.begin()) &i1,
-               decltype(*c.begin()) &&i2) {
-        c.push_back(i1);
-        c.push_back(i2);
-      };
-
-  template <typename C>
   concept push_range =
       range<C> &&
       requires(C &c,
@@ -1962,51 +1952,6 @@ namespace stew
         generator_iterator<incrementer<I>>(incrementer<I>(to, -step), to));
   }
 
-  template <push_back_range R>
-  class push_back_iterator
-  {
-  private:
-    R *_range = nullptr;
-
-  public:
-    constexpr push_back_iterator(R &range) : _range(&range)
-    {
-    }
-
-    template <typename T>
-    push_back_iterator &operator=(T &&t)
-    {
-      _range->push_back(forward<T>(t));
-      return *this;
-    }
-
-    push_back_iterator &operator*()
-    {
-      return *this;
-    }
-
-    push_back_iterator &operator++()
-    {
-      return *this;
-    }
-
-    push_back_iterator &operator++(int)
-    {
-      return *this;
-    }
-
-    auto operator==(const push_back_iterator &o)
-    {
-      return true;
-    }
-  };
-
-  template <push_back_range C>
-  push_back_iterator<C> push_back_inserter(C &c)
-  {
-    return push_back_iterator<C>(c);
-  }
-
   template <push_range R>
   class push_iterator
   {
@@ -2391,7 +2336,7 @@ namespace stew
     template <range R>
     constexpr static_stack(R &&r)
     {
-      push_back(forward<R>(r));
+      push(forward<R>(r));
     }
 
     constexpr static_stack(const static_stack &) = default;
@@ -2570,7 +2515,7 @@ namespace stew
     constexpr stack(R &&r)
         : stack(stew::end(r) - stew::begin(r))
     {
-      push_back(forward<R>(r));
+      push(forward<R>(r));
     }
 
     constexpr stack(const stack &) = default;
@@ -2663,7 +2608,7 @@ namespace stew
     template <range R>
     constexpr static_vector(R &&r)
     {
-      push_back(forward<R>(r));
+      push(forward<R>(r));
     }
 
     constexpr static_vector(const static_vector &) = default;
@@ -2726,7 +2671,7 @@ namespace stew
 
   public:
     template <convertible_to<T> U>
-    constexpr void push_back(U &&u)
+    constexpr void push(U &&u)
     {
       if (!full())
       {
@@ -2736,9 +2681,9 @@ namespace stew
     }
 
     template <range R>
-    constexpr void push_back(R &&r)
+    constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_back_inserter(*this));
+      copy(forward<R>(r), push_inserter(*this));
     }
   };
 
@@ -2763,7 +2708,7 @@ namespace stew
     constexpr fixed_vector(const fixed_vector &o)
         : fixed_vector(o._max)
     {
-      push_back(o);
+      push(o);
     }
 
     constexpr fixed_vector(fixed_vector &&o)
@@ -2778,7 +2723,7 @@ namespace stew
         : fixed_vector(stew::end(forward<R>(r)) -
                        stew::begin(forward<R>(r)))
     {
-      push_back(forward<R>(r));
+      push(forward<R>(r));
     }
 
     constexpr fixed_vector &operator=(fixed_vector o)
@@ -2844,7 +2789,7 @@ namespace stew
 
   public:
     template <convertible_to<T> U>
-    constexpr void push_back(U &&u)
+    constexpr void push(U &&u)
     {
       if (!full())
       {
@@ -2854,13 +2799,13 @@ namespace stew
     }
 
     template <range R>
-    constexpr void push_back(R &&r)
+    constexpr void push(R &&r)
       requires not_convertible_to<R, T>
     {
-      copy(forward<R>(r), push_back_inserter(*this));
+      copy(forward<R>(r), push_inserter(*this));
     }
 
-    constexpr void pop_back()
+    constexpr void pop()
     {
       if (_size != 0)
       {
@@ -2885,7 +2830,7 @@ namespace stew
         : vector(stew::end(forward<R>(r)) -
                  stew::begin(forward<R>(r)))
     {
-      push_back(forward<R>(r));
+      push(forward<R>(r));
     }
 
     constexpr vector(const vector &) = default;
@@ -2948,27 +2893,27 @@ namespace stew
 
   public:
     template <convertible_to<T> U>
-    constexpr void push_back(U &&u)
+    constexpr void push(U &&u)
     {
       if (_data.full())
       {
         fixed_vector<T> tmp = transfer(_data);
         _data = fixed_vector<T>(tmp.size() * 2 + 10);
-        _data.push_back(transfer(tmp));
+        _data.push(transfer(tmp));
       }
 
-      _data.push_back(forward<U>(u));
+      _data.push(forward<U>(u));
     }
 
     template <range R>
-    constexpr void push_back(R &&r)
+    constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_back_inserter(*this));
+      copy(forward<R>(r), push_inserter(*this));
     }
 
-    constexpr void pop_back()
+    constexpr void pop()
     {
-      _data.pop_back();
+      _data.pop();
     }
   };
 
@@ -3091,9 +3036,9 @@ namespace stew
 
     public:
       template <convertible_to<T> U>
-      void push_back(U &&u)
+      void push(U &&u)
       {
-        _nodes.push_back(node(forward<U>(u)));
+        _nodes.push(node(forward<U>(u)));
 
         if (_last == static_cast<size_t>(-1))
         {
@@ -3108,18 +3053,18 @@ namespace stew
       }
 
       template <range R>
-      void push_back(R &&r)
+      void push(R &&r)
       {
         for (auto &&i : forward<R>(r))
         {
-          push_back(forward<decltype(i)>(i));
+          push(forward<decltype(i)>(i));
         }
       }
 
       template <convertible_to<T> U>
       void push_front(U &&u)
       {
-        _nodes.push_back(node(forward<U>(u)));
+        _nodes.push(node(forward<U>(u)));
 
         if (_first == static_cast<size_t>(-1))
         {
@@ -3234,7 +3179,7 @@ namespace stew
       {
         if (find(_data, forward<U>(u)) == _data.end())
         {
-          _data.push_back(forward<U>(u));
+          _data.push(forward<U>(u));
         }
       }
 
@@ -3302,15 +3247,15 @@ namespace stew
   template <typename O>
   concept char_ostream =
       requires(O &o, char c, string_view s) {
-        o.push_back(c);
-        o.push_back(s);
+        o.push(c);
+        o.push(s);
       };
 
   template <typename O>
   concept wchar_ostream =
       requires(O &o, wchar_t c, wstring_view s) {
-        o.push_back(c);
-        o.push_back(s);
+        o.push(c);
+        o.push(s);
       };
 
   template <character C, size_t N>
@@ -3419,7 +3364,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &os, C o)
     {
-      os.push_back(o);
+      os.push(o);
     }
   };
 
@@ -3430,7 +3375,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &os, basic_string_view<C> o)
     {
-      os.push_back(o);
+      os.push(o);
     }
   };
 
@@ -4021,7 +3966,7 @@ namespace stew
 
   //----------------------
   //
-  // Ostream
+  // I/O stream
   //
   //----------------------
 
@@ -4059,12 +4004,12 @@ namespace stew
     basic_fostream &operator=(basic_fostream &) = default;
 
   public:
-    void push_back(C c)
+    void push(C c)
     {
       putc(c, _out);
     }
 
-    void push_back(basic_string_view<C> s)
+    void push(basic_string_view<C> s)
     {
       fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
     }
@@ -4091,7 +4036,7 @@ namespace stew
     void printfln(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
       printf(fmt, t...);
-      push_back('\n');
+      push('\n');
     }
 
     template <typename... T>
@@ -4104,7 +4049,7 @@ namespace stew
     void println(const T &...t)
     {
       (formatter<rm_cvref<T>>::to(*this, t), ...);
-      push_back('\n');
+      push('\n');
     }
   };
 
@@ -4114,6 +4059,92 @@ namespace stew
   fostream cout(stdout);
   fostream cerr(stderr);
 
+  template <character C>
+  class basic_fistream
+  {
+  private:
+    FILE *_in = nullptr;
+
+  public:
+    ~basic_fistream()
+    {
+      if (_in != nullptr)
+      {
+        fclose(_in);
+        _in = nullptr;
+      }
+    }
+
+    basic_fistream() = default;
+
+    basic_fistream(const C *path)
+        : _in(fopen(path, "r"))
+    {
+    }
+
+    basic_fistream(FILE *i)
+        : _in(i)
+    {
+    }
+
+    basic_fistream(const basic_fistream &) = delete;
+    basic_fistream(basic_fistream &&) = default;
+    basic_fistream &operator=(const basic_fistream &) = delete;
+    basic_fistream &operator=(basic_fistream &) = default;
+
+  public:
+    size_t read(C &c)
+    {
+      if constexpr (same_as<C, char>)
+      {
+        return (c = fgetc(_in)) != EOF ? 1 : 0;
+      }
+      else
+      {
+        return (c = fgetwc(_in)) != EOF ? 1 : 0;
+      }
+    }
+    
+    template <ostream O>
+    size_t read(O &o, C eol = '\n')
+    {
+      size_t n = 0;
+      C c;
+
+      while (read(c) != 0 && c != eol)
+      {
+        o.push(c);
+        ++n;
+      }
+
+      return n;
+    }
+
+    template <ostream O>
+    size_t readn(O &o, size_t n)
+    {
+      for (size_t i : upto(size_t(0), n))
+      {
+        C c;
+
+        if (read(c) != 0)
+        {
+          o.push(c);
+        }
+        else
+        {
+          return i;
+        }
+      }
+
+      return n;
+    }
+  };
+
+  using fistream = basic_fistream<char>;
+  using wfistream = basic_fistream<wchar_t>;
+
+  fistream cin(stdin);
 }
 
 #endif
