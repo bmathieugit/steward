@@ -1438,13 +1438,13 @@ namespace stew
 
   template <typename T>
   concept forward_incrementable_iterator =
-      requires(T t) { {++t} -> same_as<T&>; } &&
-      requires(T t) { {t++} -> same_as<T>; };
+      requires(T t) { {++t} -> same_one_of<T&, T>; } &&
+      requires(T t) { {t++} -> same_one_of<T&, T>; };
 
   template <typename T>
   concept backward_incrementable_iterator =
-      requires(T t) { {--t} -> same_as<T&>; } &&
-      requires(T t) { {t--} -> same_as<T>; };
+      requires(T t) { {--t} -> same_one_of<T&, T>; } &&
+      requires(T t) { {t--} -> same_one_of<T&, T>; };
 
   template <typename T>
   concept input_or_output_iterator =
@@ -1872,126 +1872,91 @@ namespace stew
   //----------------------------
   // FIXME: Improve constraints in iterator templates
 
-  template <integral I = size_t>
-  class incremental_iterator
+  template <typename G>
+  class generator_iterator
   {
-  private:
-    I _current = 0;
-    I _step = 1;
+    G _gener;
+    decltype(_gener()) _value;
 
   public:
-    constexpr ~incremental_iterator() = default;
-    constexpr incremental_iterator() = delete;
-    constexpr incremental_iterator(I current, I step) : _current(current), _step(step) {}
-    constexpr incremental_iterator(const incremental_iterator &) = default;
-    constexpr incremental_iterator(incremental_iterator &&) = default;
-    constexpr incremental_iterator &operator=(const incremental_iterator &) = default;
-    constexpr incremental_iterator &operator=(incremental_iterator &&) = default;
+    constexpr generator_iterator(G &&gener)
+        : _gener(transfer(gener)), _value(_gener()) {}
+
+    template <convertible_to<decltype(_value)> T>
+    constexpr generator_iterator(G &&gener, T &&sentinel)
+        : _gener(transfer(gener)),
+          _value(forward<T>(sentinel)) {}
 
   public:
-    constexpr auto operator==(const incremental_iterator &o) const
+    constexpr auto operator==(const generator_iterator &o) const
     {
-      return _current == o._current;
+      return _value == o._value;
     }
 
-    constexpr auto operator!=(const incremental_iterator &o) const
+    constexpr generator_iterator &operator++()
     {
-      return !(*this == o);
-    }
-
-    constexpr incremental_iterator &operator++()
-    {
-      _current += _step;
+      _value = _gener();
       return *this;
     }
 
-    constexpr incremental_iterator operator++(int)
+    constexpr generator_iterator operator++(int)
     {
       auto copy = *this;
       ++*this;
       return copy;
     }
 
-    constexpr auto operator*()
+    constexpr auto operator*() -> decltype(auto)
     {
-      return _current;
+      return _value;
     }
 
-    constexpr auto operator-(const incremental_iterator &o) const
+    constexpr auto operator-(const generator_iterator &o) const
     {
-      return _current - o._current;
+      return _value - o._value;
     }
   };
 
   template <integral I>
-  constexpr view<incremental_iterator<I>> upto(I from, I to, I step = 1)
+  class incrementer
+  {
+  private:
+    I _current = 0;
+    I _step = 1;
+
+  public:
+    constexpr incrementer(I current, I step)
+        : _current(current), _step(step) {}
+
+  public:
+    constexpr I operator()()
+    {
+      auto copy = _current;
+      _current += _step;
+      return copy;
+    }
+  };
+
+  template <integral I>
+  auto upto(I from, I to, I step = 1)
   {
     assert(from <= to);
-    assert((to - from) % step == 0);
-    return view<incremental_iterator<I>>(
-        incremental_iterator<I>(from, step),
-        incremental_iterator<I>(to, step));
+    assert(((to - from) % step) == 0);
+
+    return view<generator_iterator<incrementer<I>>>(
+        generator_iterator<incrementer<I>>(incrementer<I>(from, step)),
+        generator_iterator<incrementer<I>>(incrementer<I>(to, step), to));
   }
 
-  template <integral I = size_t>
-  class decremental_iterator
-  {
-  private:
-    I _current = 0;
-    I _step = 1;
-
-  public:
-    constexpr ~decremental_iterator() = default;
-    constexpr decremental_iterator() = delete;
-    constexpr decremental_iterator(I current, I step) : _current(current), _step(step) {}
-    constexpr decremental_iterator(const decremental_iterator &) = default;
-    constexpr decremental_iterator(decremental_iterator &&) = default;
-    constexpr decremental_iterator &operator=(const decremental_iterator &) = default;
-    constexpr decremental_iterator &operator=(decremental_iterator &&) = default;
-
-  public:
-    constexpr auto operator==(const decremental_iterator &o) const
-    {
-      return _current == o._current;
-    }
-
-    constexpr auto operator!=(const decremental_iterator &o) const
-    {
-      return !(*this == o);
-    }
-
-    constexpr decremental_iterator &operator++()
-    {
-      _current -= _step;
-      return *this;
-    }
-
-    constexpr decremental_iterator operator++(int)
-    {
-      auto copy = *this;
-      ++*this;
-      return copy;
-    }
-
-    constexpr auto operator*()
-    {
-      return _current;
-    }
-
-    constexpr auto operator-(const decremental_iterator &o) const
-    {
-      return _current - o._current;
-    }
-  };
-
   template <integral I>
-  constexpr view<decremental_iterator<I>> downto(I from, I to, I step = 1)
+  auto downto(I from, I to, I step = 1)
   {
     assert(from >= to);
-    assert((from - to) % step == 0);
-    return view<decremental_iterator<I>>(
-        decremental_iterator<I>(from, step),
-        decremental_iterator<I>(to, step));
+    assert(((from - to) % step) == 0);
+
+    return view<generator_iterator<incrementer<I>>>(
+        generator_iterator<incrementer<I>>(incrementer<I>(from, -step)),
+        generator_iterator<incrementer<I>>(incrementer<I>(to, -step), to));
   }
 
   template <push_back_range R>
@@ -4123,6 +4088,19 @@ namespace stew
     void printfln(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
       printf(fmt, t...);
+      push_back('\n');
+    }
+
+    template <typename... T>
+    void print(const T &...t)
+    {
+      (formatter<rm_cvref<T>>::to(*this, t), ...);
+    }
+
+    template <typename... T>
+    void println(const T &...t)
+    {
+      (formatter<rm_cvref<T>>::to(*this, t), ...);
       push_back('\n');
     }
   };

@@ -181,5 +181,10 @@ int main()
   test_map_iterator();
   test_filter_iterator();
 
+  for (int i : downto(10, 0))
+  {
+    cout.println(i);
+  }
+
   return 0;
 }
