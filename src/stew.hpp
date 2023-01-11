@@ -720,6 +720,100 @@ namespace stew
 
   //----------------------------------
   //
+  // Maybe
+  //
+  //----------------------------------
+
+  struct maybe_empty
+  {
+  };
+
+  template <typename T>
+  class maybe
+  {
+  private:
+    bool _has = false;
+    union
+    {
+      T _t;
+      maybe_empty _e;
+    };
+
+  public:
+    constexpr ~maybe()
+    {
+      if (_has)
+      {
+        _t.~T();
+      }
+    }
+
+    constexpr maybe() : _has(false), _e() {}
+
+    constexpr maybe(const T &t) : _has(true), _t(t) {}
+    constexpr maybe(T &&t) : _has(true), _t(transfer(t)) {}
+
+    constexpr maybe(const maybe &o) : _has(o._has)
+    {
+      if (_has)
+      {
+        _t = o._t;
+      }
+    }
+
+    constexpr maybe(maybe &&o) : _has(transfer(o._has))
+    {
+      if (_has)
+      {
+        _t = transfer(o._t);
+      }
+    }
+
+    constexpr maybe &operator=(const T &t)
+    {
+      _has = true;
+      _t = t;
+      return *this;
+    }
+
+    constexpr maybe &operator=(T &&t)
+    {
+      _has = true;
+      _t = transfer(t);
+      return *this;
+    }
+
+    constexpr maybe &operator=(maybe o)
+    {
+      _has = transfer(o._has);
+
+      if (_has)
+      {
+        _t = transfer(o._t);
+      }
+
+      return *this;
+    }
+
+  public:
+    constexpr T &operator*()
+    {
+      return _t;
+    }
+
+    constexpr const T &operator*() const
+    {
+      return _t;
+    }
+
+    constexpr bool has() const 
+    {
+      return _has;
+    } 
+  };
+
+  //----------------------------------
+  //
   // Function container
   //
   //----------------------------------
@@ -2801,11 +2895,16 @@ namespace stew
       copy(forward<R>(r), push_inserter(*this));
     }
 
-    constexpr void pop()
+    constexpr size_t pop(T &t)
     {
       if (_size != 0)
       {
-        _size -= 1;
+        t = transfer(_data[_size--]);
+        return 1;
+      }
+      else
+      {
+        return 0;
       }
     }
   };
@@ -2907,9 +3006,9 @@ namespace stew
       copy(forward<R>(r), push_inserter(*this));
     }
 
-    constexpr void pop()
+    constexpr size_t pop(T &t)
     {
-      _data.pop();
+      return _data.pop(t);
     }
   };
 
@@ -3242,17 +3341,16 @@ namespace stew
 
   template <typename O>
   concept char_ostream =
-      requires(O &o, char c, string_view s) {
-        o.push(c);
-        o.push(s);
-      };
+      requires(O &o, char c) { o.push(c); } &&
+      requires(O &o, string_view s) { o.push(s); };
 
   template <typename O>
   concept wchar_ostream =
-      requires(O &o, wchar_t c, wstring_view s) {
-        o.push(c);
-        o.push(s);
-      };
+      requires(O &o, wchar_t c) { o.push(c); } &&
+      requires(O &o, string_view s) { o.push(s); };
+
+  template <typename O>
+  concept ostream = char_ostream<O> || wchar_ostream<O>;
 
   template <character C, size_t N>
   class basic_format_string
@@ -3303,9 +3401,6 @@ namespace stew
       return parts;
     }
   };
-
-  template <typename O>
-  concept ostream = char_ostream<O> || wchar_ostream<O>;
 
   template <typename T>
   class formatter;
@@ -4084,6 +4179,11 @@ namespace stew
     basic_fistream &operator=(basic_fistream &) = default;
 
   public:
+    auto pop(C &c)
+    {
+      return (c = fgetc(_in)) != EOF ? 1 : 0;
+    }
+
     void close()
     {
       if (_in != nullptr)
@@ -4093,6 +4193,7 @@ namespace stew
       }
     }
 
+  public:
     size_t read(C &c)
     {
       if constexpr (same_as<C, char>)
