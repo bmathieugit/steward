@@ -806,10 +806,73 @@ namespace stew
       return _t;
     }
 
-    constexpr bool has() const 
+    constexpr bool has() const
     {
       return _has;
-    } 
+    }
+
+  public:
+    // Functional api
+    template <typename F>
+    constexpr auto map(F &&f) &
+    {
+      using U = decltype(forward<F>(f)(static_cast<T &>(_t)));
+
+      if (_has)
+      {
+        return maybe<U>(forward<F>(f)(static_cast<T &>(_t)));
+      }
+      else
+      {
+        return maybe<U>();
+      }
+    }
+
+    template <typename F>
+    constexpr auto map(F &&f) const &
+    {
+      using U = decltype(forward<F>(f)(static_cast<const T &>(_t)));
+
+      if (_has)
+      {
+        return maybe<U>(forward<F>(f)(static_cast<const T &>(_t)));
+      }
+      else
+      {
+        return maybe<U>();
+      }
+    }
+
+    template <typename F>
+    constexpr auto map(F &&f) &&
+    {
+
+      using U = decltype(forward<F>(f)(static_cast<T &&>(_t)));
+
+      if (_has)
+      {
+        return maybe<U>(forward<F>(f)(static_cast<T &&>(_t)));
+      }
+      else
+      {
+        return maybe<U>();
+      }
+    }
+
+    template <typename F>
+    constexpr auto map(F &&f) const &&
+    {
+      using U = decltype(forward<F>(f)(static_cast<const T &&>(_t)));
+
+      if (_has)
+      {
+        return maybe<U>(forward<F>(f)(static_cast<const T &&>(_t)));
+      }
+      else
+      {
+        return maybe<U>();
+      }
+    }
   };
 
   //----------------------------------
@@ -3333,6 +3396,216 @@ namespace stew
     return wstring(wstring_view(s, s + n));
   }
 
+  //---------------------
+  //
+  // I/O Containers
+  //
+  //---------------------
+  
+
+  //----------------------
+  //
+  // I/O stream
+  //
+  //----------------------
+
+  template <typename T, typename C>
+  concept ostream2 =
+      character<C> &&
+      requires(T &t) { t.write(C(0)); } &&
+      requires(T &t) { t.write(basic_string_view<C>()); };
+
+  template <typename T, typename C>
+  concept istream2 =
+      character<C> &&
+      requires(T &t) { { t.read() } -> same_as<maybe<C>>; };
+
+  template <character C>
+  class basic_fostream
+  {
+  private:
+    FILE *_out = nullptr;
+
+  public:
+    ~basic_fostream()
+    {
+      close();
+    }
+
+    basic_fostream() = default;
+
+    basic_fostream(const C *path)
+        : _out(fopen(path, "w"))
+    {
+    }
+
+    basic_fostream(FILE *o)
+        : _out(o)
+    {
+    }
+
+    basic_fostream(const basic_fostream &) = delete;
+    basic_fostream(basic_fostream &&) = default;
+    basic_fostream &operator=(const basic_fostream &) = delete;
+    basic_fostream &operator=(basic_fostream &) = default;
+
+  public:
+    void push(C c)
+    {
+      putc(c, _out);
+    }
+
+    void push(basic_string_view<C> s)
+    {
+      fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
+    }
+
+    void flush()
+    {
+      fflush(_out);
+    }
+
+    void close()
+    {
+      if (_out != nullptr)
+      {
+        fclose(_out);
+        _out = nullptr;
+      }
+    }
+
+  public:
+    template <typename... T>
+    void printf(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
+    {
+      format_to(*this, fmt, t...);
+    }
+
+    template <typename... T>
+    void printfln(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
+    {
+      printf(fmt, t...);
+      push('\n');
+    }
+
+    template <typename... T>
+    void print(const T &...t)
+    {
+      (formatter<rm_cvref<T>>::to(*this, t), ...);
+    }
+
+    template <typename... T>
+    void println(const T &...t)
+    {
+      (formatter<rm_cvref<T>>::to(*this, t), ...);
+      push('\n');
+    }
+  };
+
+  using fostream = basic_fostream<char>;
+  using wfostream = basic_fostream<wchar_t>;
+
+  fostream cout(stdout);
+  fostream cerr(stderr);
+
+  template <character C>
+  class basic_fistream
+  {
+  private:
+    FILE *_in = nullptr;
+
+  public:
+    ~basic_fistream()
+    {
+      close();
+    }
+
+    basic_fistream() = default;
+
+    basic_fistream(const C *path)
+        : _in(fopen(path, "r"))
+    {
+    }
+
+    basic_fistream(FILE *i)
+        : _in(i)
+    {
+    }
+
+    basic_fistream(const basic_fistream &) = delete;
+    basic_fistream(basic_fistream &&) = default;
+    basic_fistream &operator=(const basic_fistream &) = delete;
+    basic_fistream &operator=(basic_fistream &) = default;
+
+  public:
+    auto pop(C &c)
+    {
+      return (c = fgetc(_in)) != EOF ? 1 : 0;
+    }
+
+    void close()
+    {
+      if (_in != nullptr)
+      {
+        fclose(_in);
+        _in = nullptr;
+      }
+    }
+
+  public:
+    size_t read(C &c)
+    {
+      if constexpr (same_as<C, char>)
+      {
+        return (c = fgetc(_in)) != EOF ? 1 : 0;
+      }
+      else
+        return 0;
+    }
+
+    template <ostream O>
+    size_t read(O &o, C eol = '\n')
+    {
+      size_t n = 0;
+      C c;
+
+      while (read(c) != 0 && c != eol)
+      {
+        o.push(c);
+        ++n;
+      }
+
+      return n;
+    }
+
+    template <ostream O>
+    size_t readn(O &o, size_t n)
+    {
+      for (size_t i : upto(size_t(0), n))
+      {
+        C c;
+
+        if (read(c) != 0)
+        {
+          o.push(c);
+        }
+        else
+        {
+          return i;
+        }
+      }
+
+      return n;
+    }
+  };
+
+  using fistream = basic_fistream<char>;
+  using wfistream = basic_fistream<wchar_t>;
+
+  fistream cin(stdin);
+
+
+
   //------------------------------
   //
   // Formatting
@@ -4054,196 +4327,6 @@ namespace stew
       }
     }
   };
-
-  //----------------------
-  //
-  // I/O stream
-  //
-  //----------------------
-
-  template <character C>
-  class basic_fostream
-  {
-  private:
-    FILE *_out = nullptr;
-
-  public:
-    ~basic_fostream()
-    {
-      close();
-    }
-
-    basic_fostream() = default;
-
-    basic_fostream(const C *path)
-        : _out(fopen(path, "w"))
-    {
-    }
-
-    basic_fostream(FILE *o)
-        : _out(o)
-    {
-    }
-
-    basic_fostream(const basic_fostream &) = delete;
-    basic_fostream(basic_fostream &&) = default;
-    basic_fostream &operator=(const basic_fostream &) = delete;
-    basic_fostream &operator=(basic_fostream &) = default;
-
-  public:
-    void push(C c)
-    {
-      putc(c, _out);
-    }
-
-    void push(basic_string_view<C> s)
-    {
-      fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
-    }
-
-    void flush()
-    {
-      fflush(_out);
-    }
-
-    void close()
-    {
-      if (_out != nullptr)
-      {
-        fclose(_out);
-        _out = nullptr;
-      }
-    }
-
-  public:
-    template <typename... T>
-    void printf(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
-    {
-      format_to(*this, fmt, t...);
-    }
-
-    template <typename... T>
-    void printfln(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
-    {
-      printf(fmt, t...);
-      push('\n');
-    }
-
-    template <typename... T>
-    void print(const T &...t)
-    {
-      (formatter<rm_cvref<T>>::to(*this, t), ...);
-    }
-
-    template <typename... T>
-    void println(const T &...t)
-    {
-      (formatter<rm_cvref<T>>::to(*this, t), ...);
-      push('\n');
-    }
-  };
-
-  using fostream = basic_fostream<char>;
-  using wfostream = basic_fostream<wchar_t>;
-
-  fostream cout(stdout);
-  fostream cerr(stderr);
-
-  template <character C>
-  class basic_fistream
-  {
-  private:
-    FILE *_in = nullptr;
-
-  public:
-    ~basic_fistream()
-    {
-      close();
-    }
-
-    basic_fistream() = default;
-
-    basic_fistream(const C *path)
-        : _in(fopen(path, "r"))
-    {
-    }
-
-    basic_fistream(FILE *i)
-        : _in(i)
-    {
-    }
-
-    basic_fistream(const basic_fistream &) = delete;
-    basic_fistream(basic_fistream &&) = default;
-    basic_fistream &operator=(const basic_fistream &) = delete;
-    basic_fistream &operator=(basic_fistream &) = default;
-
-  public:
-    auto pop(C &c)
-    {
-      return (c = fgetc(_in)) != EOF ? 1 : 0;
-    }
-
-    void close()
-    {
-      if (_in != nullptr)
-      {
-        fclose(_in);
-        _in = nullptr;
-      }
-    }
-
-  public:
-    size_t read(C &c)
-    {
-      if constexpr (same_as<C, char>)
-      {
-        return (c = fgetc(_in)) != EOF ? 1 : 0;
-      }
-      else
-        return 0;
-    }
-
-    template <ostream O>
-    size_t read(O &o, C eol = '\n')
-    {
-      size_t n = 0;
-      C c;
-
-      while (read(c) != 0 && c != eol)
-      {
-        o.push(c);
-        ++n;
-      }
-
-      return n;
-    }
-
-    template <ostream O>
-    size_t readn(O &o, size_t n)
-    {
-      for (size_t i : upto(size_t(0), n))
-      {
-        C c;
-
-        if (read(c) != 0)
-        {
-          o.push(c);
-        }
-        else
-        {
-          return i;
-        }
-      }
-
-      return n;
-    }
-  };
-
-  using fistream = basic_fistream<char>;
-  using wfistream = basic_fistream<wchar_t>;
-
-  fistream cin(stdin);
 }
 
 #endif

@@ -120,26 +120,18 @@ void format_from(string_view is, string_view fmt, T &...t)
 
 int main()
 {
-  // string is = "coucou tout le monde !!!";
+  string is = "coucou tout le monde !!!";
 
-  // istream_iterator<char, string> b(&is);
-  // istream_iterator<char, string> e;
+  istream_iterator<char, string> b(&is);
+  istream_iterator<char, string> e;
 
-  // for (auto c : view(b, e))
-  // {
-  //   cout.print(c);
-  // }
+  for (auto c : view(b, e))
+  {
+    cout.print(c);
+  }
 
-  // int i;
-  // format_from("coucou12world!", "coucou{}world!", i);
-  // cout.print(i);
-
-  maybe<int> i;
-
-  if (i.has())
-    cout.println(*i);
-  else
-    cout.println("no value");
-
+  int i;
+  format_from("coucou12world!", "coucou{}world!", i);
+  cout.print(i);
   return 0;
 }
