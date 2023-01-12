@@ -23,65 +23,11 @@ namespace stew
   template <typename T>
   using type = typename T::type;
 
-  template <typename T0, typename... Tn>
-  consteval size_t sizeofmax()
-  {
-    if constexpr (sizeof...(Tn) == 0)
-    {
-      return sizeof(T0);
-    }
-    else
-    {
-      if (sizeof(T0) > sizeofmax<Tn...>())
-      {
-        return sizeof(T0);
-      }
-      else
-      {
-        return sizeofmax<Tn...>();
-      }
-    }
-  }
-
-  namespace impl
-  {
-    template <size_t I, typename H, typename... T>
-    struct indexof
-    {
-      static_assert(sizeof...(T) > 0, "indexof : search type not in types pack");
-    };
-
-    template <size_t I, typename H, typename T0, typename... Tn>
-    struct indexof<I, H, T0, Tn...>
-    {
-      static constexpr size_t value = indexof<I + 1, H, Tn...>::value;
-    };
-
-    template <size_t I, typename T, typename... Tn>
-    struct indexof<I, T, T, Tn...>
-    {
-      static constexpr size_t value = I;
-    };
-  }
-
-  template <typename H, typename... T>
-  constexpr size_t indexof = impl::indexof<0, H, T...>::value;
-
-  namespace impl
-  {
-    template <size_t I, typename T0, typename... Tn>
-    struct typeat : struct_type<typeat<I - 1, Tn...>>
-    {
-    };
-
-    template <typename T0, typename... Tn>
-    struct typeat<0, T0, Tn...> : struct_type<T0>
-    {
-    };
-  }
-
-  template <size_t I, typename... T>
-  using typeat = type<impl::typeat<I, T...>>;
+  //--------------------------------
+  //
+  // Meta : add and remove on T
+  //
+  //--------------------------------
 
   namespace impl
   {
@@ -127,6 +73,11 @@ namespace stew
 
     template <typename T>
     struct rm_array<T[]> : struct_type<T>
+    {
+    };
+
+    template <typename T, size_t N>
+    struct rm_array<T[N]> : struct_type<T>
     {
     };
 
@@ -177,62 +128,14 @@ namespace stew
   template <typename T>
   using rm_pointer = type<impl::rm_pointer<T>>;
 
+  template <typename T>
+  using strictly = rm_cvref<T>;
+
   //-----------------------------------
   //
-  // Generals concepts
+  // Meta : generals concepts
   //
   //-----------------------------------
-
-  namespace impl
-  {
-    template <typename T>
-    constexpr bool lvalue_reference_like = false;
-
-    template <typename T>
-    constexpr bool lvalue_reference_like<T &> = true;
-  }
-
-  template <typename T>
-  concept lvalue_reference_like = impl::lvalue_reference_like<T>;
-
-  template <typename T>
-  concept not_lvalue_reference_like = (!lvalue_reference_like<T>);
-
-  namespace impl
-  {
-    template <typename T>
-    constexpr bool const_lvalue_reference_like = false;
-
-    template <typename T>
-    constexpr bool const_lvalue_reference_like<const T &> = true;
-  }
-
-  template <typename T>
-  concept const_lvalue_reference_like = impl::const_lvalue_reference_like<T>;
-
-  namespace impl
-  {
-    template <typename T>
-    constexpr bool rvalue_reference_like = false;
-
-    template <typename T>
-    constexpr bool rvalue_reference_like<T &&> = true;
-  }
-
-  template <typename T>
-  concept rvalue_reference_like = impl::rvalue_reference_like<T>;
-
-  namespace impl
-  {
-    template <typename T>
-    constexpr bool pointer_like = false;
-
-    template <typename T>
-    constexpr bool pointer_like<T *> = true;
-  }
-
-  template <typename T>
-  concept pointer_like = impl::pointer_like<T>;
 
   namespace impl
   {
@@ -249,18 +152,61 @@ namespace stew
   template <typename T, typename... U>
   concept same_one_of = (same_as<T, U> || ...);
 
-  template <typename T, size_t N>
-  concept size_more_than = (sizeof(T) > N);
-
-  template <typename T, size_t N>
-  concept size_lesseq_than = (sizeof(T) <= N);
-
   template <typename From, typename To>
   concept convertible_to =
       requires { static_cast<rm_cvref<To>>(*((rm_cvref<From> *)nullptr)); };
 
   template <typename T, typename U>
-  concept not_convertible_to = (!convertible_to<T, U>);
+  concept not_convertible_to =
+      (!convertible_to<T, U>);
+
+  template <typename T>
+  concept strict_value_like =
+      same_as<T, rm_ref<T>>;
+
+  template <typename T>
+  concept reference_like =
+      same_as<T, rm_cvref<T> &>;
+
+  template <typename T>
+  concept const_reference_like =
+      same_as<T, const rm_cvref<T> &>;
+
+  template <typename T>
+  concept double_reference_like =
+      same_as<T, rm_cvref<T> &&>;
+
+  template <typename T>
+  concept const_double_reference_like =
+      same_as<T, const rm_cvref<T> &&>;
+
+  template <typename T>
+  concept pointer_like =
+      same_as<T, rm_pointer<T> *>;
+
+  template <typename T>
+  concept not_strict_value_like =
+      (!strict_value_like<T>);
+
+  template <typename T>
+  concept not_reference_like =
+      (!reference_like<T>);
+
+  template <typename T>
+  concept not_const_reference_like =
+      (!const_reference_like<T>);
+
+  template <typename T>
+  concept not_double_reference_like =
+      (!double_reference_like<T>);
+
+  template <typename T>
+  concept not_const_double_reference_like =
+      (!const_double_reference_like<T>);
+
+  template <typename T>
+  concept not_pointer_like =
+      (!pointer_like<T>);
 
   template <typename T, typename R, typename... A>
   concept callable = requires(T t, A &&...a) { 
@@ -269,12 +215,115 @@ namespace stew
   template <typename P, typename... A>
   concept predicate = callable<P, bool, A...>;
 
-  template <typename T, typename O>
-  concept equal_comparable =
-      requires(const T &t, const O &o) { {t == o} -> convertible_to<bool>; };
+  template <typename T, size_t N>
+  concept size_more_than =
+      (sizeof(T) > N);
+
+  template <typename T, size_t N>
+  concept size_lesseq_than =
+      (sizeof(T) <= N);
+
+  //-------------------------------------
+  //
+  // Meta : has operators concepts
+  //
+  //-------------------------------------
 
   template <typename T>
-  concept character = same_one_of<T, char, wchar_t>;
+  concept notable =
+      requires(T t) { !t; };
+
+  template <typename T>
+  concept prefix_incrementable =
+      requires(T t) { ++t; };
+
+  template <typename T>
+  concept suffix_incrementable =
+      requires(T t) { t++; };
+
+  template <typename T>
+  concept incrementable =
+      prefix_incrementable<T> ||
+      suffix_incrementable<T>;
+
+  template <typename T>
+  concept prefix_decrementable =
+      requires(T t) { ++t; };
+
+  template <typename T>
+  concept suffix_decrementable =
+      requires(T t) { t++; };
+
+  template <typename T>
+  concept decrementable =
+      prefix_decrementable<T> ||
+      suffix_decrementable<T>;
+
+  template <typename T>
+  concept indirectlyable =
+      requires(T t) { *t; };
+
+  template <typename T>
+  concept addressable =
+      requires(T t) { &t; };
+
+  template <typename T, typename U>
+  concept equality_comparable =
+      requires(T t, U u) { t == u; };
+
+  template <typename T, typename U>
+  concept less_comparable =
+      requires(T t, U u) { t < u; };
+
+  template <typename T, typename U>
+  concept greater_comparable =
+      requires(T t, U u) { t > u; };
+
+  template <typename T, typename U>
+  concept lesseq_comparable =
+      requires(T t, U u) { t <= u; };
+
+  template <typename T, typename U>
+  concept greatereq_comparable =
+      requires(T t, U u) { t >= u; };
+
+  template <typename T, typename U>
+  concept and_comparable =
+      requires(T t, U u) { t and u; };
+
+  template <typename T, typename U>
+  concept or_comparable =
+      requires(T t, U u) { t or u; };
+
+  template <typename T, typename U>
+  concept addable =
+      requires(T t, U u) { t + u; };
+
+  template <typename T, typename U>
+  concept substractable =
+      requires(T t, U u) { t - u; };
+
+  template <typename T, typename U>
+  concept multiplyable =
+      requires(T t, U u) { t *u; };
+
+  template <typename T, typename U>
+  concept dividable =
+      requires(T t, U u) { t / u; };
+
+  template <typename T, typename U>
+  concept modulable =
+      requires(T t, U u) { t % u; };
+
+  //------------------------------------
+  //
+  // Meta : type familly
+  //
+  //------------------------------------
+
+  template <typename T>
+  concept character =
+      same_one_of<T, char, wchar_t>;
 
   template <typename T>
   concept signed_integral =
@@ -292,25 +341,15 @@ namespace stew
       signed_integral<T> || unsigned_integral<T>;
 
   template <typename T>
-  concept floating_point = same_one_of<T, float, double, long double>;
+  concept floating_point =
+      same_one_of<T, float, double, long double>;
 
   template <typename T>
-  concept native_number = integral<T> ||
-                          character<T> ||
-                          floating_point<T> ||
-                          same_as<T, bool>;
-
-  namespace impl
-  {
-    template <typename T>
-    constexpr bool pointer = false;
-
-    template <typename T>
-    constexpr bool pointer<T *> = true;
-  }
-
-  template <typename T>
-  concept pointer = impl::pointer<T>;
+  concept native_number =
+      integral<T> ||
+      character<T> ||
+      floating_point<T> ||
+      same_as<T, bool>;
 
   namespace impl
   {
@@ -347,7 +386,7 @@ namespace stew
     return static_cast<T &&>(t);
   }
 
-  template <not_lvalue_reference_like T>
+  template <not_const_reference_like T>
   constexpr T &&forward(rm_ref<T> &&t) noexcept
   {
     return static_cast<T &&>(t);
@@ -367,7 +406,7 @@ namespace stew
     return copy;
   }
 
-  template <pointer T>
+  template <pointer_like T>
   constexpr auto transfer(T &p)
   {
     auto copy = p;
@@ -420,6 +459,11 @@ namespace stew
     non_owning &operator=(non_owning &&) = default;
 
   public:
+    auto get()
+    {
+      return _ptr;
+    }
+
     auto get() const
     {
       return _ptr;
@@ -431,6 +475,12 @@ namespace stew
       return _ptr != nullptr;
     }
 
+    auto operator*() -> decltype(auto)
+      requires(!native_array_like<T>)
+    {
+      return (*_ptr);
+    }
+
     auto operator*() const
         -> decltype(auto)
       requires(!native_array_like<T>)
@@ -438,18 +488,28 @@ namespace stew
       return (*_ptr);
     }
 
-    auto operator->() const
-        -> decltype(auto)
+    auto operator->() -> decltype(auto)
       requires(!native_array_like<T>)
     {
       return _ptr;
     }
 
-    auto operator[](size_t i) const
-        -> decltype(auto)
+    auto operator->() const -> decltype(auto)
+      requires(!native_array_like<T>)
+    {
+      return _ptr;
+    }
+
+    auto operator[](size_t i) -> decltype(auto)
       requires(native_array_like<T>)
     {
-      return _ptr[i];
+      return (_ptr[i]);
+    }
+
+    auto operator[](size_t i) const -> decltype(auto)
+      requires(native_array_like<T>)
+    {
+      return (_ptr[i]);
     }
   };
 
@@ -796,6 +856,16 @@ namespace stew
     }
 
   public:
+    constexpr operator T &()
+    {
+      return _t;
+    }
+
+    constexpr operator const T &() const
+    {
+      return _t;
+    }
+
     constexpr T &operator*()
     {
       return _t;
@@ -1086,64 +1156,6 @@ namespace stew
   constexpr auto get(const tuple<T0, Tn...> &&t) -> decltype(auto)
   {
     return t.template get<I>();
-  }
-
-  namespace todo
-  {
-    template <class T>
-    struct type_identity
-    {
-      using type = T;
-    };
-
-    template <typename T>
-    using type_identity_t = typename type_identity<T>::type;
-
-    template <size_t... I>
-    struct isequence
-    {
-    };
-
-    namespace impl
-    {
-      template <size_t I0, size_t... In>
-      consteval auto make_isequence()
-      {
-        if constexpr (I0 == 0)
-        {
-          return isequence<I0, In...>{};
-        }
-        else
-        {
-          return make_isequence<I0 - 1, I0, In...>();
-        }
-      }
-    }
-
-    template <size_t N>
-      requires(N > 0)
-    constexpr auto make_isequence()
-    {
-      return impl::make_isequence<N - 1>();
-    }
-
-    template <typename T>
-    constexpr size_t array_size = 0;
-
-    template <typename... T>
-    constexpr size_t array_size<tuple<T...>> = sizeof...(T);
-
-    template <typename T, typename F, size_t... I>
-    consteval auto apply(T &&t, F &&f, isequence<I...>) -> decltype(auto)
-    {
-      return forward<F>(f)(get<I>(forward<T>(t))...);
-    }
-
-    template <typename T, typename F>
-    consteval auto apply(T &&t, F &&f) -> decltype(auto)
-    {
-      return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
-    }
   }
 
   //----------------------------------
@@ -1579,13 +1591,6 @@ namespace stew
   //---------------------------
 
   template <typename T>
-  using with_ref = T &;
-
-  template <typename T>
-  concept can_reference =
-      requires { typename with_ref<T>; };
-
-  template <typename T>
   concept forward_incrementable_iterator =
       requires(T t) { {++t} -> same_one_of<T&, T>; } &&
       requires(T t) { {t++} -> same_one_of<T&, T>; };
@@ -1596,31 +1601,40 @@ namespace stew
       requires(T t) { {t--} -> same_one_of<T&, T>; };
 
   template <typename T>
-  concept input_or_output_iterator =
+  concept input_iterator =
       forward_incrementable_iterator<T> &&
-      requires(T t) { {*t} -> can_reference; };
+      (
+          requires(T t) { {*t} -> const_reference_like; } ||
+          requires(T t) { {*t} -> strict_value_like; });
+
+  template <typename T>
+  concept output_iterator =
+      forward_incrementable_iterator<T> &&
+      requires(T t) { {*t} -> reference_like; };
+
+  template <typename T>
+  concept input_or_output_iterator =
+      input_iterator<T> ||
+      output_iterator<T>;
 
   template <typename T>
   concept differentiable_iterator =
-      requires(T i) { {i - i}; };
+      substractable<T, T>;
 
   template <typename T>
-  concept equaliy_comparable_iterator =
-      requires(T i) { {i != i} -> same_as<bool>; } &&
-      requires(T i) { {i == i} -> same_as<bool>; };
+  concept equality_comparable_iterator =
+      equality_comparable<T, T>;
 
   template <typename T>
   concept forward_iterator =
       input_or_output_iterator<T> &&
-      equaliy_comparable_iterator<T> &&
-      differentiable_iterator<T>;
+      equality_comparable_iterator<T>;
 
   template <typename T>
   concept backward_iterator =
       input_or_output_iterator<T> &&
       backward_incrementable_iterator<T> &&
-      equaliy_comparable_iterator<T> &&
-      differentiable_iterator<T>;
+      equality_comparable_iterator<T>;
 
   template <typename T>
   concept bidirectional_iterator =
@@ -1642,16 +1656,6 @@ namespace stew
   concept range =
       native_array_like<C> ||
       strict_range<C>;
-
-  template <typename C>
-  concept push_range =
-      range<C> &&
-      requires(C &c,
-               const decltype(*c.begin()) &i1,
-               decltype(*c.begin()) &&i2) {
-        c.push(i1);
-        c.push(i2);
-      };
 
   template <range R>
   struct range_traits
@@ -1677,6 +1681,20 @@ namespace stew
   template <typename T>
   concept random_accessible =
       requires(T t) { t[0]; };
+
+  template <typename C>
+  concept push_range =
+      range<C> &&
+      requires(C &c,
+               const decltype(*c.begin()) &i1,
+               decltype(*c.begin()) &&i2) {
+        c.push(i1);
+        c.push(i2);
+      };
+
+  // TODO: To define !
+  // template<typename T>
+  // concept container =
 
   template <strict_range R>
   constexpr auto begin(R &&r)
@@ -1882,7 +1900,7 @@ namespace stew
     return b;
   }
 
-  template <range R, equal_comparable<range_value_type<R>> T>
+  template <range R, equality_comparable<range_value_type<R>> T>
   constexpr size_t count(const R &r, T &&t)
   {
     size_t c = 0;
@@ -3401,11 +3419,276 @@ namespace stew
   // I/O Containers
   //
   //---------------------
-  
+
+  constexpr array<const char *, 3> io_open_chrs = {"r", "w"};
+
+  enum class io_open : size_t
+  {
+    r = 0,
+    w = 1
+  };
+
+  template <typename T, io_open io>
+  class file
+  {
+  private:
+    FILE *_fp = nullptr;
+
+  public:
+    ~file()
+    {
+      close();
+    }
+
+    file() = default;
+
+    template <character C>
+    file(basic_string_view<C> path)
+        : _fp(fopen(path.begin(), io_open_chrs[size_t(io)]))
+    {
+    }
+
+    file(FILE *fp) : _fp(fp) {}
+
+    file(const file &) = delete;
+    file(file &&) = default;
+    file &operator=(const file &) = delete;
+    file &operator=(file &&) = default;
+
+  public:
+    class ofile_iterator
+    {
+    private:
+      non_owning<file<T, io>> _file = nullptr;
+
+    public:
+      ~ofile_iterator() = default;
+      ofile_iterator() = default;
+      ofile_iterator(file &f) : _file(&f) {}
+      ofile_iterator(const ofile_iterator &) = default;
+      ofile_iterator(ofile_iterator &&) = default;
+      ofile_iterator &operator=(const ofile_iterator &) = default;
+      ofile_iterator &operator=(ofile_iterator &&) = default;
+
+    public:
+      ofile_iterator &operator*()
+      {
+        return *this;
+      }
+
+      ofile_iterator &operator++()
+      {
+        return *this;
+      }
+
+      ofile_iterator &operator++(int)
+      {
+        return *this;
+      }
+
+      ofile_iterator &operator=(const T &t)
+      {
+        if (_file.get() != nullptr)
+        {
+          _file.get()->push(t);
+        }
+      }
+
+      ofile_iterator &operator=(T &&t)
+      {
+        if (_file.get() != nullptr)
+        {
+          _file.get()->push(t);
+        }
+      }
+    };
+
+    class ifile_iterator
+    {
+    private:
+      non_owning<file<T, io>> _file = nullptr;
+      maybe<T> _value;
+
+    public:
+      ~ifile_iterator() = default;
+      ifile_iterator() = default;
+      ifile_iterator(file &f) : _file(&f)
+      {
+        ++(*this);
+      }
+
+      ifile_iterator(const ifile_iterator &) = default;
+      ifile_iterator(ifile_iterator &&) = default;
+      ifile_iterator &operator=(const ifile_iterator &) = default;
+      ifile_iterator &operator=(ifile_iterator &&) = default;
+
+    public:
+      auto operator==(const ifile_iterator &o) const
+      {
+        return _file.get() == o._file.get();
+      }
+
+      maybe<T> &operator*()
+      {
+        return _value;
+      }
+
+      ifile_iterator &operator++()
+      {
+        if (_file.get() != nullptr)
+        {
+          _value = _file.get()->pop();
+
+          if (!_value.has())
+          {
+            _file = nullptr;
+          }
+        }
+
+        return *this;
+      }
+
+      ifile_iterator &operator++(int)
+      {
+        return ++(*this);
+      }
+    };
+
+  public:
+    bool opened()
+    {
+      return _fp != nullptr;
+    }
+
+  public:
+    auto begin()
+    {
+      if constexpr (io == io_open::w)
+      {
+        return ofile_iterator(*this);
+      }
+      else if constexpr (io == io_open::r)
+      {
+        return ifile_iterator(*this);
+      }
+    }
+
+    auto end()
+    {
+      if constexpr (io == io_open::w)
+      {
+        return ofile_iterator();
+      }
+      else if constexpr (io == io_open::r)
+      {
+        return ifile_iterator();
+      }
+    }
+
+    auto begin() const
+    {
+      if constexpr (io == io_open::r)
+      {
+        return ifile_iterator(*this);
+      }
+    }
+    auto end() const
+    {
+      if constexpr (io == io_open::r)
+      {
+        return ifile_iterator();
+      }
+    }
+
+  public:
+    void push(T &&t)
+      requires(io == io_open::w)
+    {
+      if (_fp != nullptr)
+      {
+        fwrite(&t, sizeof(rm_cvref<T>), 1, _fp);
+      }
+    }
+
+    void push(const T &t)
+      requires(io == io_open::w)
+    {
+      if (_fp != nullptr)
+      {
+        fwrite(&t, sizeof(rm_cvref<T>), 1, _fp);
+      }
+    }
+
+    template <range R>
+    void push(R &&r)
+      requires(io == io_open::w)
+    {
+      for (auto &&i : forward<R>(r))
+      {
+        push(forward<decltype(i)>(i));
+      }
+    }
+
+    maybe<T> pop()
+      requires(io == io_open::r)
+    {
+      maybe<T> res;
+
+      if (_fp != nullptr)
+      {
+        T buff;
+
+        if (fread(&buff, sizeof(T), 1, _fp) == 1)
+        {
+          res = transfer(buff);
+        }
+      }
+
+      return res;
+    }
+
+    template <typename R>
+    void pop(R &r, size_t n)
+      requires(io == io_open::r)
+    {
+      if (_fp != nullptr)
+      {
+        T buff;
+
+        for (size_t i : upto(size_t(0), n))
+        {
+          if (fread(&buff, sizeof(T), 1, _fp) == 1)
+          {
+            r.push(transfer(buff));
+          }
+          else
+          {
+            break;
+          }
+        }
+      }
+    }
+
+  private:
+    void close()
+    {
+      if (_fp != nullptr)
+      {
+        fclose(_fp);
+        _fp = nullptr;
+      }
+    }
+  };
+
+  file<char, io_open::r> termin(stdin);
+  file<char, io_open::w> termout(stdout);
+
+  file<char, io_open::r> wtermin(stdin);
+  file<char, io_open::w> wtermout(stdout);
 
   //----------------------
   //
-  // I/O stream
+  // Streams
   //
   //----------------------
 
@@ -3419,192 +3702,6 @@ namespace stew
   concept istream2 =
       character<C> &&
       requires(T &t) { { t.read() } -> same_as<maybe<C>>; };
-
-  template <character C>
-  class basic_fostream
-  {
-  private:
-    FILE *_out = nullptr;
-
-  public:
-    ~basic_fostream()
-    {
-      close();
-    }
-
-    basic_fostream() = default;
-
-    basic_fostream(const C *path)
-        : _out(fopen(path, "w"))
-    {
-    }
-
-    basic_fostream(FILE *o)
-        : _out(o)
-    {
-    }
-
-    basic_fostream(const basic_fostream &) = delete;
-    basic_fostream(basic_fostream &&) = default;
-    basic_fostream &operator=(const basic_fostream &) = delete;
-    basic_fostream &operator=(basic_fostream &) = default;
-
-  public:
-    void push(C c)
-    {
-      putc(c, _out);
-    }
-
-    void push(basic_string_view<C> s)
-    {
-      fwrite(basic_string_view<C>(s).begin(), sizeof(C), basic_string_view<C>(s).size(), _out);
-    }
-
-    void flush()
-    {
-      fflush(_out);
-    }
-
-    void close()
-    {
-      if (_out != nullptr)
-      {
-        fclose(_out);
-        _out = nullptr;
-      }
-    }
-
-  public:
-    template <typename... T>
-    void printf(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
-    {
-      format_to(*this, fmt, t...);
-    }
-
-    template <typename... T>
-    void printfln(const basic_format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
-    {
-      printf(fmt, t...);
-      push('\n');
-    }
-
-    template <typename... T>
-    void print(const T &...t)
-    {
-      (formatter<rm_cvref<T>>::to(*this, t), ...);
-    }
-
-    template <typename... T>
-    void println(const T &...t)
-    {
-      (formatter<rm_cvref<T>>::to(*this, t), ...);
-      push('\n');
-    }
-  };
-
-  using fostream = basic_fostream<char>;
-  using wfostream = basic_fostream<wchar_t>;
-
-  fostream cout(stdout);
-  fostream cerr(stderr);
-
-  template <character C>
-  class basic_fistream
-  {
-  private:
-    FILE *_in = nullptr;
-
-  public:
-    ~basic_fistream()
-    {
-      close();
-    }
-
-    basic_fistream() = default;
-
-    basic_fistream(const C *path)
-        : _in(fopen(path, "r"))
-    {
-    }
-
-    basic_fistream(FILE *i)
-        : _in(i)
-    {
-    }
-
-    basic_fistream(const basic_fistream &) = delete;
-    basic_fistream(basic_fistream &&) = default;
-    basic_fistream &operator=(const basic_fistream &) = delete;
-    basic_fistream &operator=(basic_fistream &) = default;
-
-  public:
-    auto pop(C &c)
-    {
-      return (c = fgetc(_in)) != EOF ? 1 : 0;
-    }
-
-    void close()
-    {
-      if (_in != nullptr)
-      {
-        fclose(_in);
-        _in = nullptr;
-      }
-    }
-
-  public:
-    size_t read(C &c)
-    {
-      if constexpr (same_as<C, char>)
-      {
-        return (c = fgetc(_in)) != EOF ? 1 : 0;
-      }
-      else
-        return 0;
-    }
-
-    template <ostream O>
-    size_t read(O &o, C eol = '\n')
-    {
-      size_t n = 0;
-      C c;
-
-      while (read(c) != 0 && c != eol)
-      {
-        o.push(c);
-        ++n;
-      }
-
-      return n;
-    }
-
-    template <ostream O>
-    size_t readn(O &o, size_t n)
-    {
-      for (size_t i : upto(size_t(0), n))
-      {
-        C c;
-
-        if (read(c) != 0)
-        {
-          o.push(c);
-        }
-        else
-        {
-          return i;
-        }
-      }
-
-      return n;
-    }
-  };
-
-  using fistream = basic_fistream<char>;
-  using wfistream = basic_fistream<wchar_t>;
-
-  fistream cin(stdin);
-
-
 
   //------------------------------
   //
@@ -3852,7 +3949,7 @@ namespace stew
     }
   };
 
-  template <pointer P>
+  template <pointer_like P>
   class formatter<P>
   {
   public:
