@@ -1721,14 +1721,18 @@ namespace stew
   concept push_container =
       requires(C c, T t) { c.push(t); };
 
-  template <typename C>
+  template <typename C, typename T>
   concept pop_container =
-      requires(C c) { c.pop(); };
+      requires(C c) { { c.pop() } -> convertible_to<T&>; } ||
+      requires(C c) { { c.pop() } -> convertible_to<T>; } ||
+      requires(C c) { { c.pop() } -> convertible_to<const T&>; } ||
+      requires(C c) { { c.pop() } -> convertible_to<T&&>; } ||
+      requires(C c) { { c.pop() } -> convertible_to<const T&&>; };
 
   template <typename C, typename T>
   concept container =
       push_container<C, T> &&
-      pop_container<C>;
+      pop_container<C, T>;
 
   template <range R>
   constexpr auto begin(R &&r)
@@ -2139,7 +2143,7 @@ namespace stew
   }
 
   template <plain_integral I>
-  auto upto(I from, I to, I step = 1)
+  constexpr auto upto(I from, I to, I step = 1)
   {
     assert(from <= to);
     assert(((to - from) % step) == 0);
@@ -2150,7 +2154,7 @@ namespace stew
   }
 
   template <plain_integral I>
-  auto downto(I from, I to, I step = 1)
+  constexpr auto downto(I from, I to, I step = 1)
   {
     assert(from >= to);
     assert(((from - to) % step) == 0);
@@ -3176,45 +3180,39 @@ namespace stew
   //----------------------------
 
   template <character C>
-  using basic_string_view = view<const C *>;
+  using string_view = view<const C *>;
 
-  using string_view = basic_string_view<char>;
-  using wstring_view = basic_string_view<wchar_t>;
-
-  constexpr string_view operator"" _sv(const char *s, size_t n)
+  constexpr string_view<char> operator"" _sv(const char *s, size_t n)
   {
-    return string_view(s, s + n);
+    return string_view<char>(s, s + n);
   }
 
-  constexpr wstring_view operator"" _sv(const wchar_t *s, size_t n)
+  constexpr string_view<wchar_t> operator"" _sv(const wchar_t *s, size_t n)
   {
-    return wstring_view(s, s + n);
+    return string_view<wchar_t>(s, s + n);
   }
 
   template <typename S, typename C>
   concept string_view_like =
-      character<C> && convertible_to<S, basic_string_view<C>>;
+      character<C> && convertible_to<S, string_view<C>>;
+
+  template <character C, size_t N>
+  using static_string = static_vector<C, N>;
 
   template <character C>
-  using basic_fixed_string = fixed_vector<C>;
-
-  using fixed_string = basic_fixed_string<char>;
-  using fixed_wstring = basic_fixed_string<wchar_t>;
+  using fixed_string = fixed_vector<C>;
 
   template <character C>
-  using basic_string = vector<C>;
+  using string = vector<C>;
 
-  using string = basic_string<char>;
-  using wstring = basic_string<wchar_t>;
-
-  string operator"" _s(const char *s, size_t n)
+  string<char> operator"" _s(const char *s, size_t n)
   {
-    return string(string_view(s, s + n));
+    return string<char>(string_view<char>(s, s + n));
   }
 
-  wstring operator"" _s(const wchar_t *s, size_t n)
+  string<wchar_t> operator"" _s(const wchar_t *s, size_t n)
   {
-    return wstring(wstring_view(s, s + n));
+    return string<wchar_t>(string_view<wchar_t>(s, s + n));
   }
 
   //---------------------
@@ -3223,7 +3221,7 @@ namespace stew
   //
   //---------------------
 
-  constexpr array<const char *, 3> io_open_chrs = {"r", "w"};
+  constexpr array<const char *, 3> modechr = {"r", "w"};
 
   enum class mode : size_t
   {
@@ -3246,8 +3244,8 @@ namespace stew
     file() = default;
 
     template <character C>
-    file(basic_string_view<C> path)
-        : _fp(fopen(path.begin(), io_open_chrs[size_t(m)]))
+    file(string_view<C> path)
+        : _fp(fopen(path.begin(), modechr[size_t(m)]))
     {
     }
 
@@ -3485,10 +3483,9 @@ namespace stew
 
   file<char, mode::r> termin(stdin);
   file<char, mode::w> termout(stdout);
-  
+
   file<char, mode::r> wtermin(stdin);
   file<char, mode::w> wtermout(stdout);
-
 
   //------------------------------
   //
@@ -3499,39 +3496,31 @@ namespace stew
   template <typename O>
   concept ostream =
       (push_container<O, char> &&
-       push_container<O, basic_string_view<char>>) ||
+       push_container<O, string_view<char>>) ||
       (push_container<O, wchar_t> &&
-       push_container<O, basic_string_view<wchar_t>>);
+       push_container<O, string_view<wchar_t>>);
 
   template <character C, size_t N>
-  class basic_format_string
+  class format_string
   {
   private:
-    array<basic_string_view<C>, N> _items;
+    array<string_view<C>, N> _items;
 
   public:
-    consteval basic_format_string(basic_string_view<C> fmt)
+    consteval format_string(string_view<C> fmt)
         : _items(split(fmt))
     {
     }
 
-    template <size_t M>
-    consteval basic_format_string(const C (&fmt)[M])
-        : basic_format_string(basic_string_view<C>(fmt))
-    {
-    }
-
-    constexpr const array<basic_string_view<C>, N> &
-    items() const
+    constexpr const auto &items() const
     {
       return _items;
     }
 
   private:
-    consteval array<basic_string_view<C>, N>
-    split(basic_string_view<C> fmt) const
+    consteval auto split(string_view<C> fmt) const
     {
-      array<basic_string_view<C>, N> parts;
+      array<string_view<C>, N> parts;
 
       for (auto &part : parts)
       {
@@ -3558,11 +3547,13 @@ namespace stew
 
   namespace fmt
   {
-    template <size_t I, size_t N, ostream O, character C, typename H, typename... T>
+    template <size_t I, size_t N,
+              ostream O, character C,
+              typename H, typename... T>
     constexpr void format_to_one(
-        O &o, const basic_format_string<C, N> &fmt, const H &h, const T &...t)
+        O &o, const format_string<C, N> &fmt, const H &h, const T &...t)
     {
-      formatter<basic_string_view<C>>::to(o, get<I>(fmt.items()));
+      formatter<string_view<C>>::to(o, get<I>(fmt.items()));
       formatter<H>::to(o, h);
 
       if constexpr (sizeof...(T) > 0)
@@ -3573,30 +3564,109 @@ namespace stew
 
     template <ostream O, character C, typename H, typename... T>
     constexpr void format_to(
-        O &o, const basic_format_string<C, sizeof...(T) + 2> &fmt,
+        O &o, const format_string<C, sizeof...(T) + 2> &fmt,
         const H &h, const T &...t)
     {
       format_to_one<0>(o, fmt, h, t...);
-      formatter<basic_string_view<C>>::to(o, get<sizeof...(T) + 1>(fmt.items()));
+      formatter<string_view<C>>::to(o, get<sizeof...(T) + 1>(fmt.items()));
     }
 
     template <ostream O, character C>
-    constexpr void format_to(O &o, const basic_format_string<C, 1> &fmt)
+    constexpr void format_to(O &o, const format_string<C, 1> &fmt)
     {
-      formatter<basic_string_view<C>>::to(o, get<0>(fmt.items()));
+      formatter<string_view<C>>::to(o, get<0>(fmt.items()));
     }
   }
 
   template <ostream O, typename... A>
-  constexpr void format_to(O &o, const basic_format_string<char, sizeof...(A) + 1> &fmt, const A &...a)
+  constexpr void format_to(O &o, const format_string<char, sizeof...(A) + 1> &fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
   }
 
   template <ostream O, typename... A>
-  constexpr void format_to(O &o, const basic_format_string<wchar_t, sizeof...(A) + 1> &fmt, const A &...a)
+  constexpr void format_to(O &o, const format_string<wchar_t, sizeof...(A) + 1> &fmt, const A &...a)
   {
     fmt::format_to(o, fmt, a...);
+  }
+
+  namespace fmt
+  {
+    template <input_iterator I>
+    class onepass_stream
+    {
+    private:
+      I _b;
+      I _e;
+
+    public:
+      // TODO: ce que l'on veut c'est faire en sorte de vérrouiller 
+      // le parcour entre _b et _e à un seul parcour. Même si onepass_stream
+      // a été copier, il faut qu'au travers des copies on ne puisse quand même
+      // parcourir plusieurs fois le onepass_stream. 
+    };
+
+    template <size_t... I>
+    struct isequence
+    {
+    };
+
+    namespace impl
+    {
+      template <size_t I0, size_t... In>
+      consteval auto make_isequence()
+      {
+        if constexpr (I0 == 0)
+        {
+          return isequence<I0, In...>{};
+        }
+        else
+        {
+          return make_isequence<I0 - 1, I0, In...>();
+        }
+      }
+    }
+
+    template <size_t N>
+      requires(N > 0)
+    constexpr auto make_isequence()
+    {
+      return impl::make_isequence<N - 1>();
+    }
+
+    template <typename A, input_iterator I, character C>
+    constexpr maybe<A> format_from_one(view<I> i, string_view<C> part)
+    {
+      if (starts_with(i, part))
+      {
+        return formatter<rm_cvref<A>>::from(view(i.begin() + part.size(), i.end()));
+      }
+      else
+      {
+        return maybe<A>();
+      }
+    }
+
+    template <typename... A, size_t... J, typename C, input_iterator I>
+    constexpr tuple<maybe<A>...> format_from(
+        view<I> i, const format_string<C, sizeof...(A) + 1> &fmt, isequence<J...>)
+    {
+      return tuple<maybe<A>...>(format_from_one<A>(i, get<J>(fmt.items()))...);
+    }
+
+    template <typename... A, input_iterator I>
+    constexpr tuple<maybe<A>...> format_from(
+        view<I> i, const format_string<char, sizeof...(A) + 1> &fmt)
+    {
+      return format_from<A...>(i, fmt, make_isequence<sizeof...(A)>());
+    }
+  }
+
+  template <typename... A>
+  constexpr tuple<maybe<A>...> format_from(
+      input_range auto &i, const format_string<char, sizeof...(A) + 1> &fmt)
+  {
+    return fmt::format_from<A...>(view(i), fmt);
   }
 
   template <character C>
@@ -3611,11 +3681,11 @@ namespace stew
   };
 
   template <character C>
-  class formatter<basic_string_view<C>>
+  class formatter<string_view<C>>
   {
   public:
     template <ostream O>
-    constexpr static void to(O &os, basic_string_view<C> o)
+    constexpr static void to(O &os, string_view<C> o)
     {
       os.push(o);
     }
@@ -3623,37 +3693,37 @@ namespace stew
 
   template <character C, size_t N>
   class formatter<const C (&)[N]>
-      : public formatter<basic_string_view<C>>
+      : public formatter<string_view<C>>
   {
   };
 
   template <character C, size_t N>
   class formatter<C (&)[N]>
-      : public formatter<basic_string_view<C>>
+      : public formatter<string_view<C>>
   {
   };
 
   template <character C, size_t N>
   class formatter<const C[N]>
-      : public formatter<basic_string_view<C>>
+      : public formatter<string_view<C>>
   {
   };
 
   template <character C, size_t N>
   class formatter<C[N]>
-      : public formatter<basic_string_view<C>>
+      : public formatter<string_view<C>>
   {
   };
 
   template <character C>
-  class formatter<basic_fixed_string<C>>
-      : public formatter<basic_string_view<C>>
+  class formatter<fixed_string<C>>
+      : public formatter<string_view<C>>
   {
   };
 
   template <character C>
-  class formatter<basic_string<C>>
-      : public formatter<basic_string_view<C>>
+  class formatter<string<C>>
+      : public formatter<string_view<C>>
   {
   };
 
@@ -3688,7 +3758,46 @@ namespace stew
         formatter<char>::to(o, '-');
       }
 
-      formatter<basic_string_view<char>>::to(o, tbuff);
+      formatter<string_view<char>>::to(o, tbuff);
+    }
+
+    template <input_range R>
+    constexpr static maybe<I> from(const R &r)
+    {
+      I res = 0;
+
+      bool hasone = false;
+
+      auto b = begin(r);
+      auto e = end(r);
+
+      char c;
+
+      while (b != e)
+      {
+        auto c = *b;
+
+        if ('0' <= static_cast<const char &>(c) && static_cast<const char &>(c) <= '9')
+        {
+          res = res * 10 + static_cast<const char &>(c) - '0';
+          hasone = true;
+        }
+        else
+        {
+          break;
+        }
+
+        ++b;
+      }
+
+      if (hasone)
+      {
+        return maybe<I>(res);
+      }
+      else
+      {
+        return maybe<I>();
+      }
     }
   };
 
@@ -3715,7 +3824,7 @@ namespace stew
         }
       }
 
-      formatter<basic_string_view<char>>::to(o, tbuff);
+      formatter<string_view<char>>::to(o, tbuff);
     }
   };
 
@@ -3726,7 +3835,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, bool b)
     {
-      formatter<basic_string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
+      formatter<string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
     }
   };
 
