@@ -6,9 +6,6 @@ using namespace stew;
 
 int main()
 {
-  file<char, io_open::r> makefile("makefile"_sv);
-
-  termout.push(makefile);
-
+  format_to(termout, "coucou{}qslkdj"_sv, 12);
   return 0;
 }

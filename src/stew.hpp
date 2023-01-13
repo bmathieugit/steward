@@ -105,6 +105,9 @@ namespace stew
   using rm_volatile = type<impl::rm_volatile<T>>;
 
   template <typename T>
+  using rm_cv = rm_const<rm_volatile<T>>;
+
+  template <typename T>
   using add_lref = T &;
 
   template <typename T>
@@ -339,6 +342,10 @@ namespace stew
   template <typename T>
   concept integral =
       signed_integral<T> || unsigned_integral<T>;
+
+  template <typename T>
+  concept plain_integral =
+      integral<T> || character<T>;
 
   template <typename T>
   concept floating_point =
@@ -793,6 +800,7 @@ namespace stew
   {
   private:
     bool _has = false;
+
     union
     {
       T _t;
@@ -1592,11 +1600,15 @@ namespace stew
 
   template <typename T>
   concept forward_incrementable_iterator =
+      requires(T t) { {t==t} -> convertible_to<bool>; } &&
+      requires(T t) { {t!=t} -> convertible_to<bool>; } &&
       requires(T t) { {++t} -> same_one_of<T&, T>; } &&
       requires(T t) { {t++} -> same_one_of<T&, T>; };
 
   template <typename T>
   concept backward_incrementable_iterator =
+      requires(T t) { {t==t} -> convertible_to<bool>; } &&
+      requires(T t) { {t!=t} -> convertible_to<bool>; } &&
       requires(T t) { {--t} -> same_one_of<T&, T>; } &&
       requires(T t) { {t--} -> same_one_of<T&, T>; };
 
@@ -1604,6 +1616,9 @@ namespace stew
   concept input_iterator =
       forward_incrementable_iterator<T> &&
       (
+          requires(T t) { {*t} -> const_double_reference_like; } ||
+          requires(T t) { {*t} -> double_reference_like; } ||
+          requires(T t) { {*t} -> reference_like; } ||
           requires(T t) { {*t} -> const_reference_like; } ||
           requires(T t) { {*t} -> strict_value_like; });
 
@@ -1616,10 +1631,6 @@ namespace stew
   concept input_or_output_iterator =
       input_iterator<T> ||
       output_iterator<T>;
-
-  template <typename T>
-  concept differentiable_iterator =
-      substractable<T, T>;
 
   template <typename T>
   concept equality_comparable_iterator =
@@ -1646,16 +1657,44 @@ namespace stew
       bidirectional_iterator<T> &&
       requires(T t) { { t[0] }; };
 
+  template <typename T>
+  concept distanciable_iterator =
+      substractable<T, T>;
+
   template <typename C>
-  concept strict_range =
-      requires(C &c) {
-        { c.begin() } -> forward_iterator;
-        { c.end() } -> forward_iterator; };
+  concept input_range =
+      requires(C c) {{c.begin()} -> input_iterator; } &&
+      requires(C c) {{c.end()} -> input_iterator; };
+
+  template <typename C>
+  concept output_range =
+      requires(C c) {{c.begin()} -> output_iterator; } &&
+      requires(C c) {{c.end()} -> output_iterator; };
 
   template <typename C>
   concept range =
-      native_array_like<C> ||
-      strict_range<C>;
+      requires(C c) {{c.begin()} -> input_or_output_iterator; } &&
+      requires(C c) {{c.end()} -> input_or_output_iterator; };
+
+  template <typename C>
+  concept forward_range =
+      requires(C c) {{c.begin()} -> forward_iterator; } &&
+      requires(C c) {{c.end()} -> forward_iterator; };
+
+  template <typename C>
+  concept backward_range =
+      requires(C c) {{c.begin()} -> backward_iterator; } &&
+      requires(C c) {{c.end()} -> backward_iterator; };
+
+  template <typename C>
+  concept bidirectional_range =
+      requires(C c) {{c.begin()} -> bidirectional_iterator; } &&
+      requires(C c) {{c.end()} -> bidirectional_iterator; };
+
+  template <typename C>
+  concept random_range =
+      requires(C c) {{c.begin()} -> random_iterator; } &&
+      requires(C c) {{c.end()} -> random_iterator; };
 
   template <range R>
   struct range_traits
@@ -1678,49 +1717,44 @@ namespace stew
   template <range R>
   using range_const_reference = typename range_traits<R>::const_reference;
 
-  template <typename T>
-  concept random_accessible =
-      requires(T t) { t[0]; };
+  template <typename C, typename T>
+  concept push_container =
+      requires(C c, T t) { c.push(t); };
 
   template <typename C>
-  concept push_range =
-      range<C> &&
-      requires(C &c,
-               const decltype(*c.begin()) &i1,
-               decltype(*c.begin()) &&i2) {
-        c.push(i1);
-        c.push(i2);
-      };
+  concept pop_container =
+      requires(C c) { c.pop(); };
 
-  // TODO: To define !
-  // template<typename T>
-  // concept container =
+  template <typename C, typename T>
+  concept container =
+      push_container<C, T> &&
+      pop_container<C>;
 
-  template <strict_range R>
+  template <range R>
   constexpr auto begin(R &&r)
   {
     return forward<R>(r).begin();
   }
 
-  template <strict_range R>
+  template <range R>
   constexpr auto end(R &&r)
   {
     return forward<R>(r).end();
   }
 
-  template <typename T, size_t N>
-  constexpr auto begin(T (&t)[N])
-  {
-    return t;
-  }
+  // template <typename T, size_t N>
+  // constexpr auto begin(T (&t)[N])
+  // {
+  //   return t;
+  // }
 
-  template <typename T, size_t N>
-  constexpr auto end(T (&t)[N])
-  {
-    return t + N;
-  }
+  // template <typename T, size_t N>
+  // constexpr auto end(T (&t)[N])
+  // {
+  //   return t + N;
+  // }
 
-  template <typename I>
+  template <input_or_output_iterator I>
   class view
   {
   private:
@@ -1768,19 +1802,19 @@ namespace stew
 
   public:
     constexpr auto size() const
-      requires differentiable_iterator<I>
+      requires distanciable_iterator<I>
     {
       return _begin == nullptr ? 0 : _end - _begin;
     }
 
     constexpr auto empty() const
-      requires differentiable_iterator<I>
+      requires distanciable_iterator<I>
     {
       return size() == 0;
     }
 
     constexpr const auto &operator[](size_t i) const
-      requires random_accessible<I>
+      requires random_iterator<I>
     {
       return (_begin[i]);
     }
@@ -1789,10 +1823,10 @@ namespace stew
   template <range R>
   view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
 
-  template <forward_iterator I>
+  template <input_or_output_iterator I>
   view(I b, I e) -> view<I>;
 
-  template <range R1, range R2>
+  template <input_range R1, input_range R2>
   constexpr bool equals(const R1 &r1, const R2 &r2)
   {
     if (&r1 == &r2)
@@ -1819,19 +1853,19 @@ namespace stew
     }
   }
 
-  template <range R1, range R2>
+  template <input_range R1, input_range R2>
   bool operator==(const R1 &r1, const R2 &r2)
   {
     return stew::equals(r1, r2);
   }
 
-  template <range R1, range R2>
+  template <input_range R1, input_range R2>
   bool operator!=(const R1 &r1, const R2 &r2)
   {
     return !stew::equals(r1, r2);
   }
 
-  template <range R1, range R2>
+  template <input_range R1, input_range R2>
   constexpr bool starts_with(const R1 &r1, const R2 &r2)
   {
     auto b1 = begin(r1);
@@ -1851,14 +1885,14 @@ namespace stew
     return b2 == e2;
   }
 
-  template <range R, typename T>
+  template <input_range R, typename T>
   constexpr bool starts_with(const R &r, const T &t)
   {
     auto b = begin(r);
     return b != end(r) && *b == t;
   }
 
-  template <range R, typename T>
+  template <input_range R, typename T>
   constexpr auto find(R &r, const T &t)
   {
     auto b = begin(r);
@@ -1872,7 +1906,7 @@ namespace stew
     return b;
   }
 
-  template <range R1, range R2>
+  template <input_range R1, range R2>
   constexpr auto find(R1 &r1, const R2 &r2)
   {
     auto b1 = begin(r1);
@@ -1886,7 +1920,7 @@ namespace stew
     return b1;
   }
 
-  template <range R, predicate<range_const_reference<R>> P>
+  template <input_range R, predicate<range_const_reference<R>> P>
   constexpr auto find(R &r, P &&pred)
   {
     auto b = begin(r);
@@ -1900,7 +1934,7 @@ namespace stew
     return b;
   }
 
-  template <range R, equality_comparable<range_value_type<R>> T>
+  template <input_range R, equality_comparable<range_value_type<R>> T>
   constexpr size_t count(const R &r, T &&t)
   {
     size_t c = 0;
@@ -1916,7 +1950,7 @@ namespace stew
     return c;
   }
 
-  template <range R, predicate<range_const_reference<R>> P>
+  template <input_range R, predicate<range_const_reference<R>> P>
   constexpr size_t count(const R &r, P &&pred)
   {
     size_t c = 0;
@@ -1932,13 +1966,13 @@ namespace stew
     return c;
   }
 
-  template <range R, typename T>
-  constexpr bool contains(R &r, const T &t)
+  template <input_range R, typename T>
+  constexpr bool contains(const R &r, const T &t)
   {
     return find(r, t) != end(r);
   }
 
-  template <range R1, range R2>
+  template <input_range R1, input_range R2>
   constexpr bool contains(const R1 &r1, const R2 &r2)
   {
     return find(r1, r2) != end(r1);
@@ -1952,7 +1986,7 @@ namespace stew
     view<I> _aft;
   };
 
-  template <range R, typename T>
+  template <input_range R, typename T>
   constexpr auto around(R &&r, const T &sep) -> decltype(auto)
   {
     auto pos = find(forward<R>(r), sep);
@@ -1973,7 +2007,7 @@ namespace stew
     }
   }
 
-  template <range R1, predicate<range_const_reference<R1>> P>
+  template <input_range R1, predicate<range_const_reference<R1>> P>
   constexpr bool all_of(const R1 &r, P &&p)
   {
     for (const auto &i : r)
@@ -1987,7 +2021,7 @@ namespace stew
     return true;
   }
 
-  template <range R1, predicate<range_const_reference<R1>> P>
+  template <input_range R1, predicate<range_const_reference<R1>> P>
   constexpr bool any_of(const R1 &r, P &&p)
   {
     for (const auto &i : r)
@@ -2001,7 +2035,7 @@ namespace stew
     return false;
   }
 
-  template <range R1, predicate<range_const_reference<R1>> P>
+  template <input_range R1, predicate<range_const_reference<R1>> P>
   constexpr bool none_of(const R1 &r, P &&p)
   {
     for (const auto &i : r)
@@ -2015,7 +2049,7 @@ namespace stew
     return true;
   }
 
-  template <range R, typename I>
+  template <input_range R, output_iterator I>
   constexpr void copy(R &&r, I i)
   {
     auto b = begin(forward<R>(r));
@@ -2081,63 +2115,72 @@ namespace stew
     }
   };
 
-  template <integral I>
-  class incrementer
+  namespace impl
   {
-  private:
-    I _current = 0;
-    I _step = 1;
-
-  public:
-    constexpr incrementer(I current, I step)
-        : _current(current), _step(step) {}
-
-  public:
-    constexpr I operator()()
+    template <plain_integral I>
+    class incrementer
     {
-      auto copy = _current;
-      _current += _step;
-      return copy;
-    }
-  };
+    private:
+      I _current = 0;
+      I _step = 1;
 
-  template <integral I>
+    public:
+      constexpr incrementer(I current, I step)
+          : _current(current), _step(step) {}
+
+    public:
+      constexpr I operator()()
+      {
+        auto copy = _current;
+        _current += _step;
+        return copy;
+      }
+    };
+  }
+
+  template <plain_integral I>
   auto upto(I from, I to, I step = 1)
   {
     assert(from <= to);
     assert(((to - from) % step) == 0);
 
-    return view<generator_iterator<incrementer<I>>>(
-        generator_iterator<incrementer<I>>(incrementer<I>(from, step)),
-        generator_iterator<incrementer<I>>(incrementer<I>(to, step), to));
+    return view<generator_iterator<impl::incrementer<I>>>(
+        generator_iterator<impl::incrementer<I>>(impl::incrementer<I>(from, step)),
+        generator_iterator<impl::incrementer<I>>(impl::incrementer<I>(to, step), to));
   }
 
-  template <integral I>
+  template <plain_integral I>
   auto downto(I from, I to, I step = 1)
   {
     assert(from >= to);
     assert(((from - to) % step) == 0);
 
-    return view<generator_iterator<incrementer<I>>>(
-        generator_iterator<incrementer<I>>(incrementer<I>(from, -step)),
-        generator_iterator<incrementer<I>>(incrementer<I>(to, -step), to));
+    return view<generator_iterator<impl::incrementer<I>>>(
+        generator_iterator<impl::incrementer<I>>(impl::incrementer<I>(from, -step)),
+        generator_iterator<impl::incrementer<I>>(impl::incrementer<I>(to, -step), to));
   }
 
-  template <push_range R>
+  template <typename T, push_container<T> C>
   class push_iterator
   {
   private:
-    R *_range = nullptr;
+    C *_container = nullptr;
 
   public:
-    constexpr push_iterator(R &range) : _range(&range)
+    constexpr push_iterator(C &container)
+        : _container(&container)
     {
     }
 
-    template <typename T>
+    push_iterator &operator=(const T &t)
+    {
+      _container->push(t);
+      return *this;
+    }
+
     push_iterator &operator=(T &&t)
     {
-      _range->push(forward<T>(t));
+      _container->push(transfer(t));
       return *this;
     }
 
@@ -2162,13 +2205,13 @@ namespace stew
     }
   };
 
-  template <push_range C>
-  push_iterator<C> push_inserter(C &c)
+  template <typename T, push_container<T> C>
+  push_iterator<T, C> push_inserter(C &c)
   {
-    return push_iterator<C>(c);
+    return push_iterator<T, C>(c);
   }
 
-  template <forward_iterator I>
+  template <input_iterator I>
   class transfer_iterator
   {
   private:
@@ -2203,12 +2246,13 @@ namespace stew
     }
 
     constexpr auto operator-(const transfer_iterator &o) const
+      requires distanciable_iterator<I>
     {
       return _iter - o._iter;
     }
   };
 
-  template <forward_iterator I>
+  template <input_iterator I>
   view<transfer_iterator<I>> transfer_view(I b, I e)
   {
     return view<transfer_iterator<I>>(
@@ -2216,7 +2260,7 @@ namespace stew
         transfer_iterator<I>(e));
   }
 
-  template <range R>
+  template <input_range R>
   auto transfer_view(R &&r)
   {
     return transfer_view(
@@ -2271,6 +2315,7 @@ namespace stew
     }
 
     constexpr auto operator-(const reverse_iterator &o) const
+      requires distanciable_iterator<I>
     {
       return _iter - o._iter;
     }
@@ -2284,7 +2329,7 @@ namespace stew
         reverse_iterator<I>(b));
   }
 
-  template <range R>
+  template <bidirectional_range R>
   auto reverse_view(R &&r)
   {
     return reverse_view(
@@ -2292,7 +2337,7 @@ namespace stew
         end(forward<R>(r)));
   }
 
-  template <forward_iterator I, typename M>
+  template <input_iterator I, typename M>
   class map_iterator
   {
   private:
@@ -2331,12 +2376,13 @@ namespace stew
     }
 
     constexpr auto operator-(const map_iterator &o) const
+      requires distanciable_iterator<I>
     {
       return _iter - o._iter;
     }
   };
 
-  template <forward_iterator I, typename M>
+  template <input_iterator I, typename M>
   view<map_iterator<I, M>> map_view(I b, I e, M map)
   {
     return view<map_iterator<I, M>>(
@@ -2344,7 +2390,7 @@ namespace stew
         map_iterator<I, M>(e, map));
   }
 
-  template <range R, typename M>
+  template <input_range R, typename M>
   auto map_view(R &&r, M map)
   {
     return map_view(
@@ -2352,7 +2398,7 @@ namespace stew
         end(forward<R>(r)), map);
   }
 
-  template <forward_iterator I, predicate<decltype(*I{})> F>
+  template <input_iterator I, predicate<decltype(*I{})> F>
   class filter_iterator
   {
   private:
@@ -2400,12 +2446,13 @@ namespace stew
     }
 
     constexpr auto operator-(const filter_iterator &o) const
+      requires distanciable_iterator<I>
     {
       return _iter - o._iter;
     }
   };
 
-  template <forward_iterator I, typename F>
+  template <input_iterator I, typename F>
   view<filter_iterator<I, F>> filter_view(I b, I e, F filter)
   {
     return view<filter_iterator<I, F>>(
@@ -2413,7 +2460,7 @@ namespace stew
         filter_iterator<I, F>(e, e, filter));
   }
 
-  template <range R, typename F>
+  template <input_range R, typename F>
   auto filter_view(R &&r, F filter)
   {
     return filter_view(
@@ -2504,7 +2551,7 @@ namespace stew
     constexpr ~static_stack() = default;
     constexpr static_stack() = default;
 
-    template <range R>
+    template <input_range R>
     constexpr static_stack(R &&r)
     {
       push(forward<R>(r));
@@ -2515,7 +2562,7 @@ namespace stew
     constexpr static_stack &operator=(const static_stack &) = default;
     constexpr static_stack &operator=(static_stack &&) = default;
 
-    template <range R>
+    template <input_range R>
     constexpr static_stack &operator=(R &&r)
     {
       return (*this = transfer(static_stack(forward<R>(r))));
@@ -2540,22 +2587,22 @@ namespace stew
   public:
     constexpr auto begin()
     {
-      return _data.begin() + _idx;
+      return stew::begin(_data) + _idx;
     }
 
     constexpr auto end()
     {
-      return _data.end();
+      return stew::end(_data);
     }
 
     constexpr const auto begin() const
     {
-      return _data.begin() + _idx;
+      return stew::begin(_data) + _idx;
     }
 
     constexpr const auto end() const
     {
-      return _data.end();
+      return stew::end(_data);
     }
 
   public:
@@ -2568,15 +2615,22 @@ namespace stew
       }
     }
 
-    template <range R>
+    template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter(*this));
+      copy(forward<R>(r), push_inserter<T>(*this));
     }
 
-    constexpr T &pop()
+    constexpr maybe<T> pop()
     {
-      return _data[_idx++];
+      if (0 <= _idx && _idx < N)
+      {
+        return maybe<T>(transfer(_data[_idx++]));
+      }
+      else
+      {
+        return maybe<T>();
+      }
     }
   };
 
@@ -2595,8 +2649,9 @@ namespace stew
     constexpr fixed_stack(size_t max)
         : _max(max), _idx(max), _data(new T[max]) {}
 
-    template <range R>
+    template <input_range R>
     constexpr fixed_stack(R &&r)
+      requires distanciable_iterator<decltype(stew::begin(r))>
         : fixed_stack(stew::end(r) - stew::begin(r))
     {
       push(forward<R>(r));
@@ -2607,7 +2662,7 @@ namespace stew
     constexpr fixed_stack &operator=(const fixed_stack &) = default;
     constexpr fixed_stack &operator=(fixed_stack &&) = default;
 
-    template <range R>
+    template <input_range R>
     constexpr fixed_stack &operator=(R &&r)
     {
       return (*this = transfer(fixed_stack(forward<R>(r))));
@@ -2660,15 +2715,22 @@ namespace stew
       }
     }
 
-    template <range R>
+    template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter(*this));
+      copy(forward<R>(r), push_inserter<T>(*this));
     }
 
-    constexpr T &pop()
+    constexpr maybe<T> pop()
     {
-      return _data[_idx++];
+      if (0 <= _idx && _idx < _max)
+      {
+        return maybe<T>(transfer(_data[_idx++]));
+      }
+      else
+      {
+        return maybe<T>();
+      }
     }
   };
 
@@ -2682,8 +2744,9 @@ namespace stew
     constexpr ~stack() = default;
     constexpr stack() = default;
     constexpr stack(size_t max) : _data(max) {}
-    template <range R>
+    template <input_range R>
     constexpr stack(R &&r)
+      requires distanciable_iterator<decltype(stew::begin(r))>
         : stack(stew::end(r) - stew::begin(r))
     {
       push(forward<R>(r));
@@ -2695,7 +2758,7 @@ namespace stew
     constexpr stack &operator=(const stack &) = default;
     constexpr stack &operator=(stack &&) = default;
 
-    template <range R>
+    template <input_range R>
     constexpr stack &operator=(R &&r)
     {
       return (*this = transfer(stack(forward<R>(r))));
@@ -2753,13 +2816,13 @@ namespace stew
       _data.push(forward<U>(u));
     }
 
-    template <range R>
+    template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter(*this));
+      copy(forward<R>(r), push_inserter<T>(*this));
     }
 
-    constexpr T &pop()
+    constexpr auto pop()
     {
       return _data.pop();
     }
@@ -2776,7 +2839,7 @@ namespace stew
     constexpr ~static_vector() = default;
     constexpr static_vector() = default;
 
-    template <range R>
+    template <input_range R>
     constexpr static_vector(R &&r)
     {
       push(forward<R>(r));
@@ -2787,7 +2850,7 @@ namespace stew
     constexpr static_vector &operator=(const static_vector &) = default;
     constexpr static_vector &operator=(static_vector &&) = default;
 
-    template <range R>
+    template <input_range R>
     constexpr static_vector &operator=(R &&r)
     {
       return (*this = transfer(static_vector(forward<R>(r))));
@@ -2851,10 +2914,22 @@ namespace stew
       }
     }
 
-    template <range R>
+    template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter(*this));
+      copy(forward<R>(r), push_inserter<T>(*this));
+    }
+
+    constexpr maybe<T> pop()
+    {
+      if (_size != 0)
+      {
+        return maybe<T>(transfer(_data[_size--]));
+      }
+      else
+      {
+        return maybe<T>();
+      }
     }
   };
 
@@ -2889,8 +2964,9 @@ namespace stew
     {
     }
 
-    template <range R>
+    template <input_range R>
     constexpr fixed_vector(R &&r)
+      requires distanciable_iterator<decltype(stew::begin(r))>
         : fixed_vector(stew::end(forward<R>(r)) -
                        stew::begin(forward<R>(r)))
     {
@@ -2905,7 +2981,7 @@ namespace stew
       return *this;
     }
 
-    template <range R>
+    template <input_range R>
     constexpr fixed_vector &operator=(R &&r)
     {
       return (*this = transfer(fixed_vector(forward<R>(r))));
@@ -2969,23 +3045,22 @@ namespace stew
       }
     }
 
-    template <range R>
+    template <input_range R>
     constexpr void push(R &&r)
       requires not_convertible_to<R, T>
     {
-      copy(forward<R>(r), push_inserter(*this));
+      copy(forward<R>(r), push_inserter<T>(*this));
     }
 
-    constexpr size_t pop(T &t)
+    constexpr maybe<T> pop()
     {
       if (_size != 0)
       {
-        t = transfer(_data[_size--]);
-        return 1;
+        return maybe<T>(transfer(_data[_size--]));
       }
       else
       {
-        return 0;
+        return maybe<T>();
       }
     }
   };
@@ -3001,8 +3076,9 @@ namespace stew
     constexpr vector() = default;
     constexpr vector(size_t max) : _data(max) {}
 
-    template <range R>
+    template <input_range R>
     constexpr vector(R &&r)
+      requires distanciable_iterator<decltype(stew::begin(r))>
         : vector(stew::end(forward<R>(r)) -
                  stew::begin(forward<R>(r)))
     {
@@ -3014,7 +3090,7 @@ namespace stew
     constexpr vector &operator=(const vector &) = default;
     constexpr vector &operator=(vector &&) = default;
 
-    template <range R>
+    template <input_range R>
     constexpr vector &operator=(R &&r)
     {
       return (*this = transfer(vector(forward<R>(r))));
@@ -3023,22 +3099,22 @@ namespace stew
   public:
     constexpr auto begin()
     {
-      return _data.begin();
+      return stew::begin(_data);
     }
 
     constexpr auto end()
     {
-      return _data.end();
+      return stew::end(_data);
     }
 
     constexpr const auto begin() const
     {
-      return _data.begin();
+      return stew::begin(_data);
     }
 
     constexpr const auto end() const
     {
-      return _data.end();
+      return stew::begin(_data);
     }
 
     constexpr T &operator[](size_t i)
@@ -3081,290 +3157,17 @@ namespace stew
       _data.push(forward<U>(u));
     }
 
-    template <range R>
+    template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter(*this));
+      copy(forward<R>(r), push_inserter<T>(*this));
     }
 
-    constexpr size_t pop(T &t)
+    constexpr auto pop()
     {
-      return _data.pop(t);
+      return _data.pop();
     }
   };
-
-  namespace todo
-  {
-    template <typename T>
-    class list
-    {
-      struct node
-      {
-        T _t;
-        size_t _next = static_cast<size_t>(-1);
-
-      public:
-        ~node() = default;
-        node() = default;
-        template <convertible_to<T> U>
-        node(U &&u) : _t(forward<U>(u)) {}
-        node(const node &o) : _t(o._t), _next(o._next) {}
-        node(node &&o) : _t(transfer(o._t)), _next(transfer(o._next))
-        {
-          o._next = static_cast<size_t>(-1);
-        }
-
-        node &operator=(node o)
-        {
-          _t = transfer(o._t);
-          _next = transfer(o._next);
-          return *this;
-        }
-      };
-
-      struct iterator
-      {
-        non_owning<list> _l;
-        size_t _current = static_cast<size_t>(-1);
-
-        iterator &operator++()
-        {
-          if (_current != static_cast<size_t>(-1))
-          {
-            _current = _l->_nodes[_current]._next;
-          }
-
-          return *this;
-        }
-
-        iterator operator++(int)
-        {
-          iterator copy = *this;
-          ++this;
-          return copy;
-        }
-
-        bool operator==(const iterator &o) const
-        {
-          return _l == o._l && _current == o._current;
-        }
-
-        bool operator!=(const iterator &o) const
-        {
-          return !(*this == o);
-        }
-
-        T &operator*() const
-        {
-          return _l->_nodes[_current]._t;
-        }
-      };
-
-      struct const_iterator
-      {
-        non_owning<const list> _l;
-        size_t _current = static_cast<size_t>(-1);
-
-        const_iterator &operator++()
-        {
-          if (_current != static_cast<size_t>(-1))
-          {
-            _current = _l->_nodes[_current]._next;
-          }
-
-          return *this;
-        }
-
-        const_iterator operator++(int)
-        {
-          iterator copy = *this;
-          ++this;
-          return copy;
-        }
-
-        bool operator==(const const_iterator &o) const
-        {
-          return _l == o._l && _current == o._current;
-        }
-
-        bool operator!=(const const_iterator &o) const
-        {
-          return !(*this == o);
-        }
-
-        const T &operator*() const
-        {
-          return _l->_nodes[_current]._t;
-        }
-      };
-
-    private:
-      vector<node> _nodes;
-      size_t _first = static_cast<size_t>(-1);
-      size_t _last = static_cast<size_t>(-1);
-
-    public:
-      ~list() = default;
-      list() = default;
-      list(const list &o) = default;
-      list &operator=(const list &) = default;
-      list &operator=(list &&) = default;
-
-    public:
-      template <convertible_to<T> U>
-      void push(U &&u)
-      {
-        _nodes.push(node(forward<U>(u)));
-
-        if (_last == static_cast<size_t>(-1))
-        {
-          _first = 0;
-          _last = 0;
-        }
-        else
-        {
-          _nodes[_last]._next = _nodes.size() - 1;
-          _last = _nodes.size() - 1;
-        }
-      }
-
-      template <range R>
-      void push(R &&r)
-      {
-        for (auto &&i : forward<R>(r))
-        {
-          push(forward<decltype(i)>(i));
-        }
-      }
-
-      template <convertible_to<T> U>
-      void push_front(U &&u)
-      {
-        _nodes.push(node(forward<U>(u)));
-
-        if (_first == static_cast<size_t>(-1))
-        {
-          _first = 0;
-          _last = 0;
-        }
-        else
-        {
-          _nodes[_nodes.size() - 1]._next = _first;
-          _first = _nodes.size() - 1;
-        }
-      }
-
-      template <range R>
-      void push_front(R &&r)
-      {
-        for (auto &&i : forward<R>(r))
-        {
-          push_front(forward<decltype(i)>(i));
-        }
-      }
-
-      template <typename I, convertible_to<T> U>
-        requires same_one_of<I, iterator, const_iterator>
-      void insert(I i, U &&u)
-      {
-        // TODO: faire la fonction insert
-      }
-
-    public:
-      auto size() const
-      {
-        return _nodes.size();
-      }
-
-      bool empty() const
-      {
-        return _nodes.empty();
-      }
-
-    public:
-      auto begin()
-      {
-        return iterator{this, _first};
-      }
-
-      auto end()
-      {
-        return iterator{this, static_cast<size_t>(-1)};
-      }
-
-      auto begin() const
-      {
-        return const_iterator{this, _first};
-      }
-
-      auto end() const
-      {
-        return const_iterator{this, static_cast<size_t>(-1)};
-      }
-    };
-
-    template <typename T>
-    class set
-    {
-    private:
-      vector<T> _data;
-
-    public:
-      ~set() = default;
-      set() = default;
-      set(const set &) = default;
-      set(set &&) = default;
-      set &operator=(const set &) = default;
-      set &operator=(set &&) = default;
-
-    public:
-      auto size() const
-      {
-        return _data.size();
-      }
-
-      auto empty() const
-      {
-        return _data.empty();
-      }
-
-    public:
-      auto begin()
-      {
-        return _data.begin();
-      }
-
-      auto end()
-      {
-        return _data.end();
-      }
-
-      auto begin() const
-      {
-        return _data.begin();
-      }
-
-      auto end() const
-      {
-        return _data.end();
-      }
-
-    public:
-      template <convertible_to<T> U>
-      void push(U &&u)
-      {
-        if (find(_data, forward<U>(u)) == _data.end())
-        {
-          _data.push(forward<U>(u));
-        }
-      }
-
-      template <convertible_to<T> U>
-      void pop(const U &u)
-      {
-      }
-    };
-  }
 
   //----------------------------
   //
@@ -3422,13 +3225,13 @@ namespace stew
 
   constexpr array<const char *, 3> io_open_chrs = {"r", "w"};
 
-  enum class io_open : size_t
+  enum class mode : size_t
   {
     r = 0,
     w = 1
   };
 
-  template <typename T, io_open io>
+  template <typename T, mode m>
   class file
   {
   private:
@@ -3444,7 +3247,7 @@ namespace stew
 
     template <character C>
     file(basic_string_view<C> path)
-        : _fp(fopen(path.begin(), io_open_chrs[size_t(io)]))
+        : _fp(fopen(path.begin(), io_open_chrs[size_t(m)]))
     {
     }
 
@@ -3459,7 +3262,7 @@ namespace stew
     class ofile_iterator
     {
     private:
-      non_owning<file<T, io>> _file = nullptr;
+      non_owning<file<T, m>> _file = nullptr;
 
     public:
       ~ofile_iterator() = default;
@@ -3506,7 +3309,7 @@ namespace stew
     class ifile_iterator
     {
     private:
-      non_owning<file<T, io>> _file = nullptr;
+      non_owning<file<T, m>> _file = nullptr;
       maybe<T> _value;
 
     public:
@@ -3563,11 +3366,11 @@ namespace stew
   public:
     auto begin()
     {
-      if constexpr (io == io_open::w)
+      if constexpr (m == mode::w)
       {
         return ofile_iterator(*this);
       }
-      else if constexpr (io == io_open::r)
+      else if constexpr (m == mode::r)
       {
         return ifile_iterator(*this);
       }
@@ -3575,11 +3378,11 @@ namespace stew
 
     auto end()
     {
-      if constexpr (io == io_open::w)
+      if constexpr (m == mode::w)
       {
         return ofile_iterator();
       }
-      else if constexpr (io == io_open::r)
+      else if constexpr (m == mode::r)
       {
         return ifile_iterator();
       }
@@ -3587,14 +3390,14 @@ namespace stew
 
     auto begin() const
     {
-      if constexpr (io == io_open::r)
+      if constexpr (m == mode::r)
       {
         return ifile_iterator(*this);
       }
     }
     auto end() const
     {
-      if constexpr (io == io_open::r)
+      if constexpr (m == mode::r)
       {
         return ifile_iterator();
       }
@@ -3602,7 +3405,7 @@ namespace stew
 
   public:
     void push(T &&t)
-      requires(io == io_open::w)
+      requires(m == mode::w)
     {
       if (_fp != nullptr)
       {
@@ -3611,7 +3414,7 @@ namespace stew
     }
 
     void push(const T &t)
-      requires(io == io_open::w)
+      requires(m == mode::w)
     {
       if (_fp != nullptr)
       {
@@ -3619,9 +3422,9 @@ namespace stew
       }
     }
 
-    template <range R>
+    template <input_range R>
     void push(R &&r)
-      requires(io == io_open::w)
+      requires(m == mode::w)
     {
       for (auto &&i : forward<R>(r))
       {
@@ -3630,7 +3433,7 @@ namespace stew
     }
 
     maybe<T> pop()
-      requires(io == io_open::r)
+      requires(m == mode::r)
     {
       maybe<T> res;
 
@@ -3647,9 +3450,9 @@ namespace stew
       return res;
     }
 
-    template <typename R>
+    template <push_container<T> R>
     void pop(R &r, size_t n)
-      requires(io == io_open::r)
+      requires(m == mode::r)
     {
       if (_fp != nullptr)
       {
@@ -3680,28 +3483,12 @@ namespace stew
     }
   };
 
-  file<char, io_open::r> termin(stdin);
-  file<char, io_open::w> termout(stdout);
+  file<char, mode::r> termin(stdin);
+  file<char, mode::w> termout(stdout);
+  
+  file<char, mode::r> wtermin(stdin);
+  file<char, mode::w> wtermout(stdout);
 
-  file<char, io_open::r> wtermin(stdin);
-  file<char, io_open::w> wtermout(stdout);
-
-  //----------------------
-  //
-  // Streams
-  //
-  //----------------------
-
-  template <typename T, typename C>
-  concept ostream2 =
-      character<C> &&
-      requires(T &t) { t.write(C(0)); } &&
-      requires(T &t) { t.write(basic_string_view<C>()); };
-
-  template <typename T, typename C>
-  concept istream2 =
-      character<C> &&
-      requires(T &t) { { t.read() } -> same_as<maybe<C>>; };
 
   //------------------------------
   //
@@ -3710,17 +3497,11 @@ namespace stew
   //------------------------------
 
   template <typename O>
-  concept char_ostream =
-      requires(O &o, char c) { o.push(c); } &&
-      requires(O &o, string_view s) { o.push(s); };
-
-  template <typename O>
-  concept wchar_ostream =
-      requires(O &o, wchar_t c) { o.push(c); } &&
-      requires(O &o, string_view s) { o.push(s); };
-
-  template <typename O>
-  concept ostream = char_ostream<O> || wchar_ostream<O>;
+  concept ostream =
+      (push_container<O, char> &&
+       push_container<O, basic_string_view<char>>) ||
+      (push_container<O, wchar_t> &&
+       push_container<O, basic_string_view<wchar_t>>);
 
   template <character C, size_t N>
   class basic_format_string

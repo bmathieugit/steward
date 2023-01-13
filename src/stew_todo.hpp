@@ -121,6 +121,279 @@ namespace stew
     }
   }
 
+  namespace todo
+  {
+    template <typename T>
+    class list
+    {
+      struct node
+      {
+        T _t;
+        size_t _next = static_cast<size_t>(-1);
+
+      public:
+        ~node() = default;
+        node() = default;
+        template <convertible_to<T> U>
+        node(U &&u) : _t(forward<U>(u)) {}
+        node(const node &o) : _t(o._t), _next(o._next) {}
+        node(node &&o) : _t(transfer(o._t)), _next(transfer(o._next))
+        {
+          o._next = static_cast<size_t>(-1);
+        }
+
+        node &operator=(node o)
+        {
+          _t = transfer(o._t);
+          _next = transfer(o._next);
+          return *this;
+        }
+      };
+
+      struct iterator
+      {
+        non_owning<list> _l;
+        size_t _current = static_cast<size_t>(-1);
+
+        iterator &operator++()
+        {
+          if (_current != static_cast<size_t>(-1))
+          {
+            _current = _l->_nodes[_current]._next;
+          }
+
+          return *this;
+        }
+
+        iterator operator++(int)
+        {
+          iterator copy = *this;
+          ++this;
+          return copy;
+        }
+
+        bool operator==(const iterator &o) const
+        {
+          return _l == o._l && _current == o._current;
+        }
+
+        bool operator!=(const iterator &o) const
+        {
+          return !(*this == o);
+        }
+
+        T &operator*() const
+        {
+          return _l->_nodes[_current]._t;
+        }
+      };
+
+      struct const_iterator
+      {
+        non_owning<const list> _l;
+        size_t _current = static_cast<size_t>(-1);
+
+        const_iterator &operator++()
+        {
+          if (_current != static_cast<size_t>(-1))
+          {
+            _current = _l->_nodes[_current]._next;
+          }
+
+          return *this;
+        }
+
+        const_iterator operator++(int)
+        {
+          iterator copy = *this;
+          ++this;
+          return copy;
+        }
+
+        bool operator==(const const_iterator &o) const
+        {
+          return _l == o._l && _current == o._current;
+        }
+
+        bool operator!=(const const_iterator &o) const
+        {
+          return !(*this == o);
+        }
+
+        const T &operator*() const
+        {
+          return _l->_nodes[_current]._t;
+        }
+      };
+
+    private:
+      vector<node> _nodes;
+      size_t _first = static_cast<size_t>(-1);
+      size_t _last = static_cast<size_t>(-1);
+
+    public:
+      ~list() = default;
+      list() = default;
+      list(const list &o) = default;
+      list &operator=(const list &) = default;
+      list &operator=(list &&) = default;
+
+    public:
+      template <convertible_to<T> U>
+      void push(U &&u)
+      {
+        _nodes.push(node(forward<U>(u)));
+
+        if (_last == static_cast<size_t>(-1))
+        {
+          _first = 0;
+          _last = 0;
+        }
+        else
+        {
+          _nodes[_last]._next = _nodes.size() - 1;
+          _last = _nodes.size() - 1;
+        }
+      }
+
+      template <range R>
+      void push(R &&r)
+      {
+        for (auto &&i : forward<R>(r))
+        {
+          push(forward<decltype(i)>(i));
+        }
+      }
+
+      template <convertible_to<T> U>
+      void push_front(U &&u)
+      {
+        _nodes.push(node(forward<U>(u)));
+
+        if (_first == static_cast<size_t>(-1))
+        {
+          _first = 0;
+          _last = 0;
+        }
+        else
+        {
+          _nodes[_nodes.size() - 1]._next = _first;
+          _first = _nodes.size() - 1;
+        }
+      }
+
+      template <range R>
+      void push_front(R &&r)
+      {
+        for (auto &&i : forward<R>(r))
+        {
+          push_front(forward<decltype(i)>(i));
+        }
+      }
+
+      template <typename I, convertible_to<T> U>
+        requires same_one_of<I, iterator, const_iterator>
+      void insert(I i, U &&u)
+      {
+        // TODO: faire la fonction insert
+      }
+
+    public:
+      auto size() const
+      {
+        return _nodes.size();
+      }
+
+      bool empty() const
+      {
+        return _nodes.empty();
+      }
+
+    public:
+      auto begin()
+      {
+        return iterator{this, _first};
+      }
+
+      auto end()
+      {
+        return iterator{this, static_cast<size_t>(-1)};
+      }
+
+      auto begin() const
+      {
+        return const_iterator{this, _first};
+      }
+
+      auto end() const
+      {
+        return const_iterator{this, static_cast<size_t>(-1)};
+      }
+    };
+
+    template <typename T>
+    class set
+    {
+    private:
+      vector<T> _data;
+
+    public:
+      ~set() = default;
+      set() = default;
+      set(const set &) = default;
+      set(set &&) = default;
+      set &operator=(const set &) = default;
+      set &operator=(set &&) = default;
+
+    public:
+      auto size() const
+      {
+        return _data.size();
+      }
+
+      auto empty() const
+      {
+        return _data.empty();
+      }
+
+    public:
+      auto begin()
+      {
+        return _data.begin();
+      }
+
+      auto end()
+      {
+        return _data.end();
+      }
+
+      auto begin() const
+      {
+        return _data.begin();
+      }
+
+      auto end() const
+      {
+        return _data.end();
+      }
+
+    public:
+      template <convertible_to<T> U>
+      void push(U &&u)
+      {
+        if (find(_data, forward<U>(u)) == _data.end())
+        {
+          _data.push(forward<U>(u));
+        }
+      }
+
+      template <convertible_to<T> U>
+      void pop(const U &u)
+      {
+      }
+    };
+  }
+
 }
 
 #endif
