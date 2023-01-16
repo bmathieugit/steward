@@ -3182,6 +3182,12 @@ namespace stew
   template <character C>
   using string_view = view<const C *>;
 
+  template <character C>
+  constexpr string_view<C> substr(string_view<C> s, size_t from)
+  {
+    return string_view<C>(begin(s) + from, end(s));
+  }
+
   constexpr string_view<char> operator"" _sv(const char *s, size_t n)
   {
     return string_view<char>(s, s + n);
@@ -3592,20 +3598,6 @@ namespace stew
 
   namespace fmt
   {
-    template <input_iterator I>
-    class onepass_stream
-    {
-    private:
-      I _b;
-      I _e;
-
-    public:
-      // TODO: ce que l'on veut c'est faire en sorte de vérrouiller 
-      // le parcour entre _b et _e à un seul parcour. Même si onepass_stream
-      // a été copier, il faut qu'au travers des copies on ne puisse quand même
-      // parcourir plusieurs fois le onepass_stream. 
-    };
-
     template <size_t... I>
     struct isequence
     {
@@ -3634,39 +3626,48 @@ namespace stew
       return impl::make_isequence<N - 1>();
     }
 
-    template <typename A, input_iterator I, character C>
-    constexpr maybe<A> format_from_one(view<I> i, string_view<C> part)
+    template <typename A, character C>
+    constexpr maybe<A> format_from_one(
+        string_view<C> &input, string_view<C> part)
     {
-      if (starts_with(i, part))
+      if (starts_with(input, part))
       {
-        return formatter<rm_cvref<A>>::from(view(i.begin() + part.size(), i.end()));
+        string_view<C> toparse(input.begin() + part.size(), input.end());
+        string_view<C> parsed = formatter<rm_cvref<A>>::parse(toparse);
+        input = string_view<C>(input);
+        return formatter<rm_cvref<A>>::from(parsed);
       }
-      else
-      {
-        return maybe<A>();
-      }
+
+      return maybe<A>();
     }
 
-    template <typename... A, size_t... J, typename C, input_iterator I>
+    template <typename... A, size_t... J, typename C>
     constexpr tuple<maybe<A>...> format_from(
-        view<I> i, const format_string<C, sizeof...(A) + 1> &fmt, isequence<J...>)
+        string_view<C> &input, const format_string<C, sizeof...(A) + 1> &fmt, isequence<J...>)
     {
-      return tuple<maybe<A>...>(format_from_one<A>(i, get<J>(fmt.items()))...);
+      return tuple<maybe<A>...>(format_from_one<A>(input, get<J>(fmt.items()))...);
     }
 
-    template <typename... A, input_iterator I>
+    template <typename... A, character C>
     constexpr tuple<maybe<A>...> format_from(
-        view<I> i, const format_string<char, sizeof...(A) + 1> &fmt)
+        string_view<C> &input, const format_string<char, sizeof...(A) + 1> &fmt)
     {
-      return format_from<A...>(i, fmt, make_isequence<sizeof...(A)>());
+      return format_from<A...>(input, fmt, make_isequence<sizeof...(A)>());
     }
   }
 
   template <typename... A>
   constexpr tuple<maybe<A>...> format_from(
-      input_range auto &i, const format_string<char, sizeof...(A) + 1> &fmt)
+      string_view<char> input, const format_string<char, sizeof...(A) + 1> &fmt)
   {
-    return fmt::format_from<A...>(view(i), fmt);
+    return fmt::format_from<A...>(input, fmt);
+  }
+
+  template <typename... A>
+  constexpr tuple<maybe<A>...> format_from(
+      string_view<wchar_t> input, const format_string<wchar_t, sizeof...(A) + 1> &fmt)
+  {
+    return fmt::format_from<A...>(input, fmt);
   }
 
   template <character C>
@@ -3759,6 +3760,17 @@ namespace stew
       }
 
       formatter<string_view<char>>::to(o, tbuff);
+    }
+
+    template <character C>
+    constexpr static string_view<C> parse(string_view<C> i)
+    {
+      auto f = find(i, [](C c)
+                    { return !('0' <= c && c <= '9'); });
+
+      printf("parsed : %s\n", string_view<C>(begin(i), f).begin());
+      
+      return string_view<C>(begin(i), f);
     }
 
     template <input_range R>

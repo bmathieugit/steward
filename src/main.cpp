@@ -7,10 +7,10 @@ using namespace stew;
 int main()
 {
   fixed_string<char> s(100);
-  s.push("coucou12c12"_sv);
+  s.push("coucou1412c211"_sv);
 
 
-  tuple<maybe<int>, maybe<int>> res = format_from<int, int>(s, "coucou{}c{}"_sv);
+  auto res = format_from<int, int>(s, "coucou{}c{}"_sv);
 
   if (get<0>(res).has())
   {
