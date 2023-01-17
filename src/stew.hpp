@@ -1858,13 +1858,13 @@ namespace stew
   }
 
   template <input_range R1, input_range R2>
-  bool operator==(const R1 &r1, const R2 &r2)
+  constexpr bool operator==(const R1 &r1, const R2 &r2)
   {
     return stew::equals(r1, r2);
   }
 
   template <input_range R1, input_range R2>
-  bool operator!=(const R1 &r1, const R2 &r2)
+  constexpr bool operator!=(const R1 &r1, const R2 &r2)
   {
     return !stew::equals(r1, r2);
   }
@@ -2203,9 +2203,9 @@ namespace stew
       return *this;
     }
 
-    auto operator==(const push_iterator &o)
+    auto operator==(const push_iterator &o) const
     {
-      return true;
+      return _container == o._container;
     }
   };
 
@@ -2257,7 +2257,7 @@ namespace stew
   };
 
   template <input_iterator I>
-  view<transfer_iterator<I>> transfer_view(I b, I e)
+  constexpr view<transfer_iterator<I>> transfer_view(I b, I e)
   {
     return view<transfer_iterator<I>>(
         transfer_iterator<I>(b),
@@ -2265,7 +2265,7 @@ namespace stew
   }
 
   template <input_range R>
-  auto transfer_view(R &&r)
+  constexpr auto transfer_view(R &&r)
   {
     return transfer_view(
         begin(forward<R>(r)),
@@ -2326,7 +2326,7 @@ namespace stew
   };
 
   template <bidirectional_iterator I>
-  view<reverse_iterator<I>> reverse_view(I b, I e)
+  constexpr view<reverse_iterator<I>> reverse_view(I b, I e)
   {
     return view<reverse_iterator<I>>(
         reverse_iterator<I>(e),
@@ -2334,7 +2334,7 @@ namespace stew
   }
 
   template <bidirectional_range R>
-  auto reverse_view(R &&r)
+ constexpr  auto reverse_view(R &&r)
   {
     return reverse_view(
         begin(forward<R>(r)),
@@ -2387,7 +2387,7 @@ namespace stew
   };
 
   template <input_iterator I, typename M>
-  view<map_iterator<I, M>> map_view(I b, I e, M map)
+  constexpr view<map_iterator<I, M>> map_view(I b, I e, M map)
   {
     return view<map_iterator<I, M>>(
         map_iterator<I, M>(b, map),
@@ -2395,7 +2395,7 @@ namespace stew
   }
 
   template <input_range R, typename M>
-  auto map_view(R &&r, M map)
+  constexpr auto map_view(R &&r, M map)
   {
     return map_view(
         begin(forward<R>(r)),
@@ -2457,7 +2457,7 @@ namespace stew
   };
 
   template <input_iterator I, typename F>
-  view<filter_iterator<I, F>> filter_view(I b, I e, F filter)
+  constexpr view<filter_iterator<I, F>> filter_view(I b, I e, F filter)
   {
     return view<filter_iterator<I, F>>(
         filter_iterator<I, F>(b, e, filter),
@@ -2465,7 +2465,7 @@ namespace stew
   }
 
   template <input_range R, typename F>
-  auto filter_view(R &&r, F filter)
+  constexpr auto filter_view(R &&r, F filter)
   {
     return filter_view(
         begin(forward<R>(r)),
@@ -3632,7 +3632,7 @@ namespace stew
     {
       if (starts_with(input, part))
       {
-        string_view<C> toparse(input.begin() + part.size(), input.end());
+        string_view<C> toparse = substr(input, part.size());
         string_view<C> parsed = formatter<rm_cvref<A>>::parse(toparse);
         input = string_view<C>(input);
         return formatter<rm_cvref<A>>::from(parsed);
@@ -3769,7 +3769,7 @@ namespace stew
                     { return !('0' <= c && c <= '9'); });
 
       printf("parsed : %s\n", string_view<C>(begin(i), f).begin());
-      
+
       return string_view<C>(begin(i), f);
     }
 

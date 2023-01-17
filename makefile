@@ -5,8 +5,8 @@
 # $* : nom d’un fichier sans son suffixe  
 
 CC=g++
-FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc 
-EXTRA=-save-temps -fconcepts-diagnostics-depth=10
+FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc
+EXTRA=-save-temps #-fconcepts-diagnostics-depth=10
 #EXPER=-fanalyzer
 
 all: clean compile run
