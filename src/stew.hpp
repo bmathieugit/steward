@@ -3040,7 +3040,6 @@ namespace stew
 
     template <input_range R>
     constexpr vector(R &&r)
-      requires distanciable_iterator<decltype(stew::begin(r))>
         : vector(stew::end(forward<R>(r)) -
                  stew::begin(forward<R>(r)))
     {
@@ -3777,41 +3776,6 @@ namespace stew
 
   //------------------------
   //
-  // Console
-  //
-  //------------------------
-
-  template <character C>
-  class console
-  {
-  public:
-    template <typename... T>
-    static void printf(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
-    {
-      format_to(termout, fmt, t...);
-    }
-
-    template <typename... T>
-    static void printfln(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
-    {
-      format_to(termout, fmt, t...);
-      termout.push('\n');
-    }
-
-    static void print(string_view<C> s)
-    {
-      termout.push(s);
-    }
-
-    static void println(string_view<C> s)
-    {
-      termout.push(s);
-      termout.push('\n');
-    }
-  };
-
-  //------------------------
-  //
   // Extracting
   //
   //------------------------
@@ -3991,6 +3955,62 @@ namespace stew
       {
         return i;
       }
+    }
+  };
+
+  //------------------------
+  //
+  // Console
+  //
+  //------------------------
+
+  template <character C>
+  class console
+  {
+  public:
+    template <typename... T>
+    static void printf(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
+    {
+      format_to(termout, fmt, t...);
+    }
+
+    template <typename... T>
+    static void printfln(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
+    {
+      format_to(termout, fmt, t...);
+      termout.push('\n');
+    }
+
+    static void print(string_view<C> s)
+    {
+      termout.push(s);
+    }
+
+    static void println(string_view<C> s)
+    {
+      termout.push(s);
+      termout.push('\n');
+    }
+
+    template <typename... T>
+    static void readf(
+        format_string<C, sizeof...(T) + 1> fmt,
+        extract_response<T...> &response)
+    {
+      maybe<C> mb;
+      string<C> s;
+
+      while ((mb = termin.pop()).has())
+      {
+        if (*mb == '\n')
+        {
+          break;
+        }
+
+        s.push(*mb);
+      }
+
+      extract_to(s, fmt, response);
     }
   };
 
