@@ -3797,6 +3797,17 @@ namespace stew
       format_to(termout, fmt, t...);
       termout.push('\n');
     }
+
+    static void print(string_view<C> s)
+    {
+      termout.push(s);
+    }
+
+    static void println(string_view<C> s)
+    {
+      termout.push(s);
+      termout.push('\n');
+    }
   };
 
   //------------------------

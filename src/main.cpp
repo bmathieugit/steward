@@ -4,6 +4,6 @@ using namespace stew;
 
 int main()
 {
-  console<char>::printfln("hello M.{}"_sv, "Mathieu"_sv);
+  console<char>::println("hello M.MATHIEU"_sv);
   return 0;
 }
