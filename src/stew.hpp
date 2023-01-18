@@ -3633,121 +3633,6 @@ namespace stew
     fmt::format_to(o, fmt, a...);
   }
 
-  template <typename... T>
-  using format_response = tuple<maybe<T>...>;
-
-  namespace fmt
-  {
-    template <size_t... I>
-    struct isequence
-    {
-    };
-
-    namespace impl
-    {
-      template <size_t I0, size_t... In>
-      consteval auto make_isequence()
-      {
-        if constexpr (I0 == 0)
-        {
-          return isequence<I0, In...>{};
-        }
-        else
-        {
-          return make_isequence<I0 - 1, I0, In...>();
-        }
-      }
-    }
-
-    template <size_t N>
-      requires(N > 0)
-    constexpr auto make_isequence()
-    {
-      return impl::make_isequence<N - 1>();
-    }
-
-    template <size_t N, character C>
-    constexpr auto split_fmt(string_view<C> fmt)
-    {
-      array<string_view<C>, N + 1> parts;
-
-      for (auto &part : parts)
-      {
-        auto [fnd, bef, aft] = around(fmt, "{}"_sv);
-
-        if (fnd)
-        {
-          fmt = aft;
-          part = bef;
-        }
-        else
-        {
-          part = aft;
-          break;
-        }
-      }
-
-      return parts;
-    }
-
-    template <size_t I, character C, typename T>
-    constexpr void format_from_one(
-        string_view<C> &input,
-        string_view<C> fmt_part,
-        maybe<T> &response_part)
-    {
-      if (starts_with(input, fmt_part))
-      {
-        input = substr(input, fmt_part.size());
-        auto parsed = formatter<T>::parse(input);
-
-        if (!parsed.empty())
-        {
-          response_part = formatter<T>::from(parsed);
-        }
-
-        input = substr(input, parsed.size());
-      }
-    }
-
-    template <character C, typename... T, size_t... I>
-    constexpr void format_from(
-        string_view<C> input,
-        const array<string_view<C>, sizeof...(T) + 1> fmt_parts,
-        format_response<T...> &response,
-        isequence<I...>)
-    {
-      (format_from_one<I>(input, get<I>(fmt_parts), get<I>(response)), ...);
-    }
-
-    template <character C, typename... T>
-    constexpr void format_from(
-        string_view<C> input,
-        const array<string_view<C>, sizeof...(T) + 1> fmt_parts,
-        format_response<T...> &response)
-    {
-      format_from(input, fmt_parts, response, make_isequence<sizeof...(T)>());
-    }
-  }
-
-  template <typename... T>
-  constexpr void format_from(
-      string_view<char> input,
-      format_string<char, sizeof...(T) + 1> fmt,
-      format_response<T...> &response)
-  {
-    return fmt::format_from(input, fmt.parts(), response);
-  }
-
-  template <typename... T>
-  constexpr void format_from(
-      string_view<wchar_t> input,
-      format_string<wchar_t, sizeof...(T) + 1> fmt,
-      format_response<T...> &response)
-  {
-    return fmt::format_from(input, fmt.parts(), response);
-  }
-
   template <character C>
   class formatter<C>
   {
@@ -3756,23 +3641,6 @@ namespace stew
     constexpr static void to(O &os, C o)
     {
       os.push(o);
-    }
-
-    constexpr static string_view<C> parse(string_view<C> i)
-    {
-      if (!i.empty())
-      {
-        return substr(i, 0, 1);
-      }
-      else
-      {
-        return string_view<C>();
-      }
-    }
-
-    constexpr static maybe<C> from(string_view<C> i)
-    {
-      return maybe<C>(*begin(i));
     }
   };
 
@@ -3856,44 +3724,6 @@ namespace stew
 
       formatter<string_view<char>>::to(o, tbuff);
     }
-
-    template <character C>
-    constexpr static string_view<C> parse(string_view<C> i)
-    {
-      if (starts_with(i, '-') || starts_with(i, '+'))
-      {
-        i = substr(i, 1);
-      }
-
-      auto f = find(i, [](C c)
-                    { return !('0' <= c && c <= '9'); });
-      return string_view<C>(begin(i), f);
-    }
-
-    template <character C>
-    constexpr static maybe<I> from(string_view<C> i)
-    {
-      I rhesus = 1;
-
-      if (starts_with(i, '-'))
-      {
-        rhesus = -1;
-        i = substr(i, 1);
-      }
-      else if (starts_with(i, '+'))
-      {
-        i = substr(i, 1);
-      }
-
-      I res = 0;
-
-      for (C c : i)
-      {
-        res = res * 10 + (c - '0');
-      }
-
-      return maybe<I>(rhesus * res);
-    }
   };
 
   template <unsigned_integral I>
@@ -3921,27 +3751,6 @@ namespace stew
 
       formatter<string_view<char>>::to(o, tbuff);
     }
-
-    template <character C>
-    constexpr static string_view<C> parse(string_view<C> i)
-    {
-      auto f = find(i, [](C c)
-                    { return !('0' <= c && c <= '9'); });
-      return string_view<C>(begin(i), f);
-    }
-
-    template <character C>
-    constexpr static maybe<I> from(string_view<C> i)
-    {
-      I res = 0;
-
-      for (C c : i)
-      {
-        res = res * 10 + (c - '0');
-      }
-
-      return maybe<I>(res);
-    }
   };
 
   template <>
@@ -3952,29 +3761,6 @@ namespace stew
     constexpr static void to(O &o, bool b)
     {
       formatter<string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
-    }
-
-    template <character C>
-    constexpr static string_view<C> parse(string_view<C> i)
-    {
-      if (starts_with(i, "true"_sv))
-      {
-        return substr(i, 0, 4);
-      }
-      else if (starts_with(i, "false"_sv))
-      {
-        return substr(i, 0, 5);
-      }
-      else
-      {
-        return string_view<C>();
-      }
-    }
-
-    template <character C>
-    constexpr static maybe<bool> from(string_view<C> i)
-    {
-      return starts_with(i, "true"_sv);
     }
   };
 
@@ -3989,6 +3775,189 @@ namespace stew
     }
   };
 
+  //------------------------
+  //
+  // Extracting
+  //
+  //------------------------
+
+  template <typename T>
+  class extractor;
+
+  template <typename... T>
+  using extract_response = tuple<maybe<T>...>;
+
+  namespace fmt
+  {
+    template <size_t... I>
+    struct isequence
+    {
+    };
+
+    namespace impl
+    {
+      template <size_t I0, size_t... In>
+      consteval auto make_isequence()
+      {
+        if constexpr (I0 == 0)
+        {
+          return isequence<I0, In...>{};
+        }
+        else
+        {
+          return make_isequence<I0 - 1, I0, In...>();
+        }
+      }
+    }
+
+    template <size_t N>
+      requires(N > 0)
+    constexpr auto make_isequence()
+    {
+      return impl::make_isequence<N - 1>();
+    }
+
+    template <size_t I, character C, typename T>
+    constexpr void extract_to_one(
+        string_view<C> &input,
+        string_view<C> fmt_part,
+        maybe<T> &response_part)
+    {
+      if (starts_with(input, fmt_part))
+      {
+        input = substr(input, fmt_part.size());
+        input = extractor<T>::to(input, response_part);
+      }
+    }
+
+    template <character C, typename... T, size_t... I>
+    constexpr void extract_to(
+        string_view<C> input,
+        const array<string_view<C>, sizeof...(T) + 1> fmt_parts,
+        extract_response<T...> &response,
+        isequence<I...>)
+    {
+      (extract_to_one<I>(input, get<I>(fmt_parts), get<I>(response)), ...);
+    }
+  }
+
+  template <typename... T>
+  constexpr void extract_to(
+      string_view<char> input,
+      format_string<char, sizeof...(T) + 1> fmt,
+      extract_response<T...> &response)
+  {
+    return fmt::extract_to(
+        input, fmt.parts(), response,
+        fmt::make_isequence<sizeof...(T)>());
+  }
+
+  template <typename... T>
+  constexpr void format_from(
+      string_view<wchar_t> input,
+      format_string<wchar_t, sizeof...(T) + 1> fmt,
+      extract_response<T...> &response)
+  {
+    return fmt::extract_to(
+        input, fmt.parts(), response,
+        fmt::make_isequence<sizeof...(T)>());
+  }
+
+  template <unsigned_integral I>
+  class extractor<I>
+  {
+  public:
+    template <character C>
+    constexpr static auto to(
+        string_view<C> i, maybe<I> &mb)
+    {
+      auto b = begin(i);
+      auto e = end(i);
+
+      I res = 0;
+
+      while (b != e && '0' <= *b && *b <= '9')
+      {
+        res = res * 10 + (*b - '0');
+        ++b;
+      }
+
+      if (b != begin(i))
+      {
+        mb = res;
+      }
+
+      return string_view<C>(b, end(i));
+    }
+  };
+
+  template <signed_integral I>
+  class extractor<I>
+  {
+  public:
+    template <character C>
+    constexpr static auto to(
+        string_view<C> i, maybe<I> &mb)
+    {
+      auto b = begin(i);
+      auto e = end(i);
+
+      I unit = 1;
+
+      if (b != e)
+      {
+        if (*b == '-')
+        {
+          unit = -1;
+          ++b;
+        }
+        else if (*b == '+')
+        {
+          ++b;
+        }
+      }
+
+      I res = 0;
+
+      while (b != e && '0' <= *b && *b <= '9')
+      {
+        res = res * 10 + (*b - '0');
+        ++b;
+      }
+
+      if (b != begin(i))
+      {
+        mb = unit * res;
+      }
+
+      return string_view<C>(b, end(i));
+    }
+  };
+
+  template <>
+  class extractor<bool>
+  {
+  public:
+    template <character C>
+    constexpr static auto to(
+        string_view<C> i, maybe<bool> &mb)
+    {
+      if (starts_with(i, "true"_sv))
+      {
+        mb = true;
+        return substr(i, 4);
+      }
+      else if (starts_with(i, "false"_sv))
+      {
+        mb = false;
+        return substr(i, 5);
+      }
+      else
+      {
+        return i;
+      }
+    }
+  };
   //------------------------
   //
   // Multithreading
