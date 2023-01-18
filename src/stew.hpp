@@ -1746,18 +1746,6 @@ namespace stew
     return forward<R>(r).end();
   }
 
-  // template <typename T, size_t N>
-  // constexpr auto begin(T (&t)[N])
-  // {
-  //   return t;
-  // }
-
-  // template <typename T, size_t N>
-  // constexpr auto end(T (&t)[N])
-  // {
-  //   return t + N;
-  // }
-
   template <input_or_output_iterator I>
   class view
   {
@@ -2043,7 +2031,6 @@ namespace stew
   // Iterator utilities
   //
   //----------------------------
-  // FIXME: Improve constraints in iterator templates
 
   template <typename G>
   class generator_iterator
@@ -3159,6 +3146,12 @@ namespace stew
     return string_view<C>(begin(s) + from, end(s));
   }
 
+  template <character C>
+  constexpr string_view<C> substr(string_view<C> s, size_t from, size_t n)
+  {
+    return string_view<C>(begin(s) + from, begin(s) + from + n);
+  }
+
   constexpr string_view<char> operator"" _sv(const char *s, size_t n)
   {
     return string_view<char>(s, s + n);
@@ -3232,6 +3225,29 @@ namespace stew
           true,
           {begin(input), pos},
           {pos + sep.size(), end(input)}};
+    }
+    else
+    {
+      return around_pair<C>{
+          false,
+          {begin(input), begin(input)},
+          {begin(input), end(input)}};
+    }
+  }
+
+  template <character C>
+  constexpr around_pair<C> around(
+      string_view<C> input,
+      C sep)
+  {
+    auto pos = find(input, sep);
+
+    if (pos != end(input))
+    {
+      return around_pair<C>{
+          true,
+          {begin(input), pos},
+          {pos + 1, end(input)}};
     }
     else
     {
@@ -3684,8 +3700,13 @@ namespace stew
       {
         input = substr(input, fmt_part.size());
         auto parsed = formatter<T>::parse(input);
+
+        if (!parsed.empty())
+        {
+          response_part = formatter<T>::from(parsed);
+        }
+
         input = substr(input, parsed.size());
-        response_part = formatter<T>::from(parsed);
       }
     }
 
@@ -3735,6 +3756,23 @@ namespace stew
     constexpr static void to(O &os, C o)
     {
       os.push(o);
+    }
+
+    constexpr static string_view<C> parse(string_view<C> i)
+    {
+      if (!i.empty())
+      {
+        return substr(i, 0, 1);
+      }
+      else
+      {
+        return string_view<C>();
+      }
+    }
+
+    constexpr static maybe<C> from(string_view<C> i)
+    {
+      return maybe<C>(*begin(i));
     }
   };
 
@@ -3822,48 +3860,39 @@ namespace stew
     template <character C>
     constexpr static string_view<C> parse(string_view<C> i)
     {
+      if (starts_with(i, '-') || starts_with(i, '+'))
+      {
+        i = substr(i, 1);
+      }
+
       auto f = find(i, [](C c)
                     { return !('0' <= c && c <= '9'); });
       return string_view<C>(begin(i), f);
     }
 
-    template <input_range R>
-    constexpr static maybe<I> from(const R &r)
+    template <character C>
+    constexpr static maybe<I> from(string_view<C> i)
     {
+      I rhesus = 1;
+
+      if (starts_with(i, '-'))
+      {
+        rhesus = -1;
+        i = substr(i, 1);
+      }
+      else if (starts_with(i, '+'))
+      {
+        i = substr(i, 1);
+      }
+
       I res = 0;
 
-      bool hasone = false;
-
-      auto b = begin(r);
-      auto e = end(r);
-
-      char c;
-
-      while (b != e)
+      for (C c : i)
       {
-        auto c = *b;
-
-        if ('0' <= static_cast<const char &>(c) && static_cast<const char &>(c) <= '9')
-        {
-          res = res * 10 + static_cast<const char &>(c) - '0';
-          hasone = true;
-        }
-        else
-        {
-          break;
-        }
-
-        ++b;
+        res = res * 10 + (c - '0');
       }
 
-      if (hasone)
-      {
-        return maybe<I>(res);
-      }
-      else
-      {
-        return maybe<I>();
-      }
+      return maybe<I>(rhesus * res);
     }
   };
 
@@ -3892,6 +3921,27 @@ namespace stew
 
       formatter<string_view<char>>::to(o, tbuff);
     }
+
+    template <character C>
+    constexpr static string_view<C> parse(string_view<C> i)
+    {
+      auto f = find(i, [](C c)
+                    { return !('0' <= c && c <= '9'); });
+      return string_view<C>(begin(i), f);
+    }
+
+    template <character C>
+    constexpr static maybe<I> from(string_view<C> i)
+    {
+      I res = 0;
+
+      for (C c : i)
+      {
+        res = res * 10 + (c - '0');
+      }
+
+      return maybe<I>(res);
+    }
   };
 
   template <>
@@ -3902,6 +3952,29 @@ namespace stew
     constexpr static void to(O &o, bool b)
     {
       formatter<string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
+    }
+
+    template <character C>
+    constexpr static string_view<C> parse(string_view<C> i)
+    {
+      if (starts_with(i, "true"_sv))
+      {
+        return substr(i, 0, 4);
+      }
+      else if (starts_with(i, "false"_sv))
+      {
+        return substr(i, 0, 5);
+      }
+      else
+      {
+        return string_view<C>();
+      }
+    }
+
+    template <character C>
+    constexpr static maybe<bool> from(string_view<C> i)
+    {
+      return starts_with(i, "true"_sv);
     }
   };
 
