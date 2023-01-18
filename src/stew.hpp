@@ -3527,8 +3527,8 @@ namespace stew
   file<char, mode::r> termin(stdin);
   file<char, mode::w> termout(stdout);
 
-  file<char, mode::r> wtermin(stdin);
-  file<char, mode::w> wtermout(stdout);
+  file<wchar_t, mode::r> wtermin(stdin);
+  file<wchar_t, mode::w> wtermout(stdout);
 
   //------------------------------
   //
@@ -3777,6 +3777,30 @@ namespace stew
 
   //------------------------
   //
+  // Console
+  //
+  //------------------------
+
+  template <character C>
+  class console
+  {
+  public:
+    template <typename... T>
+    static void printf(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
+    {
+      format_to(termout, fmt, t...);
+    }
+
+    template <typename... T>
+    static void printfln(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
+    {
+      format_to(termout, fmt, t...);
+      termout.push('\n');
+    }
+  };
+
+  //------------------------
+  //
   // Extracting
   //
   //------------------------
@@ -3958,6 +3982,7 @@ namespace stew
       }
     }
   };
+
   //------------------------
   //
   // Multithreading
