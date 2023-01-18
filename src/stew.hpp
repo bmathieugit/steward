@@ -1982,35 +1982,6 @@ namespace stew
     return find(r1, r2) != end(r1);
   }
 
-  template <forward_iterator I>
-  struct around_pair
-  {
-    bool _found;
-    view<I> _bef;
-    view<I> _aft;
-  };
-
-  template <input_range R, typename T>
-  constexpr auto around(R &&r, const T &sep) -> decltype(auto)
-  {
-    auto pos = find(forward<R>(r), sep);
-
-    if (pos != end(forward<R>(r)))
-    {
-      return around_pair<decltype(begin(forward<R>(r)))>{
-          true,
-          {begin(forward<R>(r)), pos},
-          {pos + 2, end(forward<R>(r))}};
-    }
-    else
-    {
-      return around_pair<decltype(begin(forward<R>(r)))>{
-          false,
-          {begin(forward<R>(r)), begin(forward<R>(r))},
-          {begin(forward<R>(r)), end(forward<R>(r))}};
-    }
-  }
-
   template <input_range R1, predicate<range_const_reference<R1>> P>
   constexpr bool all_of(const R1 &r, P &&p)
   {
@@ -2334,7 +2305,7 @@ namespace stew
   }
 
   template <bidirectional_range R>
- constexpr  auto reverse_view(R &&r)
+  constexpr auto reverse_view(R &&r)
   {
     return reverse_view(
         begin(forward<R>(r)),
@@ -3221,6 +3192,56 @@ namespace stew
     return string<wchar_t>(string_view<wchar_t>(s, s + n));
   }
 
+  template <character C>
+  struct after_pair
+  {
+    bool _found;
+    string_view<C> _aft;
+  };
+
+  template <character C>
+  constexpr after_pair<C> after(
+      string_view<C> input,
+      string_view<C> sep)
+  {
+    auto pos = find(input, sep);
+
+    return after_pair<C>{
+        pos != end(input),
+        {pos + sep.size(), end(input)}};
+  }
+
+  template <character C>
+  struct around_pair
+  {
+    bool _found;
+    string_view<C> _bef;
+    string_view<C> _aft;
+  };
+
+  template <character C>
+  constexpr around_pair<C> around(
+      string_view<C> input,
+      string_view<C> sep)
+  {
+    auto pos = find(input, sep);
+
+    if (pos != end(input))
+    {
+      return around_pair<C>{
+          true,
+          {begin(input), pos},
+          {pos + sep.size(), end(input)}};
+    }
+    else
+    {
+      return around_pair<C>{
+          false,
+          {begin(input), begin(input)},
+          {begin(input), end(input)}};
+    }
+  }
+
   //---------------------
   //
   // I/O Containers
@@ -3596,6 +3617,9 @@ namespace stew
     fmt::format_to(o, fmt, a...);
   }
 
+  template <typename... T>
+  using format_response = tuple<maybe<T>...>;
+
   namespace fmt
   {
     template <size_t... I>
@@ -3626,48 +3650,82 @@ namespace stew
       return impl::make_isequence<N - 1>();
     }
 
-    template <typename A, character C>
-    constexpr maybe<A> format_from_one(
-        string_view<C> &input, string_view<C> part)
+    template <size_t N, character C>
+    constexpr auto split_fmt(string_view<C> fmt)
     {
-      if (starts_with(input, part))
+      array<string_view<C>, N + 1> parts;
+
+      for (auto &part : parts)
       {
-        string_view<C> toparse = substr(input, part.size());
-        string_view<C> parsed = formatter<rm_cvref<A>>::parse(toparse);
-        input = string_view<C>(input);
-        return formatter<rm_cvref<A>>::from(parsed);
+        auto [fnd, bef, aft] = around(fmt, "{}"_sv);
+
+        if (fnd)
+        {
+          fmt = aft;
+          part = bef;
+        }
+        else
+        {
+          part = aft;
+          break;
+        }
       }
 
-      return maybe<A>();
+      return parts;
     }
 
-    template <typename... A, size_t... J, typename C>
-    constexpr tuple<maybe<A>...> format_from(
-        string_view<C> &input, const format_string<C, sizeof...(A) + 1> &fmt, isequence<J...>)
+    template <size_t I, character C, typename T>
+    constexpr void format_from_one(
+        string_view<C> &input,
+        string_view<C> fmt_part,
+        maybe<T> &response_part)
     {
-      return tuple<maybe<A>...>(format_from_one<A>(input, get<J>(fmt.items()))...);
+      if (starts_with(input, fmt_part))
+      {
+        input = substr(input, fmt_part.size());
+        auto parsed = formatter<T>::parse(input);
+        input = substr(input, parsed.size());
+        response_part = formatter<T>::from(parsed);
+      }
     }
 
-    template <typename... A, character C>
-    constexpr tuple<maybe<A>...> format_from(
-        string_view<C> &input, const format_string<char, sizeof...(A) + 1> &fmt)
+    template <character C, typename... T, size_t... I>
+    constexpr void format_from(
+        string_view<C> input,
+        const array<string_view<C>, sizeof...(T) + 1> fmt_parts,
+        format_response<T...> &response,
+        isequence<I...>)
     {
-      return format_from<A...>(input, fmt, make_isequence<sizeof...(A)>());
+      (format_from_one<I>(input, get<I>(fmt_parts), get<I>(response)), ...);
+    }
+
+    template <character C, typename... T>
+    constexpr void format_from(
+        string_view<C> input,
+        string_view<C> fmt,
+        format_response<T...> &response)
+    {
+      auto fmt_parts = split_fmt<sizeof...(T)>(fmt);
+      format_from(input, fmt_parts, response, make_isequence<sizeof...(T)>());
     }
   }
 
-  template <typename... A>
-  constexpr tuple<maybe<A>...> format_from(
-      string_view<char> input, const format_string<char, sizeof...(A) + 1> &fmt)
+  template <typename... T>
+  constexpr void format_from(
+      string_view<char> input,
+      string_view<char> fmt,
+      format_response<T...> &response)
   {
-    return fmt::format_from<A...>(input, fmt);
+    return fmt::format_from(input, fmt, response);
   }
 
-  template <typename... A>
-  constexpr tuple<maybe<A>...> format_from(
-      string_view<wchar_t> input, const format_string<wchar_t, sizeof...(A) + 1> &fmt)
+  template <typename... T>
+  constexpr void format_from(
+      string_view<wchar_t> input,
+      string_view<wchar_t> fmt,
+      format_response<T...> &response)
   {
-    return fmt::format_from<A...>(input, fmt);
+    return fmt::format_from(input, fmt, response);
   }
 
   template <character C>
@@ -3767,9 +3825,6 @@ namespace stew
     {
       auto f = find(i, [](C c)
                     { return !('0' <= c && c <= '9'); });
-
-      printf("parsed : %s\n", string_view<C>(begin(i), f).begin());
-
       return string_view<C>(begin(i), f);
     }
 

@@ -4,23 +4,25 @@
 
 using namespace stew;
 
+
 int main()
 {
-  fixed_string<char> s(100);
-  s.push("coucou1412c211"_sv);
+  string_view<char> hello = "hello 12020 12021"_sv;
+  format_response<int, int> res;
 
-
-  auto res = format_from<int, int>(s, "coucou{}c{}"_sv);
+  format_from(hello, "hello {} {}"_sv, res);
 
   if (get<0>(res).has())
   {
-    printf("%d\n", *get<0>(res));
-    printf("%d\n", *get<1>(res));
+    format_to(termout, " - number 0 : '{}'\n"_sv, *get<0>(res));
   }
-  else
+
+  if (get<1>(res).has())
   {
-    printf("not found!\n");
+    format_to(termout, " - number 1 : '{}'\n"_sv, *get<1>(res));
   }
+
+  
 
   return 0;
 }
