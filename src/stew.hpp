@@ -3531,17 +3531,17 @@ namespace stew
   class format_string
   {
   private:
-    array<string_view<C>, N> _items;
+    array<string_view<C>, N> _parts;
 
   public:
     consteval format_string(string_view<C> fmt)
-        : _items(split(fmt))
+        : _parts(split(fmt))
     {
     }
 
-    constexpr const auto &items() const
+    constexpr const auto &parts() const
     {
-      return _items;
+      return _parts;
     }
 
   private:
@@ -3580,7 +3580,7 @@ namespace stew
     constexpr void format_to_one(
         O &o, const format_string<C, N> &fmt, const H &h, const T &...t)
     {
-      formatter<string_view<C>>::to(o, get<I>(fmt.items()));
+      formatter<string_view<C>>::to(o, get<I>(fmt.parts()));
       formatter<H>::to(o, h);
 
       if constexpr (sizeof...(T) > 0)
@@ -3595,13 +3595,13 @@ namespace stew
         const H &h, const T &...t)
     {
       format_to_one<0>(o, fmt, h, t...);
-      formatter<string_view<C>>::to(o, get<sizeof...(T) + 1>(fmt.items()));
+      formatter<string_view<C>>::to(o, get<sizeof...(T) + 1>(fmt.parts()));
     }
 
     template <ostream O, character C>
     constexpr void format_to(O &o, const format_string<C, 1> &fmt)
     {
-      formatter<string_view<C>>::to(o, get<0>(fmt.items()));
+      formatter<string_view<C>>::to(o, get<0>(fmt.parts()));
     }
   }
 
@@ -3702,10 +3702,9 @@ namespace stew
     template <character C, typename... T>
     constexpr void format_from(
         string_view<C> input,
-        string_view<C> fmt,
+        const array<string_view<C>, sizeof...(T) + 1> fmt_parts,
         format_response<T...> &response)
     {
-      auto fmt_parts = split_fmt<sizeof...(T)>(fmt);
       format_from(input, fmt_parts, response, make_isequence<sizeof...(T)>());
     }
   }
@@ -3713,19 +3712,19 @@ namespace stew
   template <typename... T>
   constexpr void format_from(
       string_view<char> input,
-      string_view<char> fmt,
+      format_string<char, sizeof...(T) + 1> fmt,
       format_response<T...> &response)
   {
-    return fmt::format_from(input, fmt, response);
+    return fmt::format_from(input, fmt.parts(), response);
   }
 
   template <typename... T>
   constexpr void format_from(
       string_view<wchar_t> input,
-      string_view<wchar_t> fmt,
+      format_string<wchar_t, sizeof...(T) + 1> fmt,
       format_response<T...> &response)
   {
-    return fmt::format_from(input, fmt, response);
+    return fmt::format_from(input, fmt.parts(), response);
   }
 
   template <character C>
