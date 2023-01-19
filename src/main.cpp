@@ -6,8 +6,8 @@ int main()
 {
   using cons = console<char>;
 
-  cons::printfln("time = {}"_sv,   wall_timer());
-  cons::printfln("time = {}"_sv,   cpu_timer<time::unit::ns>());
+  date<time::zone::local> now;
 
+  cons::printfln("heure locale : {}"_sv, now);
   return 0;
 }

@@ -4073,7 +4073,7 @@ namespace stew
 
   //------------------------
   //
-  //  Time and Calendar
+  //  TImers and Calendars
   //
   //------------------------
 
@@ -4152,6 +4152,104 @@ namespace stew
     {
       formatter<double>::to(o, timer.duration());
     }
+  };
+
+  namespace time
+  {
+    enum class zone
+    {
+      local,
+      utc
+    };
+  }
+
+  template <time::zone z>
+  class date
+  {
+  private:
+    tm _tm;
+
+  public:
+    date()
+    {
+      time_t _tt = ::time(nullptr);
+
+      if constexpr (z == time::zone::local)
+      {
+        ::localtime_r(&_tt, &_tm);
+      }
+      else if constexpr (z == time::zone::utc)
+      {
+        ::gmtime_r(&_tt, &_tm);
+      }
+    }
+
+  public:
+    auto year() const
+    {
+      return 1900 + _tm.tm_year;
+    }
+
+    auto month() const
+    {
+      return _tm.tm_mon + 1;
+    }
+
+    auto yday() const
+    {
+      return _tm.tm_yday;
+    }
+
+    auto mday() const
+    {
+      return _tm.tm_mday;
+    }
+
+    auto wday() const
+    {
+      return _tm.tm_wday;
+    }
+
+    auto hour() const
+    {
+      return _tm.tm_hour;
+    }
+
+    auto min() const
+    {
+      return _tm.tm_min;
+    }
+
+    auto sec() const
+    {
+      return _tm.tm_sec;
+    }
+  };
+
+  template <time::zone z>
+  class formatter<date<z>>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, const date<z> &d)
+    {
+      formatter<decltype(d.mday())>::to(o, d.mday());
+      formatter<char>::to(o, '/');
+      formatter<decltype(d.month())>::to(o, d.month());
+      formatter<char>::to(o, '/');
+      formatter<decltype(d.year())>::to(o, d.year());
+      formatter<char>::to(o, ' ');
+      formatter<decltype(d.hour())>::to(o, d.hour());
+      formatter<char>::to(o, ':');
+      formatter<decltype(d.min())>::to(o, d.min());
+      formatter<char>::to(o, ':');
+      formatter<decltype(d.sec())>::to(o, d.sec());
+    }
+  };
+
+  class format_date
+  {
+    
   };
 
   //------------------------
