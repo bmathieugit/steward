@@ -3075,7 +3075,7 @@ namespace stew
 
     constexpr const auto end() const
     {
-      return stew::begin(_data);
+      return stew::end(_data);
     }
 
     constexpr T &operator[](size_t i)
@@ -3822,7 +3822,7 @@ namespace stew
         string_view<C> fmt_part,
         maybe<T> &response_part)
     {
-      if (starts_with(input, fmt_part))
+      if (fmt_part.empty() || starts_with(input, fmt_part))
       {
         input = substr(input, fmt_part.size());
         input = extractor<T>::to(input, response_part);
@@ -3852,7 +3852,7 @@ namespace stew
   }
 
   template <typename... T>
-  constexpr void format_from(
+  constexpr void extract_to(
       string_view<wchar_t> input,
       format_string<wchar_t, sizeof...(T) + 1> fmt,
       extract_response<T...> &response)
@@ -4000,13 +4000,8 @@ namespace stew
       maybe<C> mb;
       string<C> s;
 
-      while ((mb = termin.pop()).has())
+      while ((mb = termin.pop()).has() && *mb != '\n')
       {
-        if (*mb == '\n')
-        {
-          break;
-        }
-
         s.push(*mb);
       }
 
