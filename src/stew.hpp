@@ -2,6 +2,7 @@
 #define __stew_hpp__
 
 #include <clibs.hpp>
+#include <time.h>
 
 namespace stew
 {
@@ -3799,6 +3800,21 @@ namespace stew
   };
 
   template <>
+  class formatter<double>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, double d)
+    {
+      size_t i = static_cast<size_t>(d);
+      size_t e = static_cast<size_t>((d - i) * 10'000.0);
+      formatter<size_t>::to(o, i);
+      formatter<char>::to(o, '.');
+      formatter<size_t>::to(o, e);
+    }
+  };
+
+  template <>
   class formatter<bool>
   {
   public:
@@ -4052,6 +4068,65 @@ namespace stew
       }
 
       extract_to(s, fmt, response);
+    }
+  };
+
+  //------------------------
+  //
+  //  Time and Calendar
+  //
+  //------------------------
+
+  namespace time
+  {
+    enum class unit
+    {
+      ns,
+      ms,
+      s
+    };
+  }
+
+  template <time::unit u>
+  class cpu_timer
+  {
+  private:
+    clock_t _t0;
+
+  public:
+    cpu_timer() : _t0(clock()) {}
+
+  public:
+    inline double ticks() const
+    {
+      if constexpr (u == time::unit::s)
+      {
+        return (1.0 * (clock() - _t0)) /
+               CLOCKS_PER_SEC;
+      }
+      else if constexpr (u == time::unit::ms)
+      {
+
+        return (1'000.0 * (clock() - _t0)) /
+               CLOCKS_PER_SEC;
+      }
+      else if constexpr (u == time::unit::ns)
+      {
+
+        return (1'000'000.0 * (clock() - _t0)) /
+               CLOCKS_PER_SEC;
+      }
+    }
+  };
+
+  template <time::unit u>
+  class formatter<cpu_timer<u>>
+  {
+  public:
+    template <ostream O>
+    static constexpr void to(O &o, cpu_timer<u> timer)
+    {
+      formatter<double>::to(o, timer.ticks());
     }
   };
 
