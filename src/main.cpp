@@ -7,6 +7,8 @@ int main()
   using cons = console<char>;
   using wcons = console<wchar_t>;
 
+  string_view<char> coucou = "coucou";
+
   extract_response<size_t> resp;
 
   // string<char> tmp;

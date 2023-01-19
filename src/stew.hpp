@@ -376,6 +376,36 @@ namespace stew
   template <typename T>
   concept native_array_like = impl::native_array_like<T>;
 
+  namespace impl
+  {
+    template <typename T>
+    constexpr bool bounded_array_like = false;
+
+    template <typename T, size_t N>
+    constexpr bool bounded_array_like<T[N]> = true;
+
+    template <typename T, size_t N>
+    constexpr bool bounded_array_like<T (&)[N]> = true;
+  }
+
+  template <typename T>
+  concept bounded_array_like = impl::bounded_array_like<T>;
+
+  namespace impl
+  {
+    template <typename T>
+    constexpr bool unbounded_array_like = false;
+
+    template <typename T>
+    constexpr bool unbounded_array_like<T[]> = true;
+
+    template <typename T>
+    constexpr bool unbounded_array_like<T (&)[]> = true;
+  }
+
+  template <typename T>
+  concept unbounded_array_like = impl::unbounded_array_like<T>;
+
   template <typename D, typename B>
   constexpr bool derived_from =
       requires { dynamic_cast<B *>(static_cast<D *>(nullptr)); } &&
@@ -1696,6 +1726,10 @@ namespace stew
       requires(C c) {{c.begin()} -> random_iterator; } &&
       requires(C c) {{c.end()} -> random_iterator; };
 
+  template <typename C>
+  concept range_or_bounded_array =
+      range<C> || bounded_array_like<C>;
+
   template <range R>
   struct range_traits
   {
@@ -1746,6 +1780,18 @@ namespace stew
     return forward<R>(r).end();
   }
 
+  template <typename T, size_t N>
+  constexpr auto begin(T (&ar)[N])
+  {
+    return ar;
+  }
+
+  template <typename T, size_t N>
+  constexpr auto end(T (&ar)[N])
+  {
+    return ar + N;
+  }
+
   template <input_or_output_iterator I>
   class view
   {
@@ -1759,7 +1805,7 @@ namespace stew
     constexpr view(I b, I e)
         : _begin(b), _end(e) {}
 
-    template <range R>
+    template <range_or_bounded_array R>
     constexpr view(const R &r)
         : view(stew::begin(r), stew::end(r))
     {
@@ -3587,7 +3633,7 @@ namespace stew
   template <typename T>
   class formatter;
 
-  namespace fmt
+  namespace impl
   {
     template <size_t I, size_t N,
               ostream O, character C,
@@ -3623,13 +3669,13 @@ namespace stew
   template <ostream O, typename... A>
   constexpr void format_to(O &o, const format_string<char, sizeof...(A) + 1> &fmt, const A &...a)
   {
-    fmt::format_to(o, fmt, a...);
+    impl::format_to(o, fmt, a...);
   }
 
   template <ostream O, typename... A>
   constexpr void format_to(O &o, const format_string<wchar_t, sizeof...(A) + 1> &fmt, const A &...a)
   {
-    fmt::format_to(o, fmt, a...);
+    impl::format_to(o, fmt, a...);
   }
 
   template <character C>
@@ -3786,7 +3832,7 @@ namespace stew
   template <typename... T>
   using extract_response = tuple<maybe<T>...>;
 
-  namespace fmt
+  namespace impl
   {
     template <size_t... I>
     struct isequence
@@ -3846,9 +3892,9 @@ namespace stew
       format_string<char, sizeof...(T) + 1> fmt,
       extract_response<T...> &response)
   {
-    return fmt::extract_to(
+    return impl::extract_to(
         input, fmt.parts(), response,
-        fmt::make_isequence<sizeof...(T)>());
+        impl::make_isequence<sizeof...(T)>());
   }
 
   template <typename... T>
@@ -3857,9 +3903,9 @@ namespace stew
       format_string<wchar_t, sizeof...(T) + 1> fmt,
       extract_response<T...> &response)
   {
-    return fmt::extract_to(
+    return impl::extract_to(
         input, fmt.parts(), response,
-        fmt::make_isequence<sizeof...(T)>());
+        impl::make_isequence<sizeof...(T)>());
   }
 
   template <unsigned_integral I>
