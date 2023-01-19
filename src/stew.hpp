@@ -3799,12 +3799,12 @@ namespace stew
     }
   };
 
-  template <>
-  class formatter<double>
+  template <floating_point F>
+  class formatter<F>
   {
   public:
     template <ostream O>
-    constexpr static void to(O &o, double d)
+    constexpr static void to(O &o, F d)
     {
       size_t i = static_cast<size_t>(d);
       size_t e = static_cast<size_t>((d - i) * 10'000.0);
@@ -4094,10 +4094,10 @@ namespace stew
     clock_t _t0;
 
   public:
-    cpu_timer() : _t0(clock()) {}
+    inline cpu_timer() : _t0(::clock()) {}
 
   public:
-    inline double ticks() const
+    inline double duration() const
     {
       if constexpr (u == time::unit::s)
       {
@@ -4106,13 +4106,11 @@ namespace stew
       }
       else if constexpr (u == time::unit::ms)
       {
-
         return (1'000.0 * (clock() - _t0)) /
                CLOCKS_PER_SEC;
       }
       else if constexpr (u == time::unit::ns)
       {
-
         return (1'000'000.0 * (clock() - _t0)) /
                CLOCKS_PER_SEC;
       }
@@ -4126,7 +4124,33 @@ namespace stew
     template <ostream O>
     static constexpr void to(O &o, cpu_timer<u> timer)
     {
-      formatter<double>::to(o, timer.ticks());
+      formatter<double>::to(o, timer.duration());
+    }
+  };
+
+  class wall_timer
+  {
+  private:
+    time_t _t0;
+
+  public:
+    inline wall_timer() : _t0(::time(nullptr)) {}
+
+  public:
+    inline double duration() const
+    {
+      return ::difftime(::time(nullptr), _t0);
+    }
+  };
+
+  template <>
+  class formatter<wall_timer>
+  {
+  public:
+    template <ostream O>
+    static constexpr void to(O &o, wall_timer timer)
+    {
+      formatter<double>::to(o, timer.duration());
     }
   };
 

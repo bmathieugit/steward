@@ -6,9 +6,8 @@ int main()
 {
   using cons = console<char>;
 
-
-  double d = 1234555.399203;
-  cons::printfln("time = {}"_sv, d);
+  cons::printfln("time = {}"_sv,   wall_timer());
+  cons::printfln("time = {}"_sv,   cpu_timer<time::unit::ns>());
 
   return 0;
 }
