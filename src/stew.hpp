@@ -3598,8 +3598,8 @@ namespace stew
     array<string_view<C>, N> _parts;
 
   public:
-    template<string_view_like<C> FMT>
-    consteval format_string(FMT&& fmt)
+    template <string_view_like<C> FMT>
+    consteval format_string(FMT &&fmt)
         : _parts(split(forward<FMT>(fmt)))
     {
     }
@@ -4716,6 +4716,86 @@ namespace stew
       }
     }
   };
+
+  //-----------------------
+  //
+  // Events utilities
+  //
+  //-----------------------
+
+  template <typename T>
+  class observer
+  {
+  private:
+    T _t;
+
+  private:
+    function<void(const T &)> _destroyed;
+    function<void(const T &)> _changed;
+
+  public:
+    ~observer()
+    {
+      if (!_destroyed.empty())
+      {
+        _destroyed(_t);
+      }
+    }
+
+    observer(const T &t) : _t(t) {}
+    observer(T &&t) : _t(t) {}
+
+    observer(const observer &) = default;
+    observer(observer &&) = default;
+
+    observer &operator=(const T &t)
+    {
+      _t = t;
+
+      if (!_changed.empty())
+      {
+        _changed(_t);
+      }
+
+      return *this;
+    }
+
+    observer &operator=(T &&t)
+    {
+      _t = transfer(t);
+
+      if (!_changed.empty())
+      {
+        _changed(_t);
+      }
+
+      return *this;
+    }
+
+    observer &operator=(const observer &) = default;
+    observer &operator=(observer &&) = default;
+
+  public:
+    enum class signal
+    {
+      destroyed,
+      changed
+    };
+
+    template <signal S, callable<void, const int &> F>
+    void slot(F &&sl)
+    {
+      if constexpr (S == signal::destroyed)
+      {
+        _destroyed = forward<F>(sl);
+      }
+      else if constexpr (S == signal ::changed)
+      {
+        _changed = forward<F>(sl);
+      }
+    }
+  };
+
 }
 
 #endif
