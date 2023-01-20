@@ -4082,6 +4082,7 @@ namespace stew
     enum class unit
     {
       ns,
+      us,
       ms,
       s
     };
@@ -4099,20 +4100,24 @@ namespace stew
   public:
     inline double duration() const
     {
+      const double clocks = (1.0 * (clock() - _t0));
+      const double dur = clocks / CLOCKS_PER_SEC;
+
       if constexpr (u == time::unit::s)
       {
-        return (1.0 * (clock() - _t0)) /
-               CLOCKS_PER_SEC;
+        return dur;
       }
       else if constexpr (u == time::unit::ms)
       {
-        return (1'000.0 * (clock() - _t0)) /
-               CLOCKS_PER_SEC;
+        return 1'000.0 * dur;
+      }
+      else if constexpr (u == time::unit::us)
+      {
+        return 1'000'000.0 * dur;
       }
       else if constexpr (u == time::unit::ns)
       {
-        return (1'000'000.0 * (clock() - _t0)) /
-               CLOCKS_PER_SEC;
+        return 1'000'000'000.0 * dur;
       }
     }
   };
@@ -4249,7 +4254,6 @@ namespace stew
 
   class format_date
   {
-    
   };
 
   //------------------------
@@ -4459,15 +4463,8 @@ namespace stew
       } });
   }
 
-  enum class duration_type
-  {
-    second,
-    millisecond,
-    microsecond,
-    nanosecond
-  };
 
-  template <duration_type T>
+  template <time::unit T>
   class duration_spec
   {
     timespec _time;
@@ -4484,20 +4481,22 @@ namespace stew
   private:
     void _spec(long time)
     {
-      switch (T)
+
+      if constexpr (T == time::unit::s)
       {
-      case duration_type::second:
         _time.tv_sec = time;
-        break;
-      case duration_type::millisecond:
+      }
+      else if constexpr (T == time::unit::ms)
+      {
         _time.tv_nsec = 1'000'000 * time;
-        break;
-      case duration_type::microsecond:
+      }
+      else if constexpr (T == time::unit::us)
+      {
         _time.tv_nsec = 1'000 * time;
-        break;
-      case duration_type::nanosecond:
+      }
+      else if constexpr (T == time::unit::ns)
+      {
         _time.tv_nsec = time;
-        break;
       }
     }
 
@@ -4510,7 +4509,7 @@ namespace stew
 
   namespace this_thread
   {
-    template <duration_type T>
+    template <time::unit T>
     inline void sleep(duration_spec<T> spec)
     {
       thrd_sleep(&spec.spec(), nullptr);
@@ -4592,7 +4591,7 @@ namespace stew
       }
     }
 
-    template <duration_type Tp>
+    template <time::unit Tp>
     void timedlock(duration_spec<Tp> spec)
       requires is_timed<T>
     {
@@ -4707,7 +4706,7 @@ namespace stew
       }
     }
 
-    template <mutex_type T, duration_type Tp>
+    template <mutex_type T, time::unit Tp>
     void waitfor(basic_mutex<T> &m, duration_spec<Tp> spec)
     {
       if (_useable)

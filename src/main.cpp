@@ -4,10 +4,6 @@ using namespace stew;
 
 int main()
 {
-  using cons = console<char>;
-
-  date<time::zone::local> now;
-
-  cons::printfln("heure locale : {}"_sv, now);
+  console<char>::printfln("heure locale : {}"_sv, date<time::zone::local>());
   return 0;
 }
