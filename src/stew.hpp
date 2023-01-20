@@ -158,6 +158,7 @@ namespace stew
 
   template <typename From, typename To>
   concept convertible_to =
+      (same_as<From, void> && same_as<To, void>) ||
       requires { static_cast<rm_cvref<To>>(*((rm_cvref<From> *)nullptr)); };
 
   template <typename T, typename U>
@@ -1024,6 +1025,7 @@ namespace stew
     public:
       virtual R invoke(A &&...args) override
       {
+        printf("invokation\n");
         return _func(forward<A>(args)...);
       }
 
@@ -1050,7 +1052,7 @@ namespace stew
     }
 
     function(const function &o)
-        : _handler(o._handler == nullptr ? nullptr : o._handler->clone()),
+        : _handler(o._handler.get() == nullptr ? nullptr : o._handler->clone()),
           _func(o._func)
     {
     }
@@ -1070,15 +1072,15 @@ namespace stew
     }
 
   public:
-    operator bool() const
+    bool empty() const
     {
-      return static_cast<bool>(_handler) || _func != nullptr;
+      return _handler.get() == nullptr && _func == nullptr;
     }
 
     template <typename... T>
     R operator()(T &&...t)
     {
-      return _handler
+      return _handler.get() != nullptr
                  ? _handler->invoke(forward<T>(t)...)
                  : _func(forward<T>(t)...);
     }
@@ -3596,8 +3598,9 @@ namespace stew
     array<string_view<C>, N> _parts;
 
   public:
-    consteval format_string(string_view<C> fmt)
-        : _parts(split(fmt))
+    template<string_view_like<C> FMT>
+    consteval format_string(FMT&& fmt)
+        : _parts(split(forward<FMT>(fmt)))
     {
     }
 
@@ -4463,7 +4466,6 @@ namespace stew
       } });
   }
 
-
   template <time::unit T>
   class duration_spec
   {
@@ -4481,7 +4483,6 @@ namespace stew
   private:
     void _spec(long time)
     {
-
       if constexpr (T == time::unit::s)
       {
         _time.tv_sec = time;
