@@ -146,19 +146,9 @@ public:
 
 int main()
 {
-  observable<int> i = 12;
-  observer2<int> oi = i;
+  atomic<int> i(20);
+  i.apply([](int &t) { t = 25; });
+  i.apply([](const int &t) { console<char>::printfln("nouvelle valeur : {}", t); });
 
-  oi.slot<signal::changed>([](const int &i)
-                           { printf("coucou!!!!!%d\n", i); });
-  i = 14;
-  i = 25; 
-  i = 24444;
-  i = 24444;
-  i = 24444;
-  i = 24444;
-  i = 24444;
-  i = 24444;
-  i = 24444;
   return 0;
 }

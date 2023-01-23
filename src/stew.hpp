@@ -4643,6 +4643,67 @@ namespace stew
   using recursive_scoped_lock = basic_scoped_lock<mutex_type::recursive>;
   using timed_recursive_scoped_lock = basic_scoped_lock<mutex_type::timed_recursive>;
 
+  template <typename T>
+  class atomic
+  {
+  private:
+    T _t;
+    mutex _mtx;
+
+  public:
+    ~atomic() = default;
+    atomic(const T &t) : _t(t) {}
+    atomic(T &&t) : _t(transfer(t)) {}
+    atomic(const atomic &) = delete;
+    atomic(atomic &&) = delete;
+    atomic &operator=(const atomic &) = delete;
+    atomic &operator=(atomic &&) = delete;
+
+  public:
+    template <typename F>
+    void apply(F &&f)
+    {
+      scoped_lock lck(_mtx);
+      forward<F>(f)(_t);
+    }
+
+    template <typename F>
+    void apply(F &&f) const
+    {
+      scoped_lock lck(_mtx);
+      forward<F>(f)(_t);
+    }
+  };
+
+  template <native_number T>
+  class atomic<T>
+  {
+  private:
+    T _t;
+
+  public:
+    ~atomic() = default;
+    atomic(const T &t) : _t(t) {}
+    atomic(T &&t) : _t(transfer(t)) {}
+    atomic(const atomic &) = delete;
+    atomic(atomic &&) = delete;
+    atomic &operator=(const atomic &) = delete;
+    atomic &operator=(atomic &&) = delete;
+
+  public:
+    template <typename F>
+    void apply(F &&f)
+    {
+      forward<F>(f)(_t);
+    }
+
+    template <typename F>
+    void apply(F &&f) const
+    {
+      forward<F>(f)(_t);
+    }
+  };
+
   class condition_variable
   {
   private:
