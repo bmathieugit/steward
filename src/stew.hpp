@@ -1025,7 +1025,6 @@ namespace stew
     public:
       virtual R invoke(A &&...args) override
       {
-        printf("invokation\n");
         return _func(forward<A>(args)...);
       }
 
