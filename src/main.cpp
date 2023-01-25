@@ -4,19 +4,8 @@ using namespace stew;
 
 int main()
 {
-  atomic<int> a(20);
-
-  jthread([&a]()
-          { for (int j : upto(0, 1000))
-                a.apply([](int &i)
-                        {
-                  console<char>::printfln("th1 {}",++i); }); });
-
-  jthread([&a]()
-          { for (int j : upto(0, 1000))
-              a.apply([](int &i)
-                        { 
-                          console<char>::printfln("th0 {}", ++i); }); });
+  console<char>::print("quel est votre age ?");
+  console<char>::printfln("votre reponse est {}", buff);
 
   return 0;
 }

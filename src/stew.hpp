@@ -3514,9 +3514,28 @@ namespace stew
     void push(R &&r)
       requires(m == mode::w)
     {
-      for (auto &&i : forward<R>(r))
+      if constexpr (string_view_like<R, char>)
       {
-        push(forward<decltype(i)>(i));
+        if (_fp != nullptr)
+        {
+          string_view<char> tmp(forward<R>(r));
+          fwrite(tmp.begin(), sizeof(char), tmp.size(), _fp);
+        }
+      }
+      else if constexpr (string_view_like<R, wchar_t>)
+      {
+        if (_fp != nullptr)
+        {
+          string_view<wchar_t> tmp(forward<R>(r));
+          fwrite(tmp.begin(), sizeof(wchar_t), tmp.size(), _fp);
+        }
+      }
+      else
+      {
+        for (auto &&i : forward<R>(r))
+        {
+          push(forward<decltype(i)>(i));
+        }
       }
     }
 
@@ -3615,9 +3634,10 @@ namespace stew
 
       for (auto &part : parts)
       {
-        auto [found, bef, aft] = around(fmt, "{}"_sv);
+        auto [fnd, bef, aft] =
+            around(fmt, "{}"_sv);
 
-        if (found)
+        if (fnd)
         {
           fmt = aft;
           part = bef;
@@ -4268,21 +4288,23 @@ namespace stew
   class thread
   {
   private:
+    bool _joinable;
     thrd_t _thrid;
-    bool _joinable = false;
     F _call;
 
   private:
     static int fcall_wrapper(void *ctx)
     {
-      (*static_cast<F*>(ctx))();
+      (*static_cast<F *>(ctx))();
       return thrd_success;
     }
 
   public:
     ~thread() = default;
 
-    thread(F &&f) : _call(forward<F>(f))
+    thread(F &&f)
+        : _call(forward<F>(f)),
+          _joinable(false)
     {
       if (thrd_create(&_thrid, fcall_wrapper, &_call) == thrd_success)
       {
@@ -4323,7 +4345,7 @@ namespace stew
     }
   };
 
-  template<typename F>
+  template <typename F>
   class jthread
   {
   private:
@@ -4368,7 +4390,7 @@ namespace stew
     }
   };
 
-  template<typename F>
+  template <typename F>
   class dthread
   {
   private:
@@ -4398,7 +4420,7 @@ namespace stew
       return _t.operator==(id);
     }
 
-    bool operator==(const thread <F>&o) const
+    bool operator==(const thread<F> &o) const
     {
       return _t == o;
     }
@@ -4984,7 +5006,6 @@ namespace stew
       }
     }
   };
-
 }
 
 #endif
