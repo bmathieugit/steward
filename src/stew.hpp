@@ -1,8 +1,10 @@
 #ifndef __stew_hpp__
 #define __stew_hpp__
 
-#include <clibs.hpp>
+#include <stdio.h>
+#include <threads.h>
 #include <time.h>
+#include <assert.h>
 
 namespace stew
 {
@@ -4288,8 +4290,31 @@ namespace stew
     }
   };
 
-  class format_date
+  //------------------------
+  //
+  // XML format
+  //
+  //------------------------
+
+  template <typename T>
+  class xml
   {
+  private:
+    const_reference<T> _t;
+
+  public:
+    ~xml() = default;
+    xml(const T &t) : _t(t) {}
+    xml(const xml &) = default;
+    xml(xml &&) = default;
+    xml &operator=(const xml &) = default;
+    xml &operator=(xml &&) = default;
+
+  public:
+    const T &operator*() const
+    {
+      return _t;
+    }
   };
 
   //------------------------
@@ -5020,6 +5045,14 @@ namespace stew
       }
     }
   };
+}
+
+namespace stew
+{
+  // class benchmark
+  // {
+
+  // };
 }
 
 #endif
