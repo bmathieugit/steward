@@ -4264,28 +4264,27 @@ namespace stew
   //
   //------------------------
 
+  template <typename F>
   class thread
   {
   private:
     thrd_t _thrid;
     bool _joinable = false;
-    function<void()> _call;
+    F _call;
 
   private:
-    template <typename F>
     static int fcall_wrapper(void *ctx)
     {
-      (*static_cast<function<void()>*>(ctx))();
+      (*static_cast<F*>(ctx))();
       return thrd_success;
     }
 
   public:
     ~thread() = default;
 
-    template <typename F>
     thread(F &&f) : _call(forward<F>(f))
     {
-      if (thrd_create(&_thrid, fcall_wrapper<F>, &_call) == thrd_success)
+      if (thrd_create(&_thrid, fcall_wrapper, &_call) == thrd_success)
       {
         _joinable = true;
       }
@@ -4324,10 +4323,11 @@ namespace stew
     }
   };
 
+  template<typename F>
   class jthread
   {
   private:
-    thread _t;
+    thread<F> _t;
 
   public:
     ~jthread()
@@ -4335,7 +4335,6 @@ namespace stew
       _t.join();
     }
 
-    template <typename F>
     jthread(F &&f) : _t(forward<F>(f)) {}
     jthread(const jthread &) = delete;
     jthread(jthread &&) = default;
@@ -4358,7 +4357,7 @@ namespace stew
       return _t.operator==(id);
     }
 
-    bool operator==(const thread &o) const
+    bool operator==(const thread<F> &o) const
     {
       return _t == o;
     }
@@ -4369,14 +4368,14 @@ namespace stew
     }
   };
 
+  template<typename F>
   class dthread
   {
   private:
-    thread _t;
+    thread<F> _t;
 
   public:
     ~dthread() = default;
-    template <typename F>
     dthread(F &&f) : _t(forward<F>(f)) { detach(); }
     dthread(const dthread &) = delete;
     dthread(dthread &&) = default;
@@ -4399,7 +4398,7 @@ namespace stew
       return _t.operator==(id);
     }
 
-    bool operator==(const thread &o) const
+    bool operator==(const thread <F>&o) const
     {
       return _t == o;
     }
