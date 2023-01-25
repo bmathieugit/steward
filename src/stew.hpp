@@ -4269,24 +4269,23 @@ namespace stew
   private:
     thrd_t _thrid;
     bool _joinable = false;
+    function<void()> _call;
 
   private:
     template <typename F>
     static int fcall_wrapper(void *ctx)
     {
-      (*static_cast<F *>(ctx))();
-      return 0;
+      (*static_cast<function<void()>*>(ctx))();
+      return thrd_success;
     }
 
   public:
     ~thread() = default;
 
     template <typename F>
-    thread(F &&f)
+    thread(F &&f) : _call(forward<F>(f))
     {
-      auto tmp = forward<F>(f);
-
-      if (thrd_create(&_thrid, fcall_wrapper<F>, &tmp) == thrd_success)
+      if (thrd_create(&_thrid, fcall_wrapper<F>, &_call) == thrd_success)
       {
         _joinable = true;
       }

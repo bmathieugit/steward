@@ -2,17 +2,21 @@
 
 using namespace stew;
 
-// Ce que je vais faire maintenant c'est de développer un système de gestion des évenements
-// le plus basique possible afin de rester aussi près que possible des performances optimales.
-// Nous allons partir sur une API type signal/slot sur des types strict. L'héritage ne
-// sera pas fonctionnel sur les évènements.
-
-
 int main()
 {
-  atomic<int> i(20);
-  i.apply([](int &t) { t = 25; });
-  i.apply([](const int &t) { console<char>::printfln("nouvelle valeur : {}", t); });
 
+  atomic<int> a(20);
+
+  jthread th1([&a]()
+              { for (int j : upto(0, 1000))
+                a.apply([](int &i)
+                        {
+                  console<char>::printfln("th1 {}",++i); }); });
+
+  jthread th0([&a]()
+              { for (int j : upto(0, 1000))
+              a.apply([](int &i)
+                        { 
+                          console<char>::printfln("th0 {}", ++i); }); });
   return 0;
 }
