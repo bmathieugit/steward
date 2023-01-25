@@ -922,7 +922,6 @@ namespace stew
     }
 
   public:
-    // Functional api
     template <typename F>
     constexpr auto map(F &&f) &
     {
@@ -2517,11 +2516,13 @@ namespace stew
 
     constexpr T &operator[](size_t i)
     {
+      assert(i < N);
       return _data[i];
     }
 
     constexpr const T &operator[](size_t i) const
     {
+      assert(i < N);
       return _data[i];
     }
   };
@@ -2529,24 +2530,28 @@ namespace stew
   template <size_t I, typename T, size_t N>
   constexpr auto get(array<T, N> &a) -> decltype(auto)
   {
+    static_assert(I < N);
     return a[I];
   }
 
   template <size_t I, typename T, size_t N>
   constexpr auto get(const array<T, N> &a) -> decltype(auto)
   {
+    static_assert(I < N);
     return a[I];
   }
 
   template <size_t I, typename T, size_t N>
   constexpr auto get(array<T, N> &&a) -> decltype(auto)
   {
+    static_assert(I < N);
     return a[I];
   }
 
   template <size_t I, typename T, size_t N>
   constexpr auto get(const array<T, N> &&a) -> decltype(auto)
   {
+    static_assert(I < N);
     return a[I];
   }
 
@@ -2905,11 +2910,13 @@ namespace stew
 
     constexpr T &operator[](size_t i)
     {
+      assert(i < N);
       return _data[i];
     }
 
     constexpr const T &operator[](size_t i) const
     {
+      assert(i < N);
       return _data[i];
     }
 
@@ -3020,11 +3027,13 @@ namespace stew
 
     constexpr T &operator[](size_t i)
     {
+      assert(i < _size);
       return _data[i];
     }
 
     constexpr const T &operator[](size_t i) const
     {
+      assert(i < _size);
       return _data[i];
     }
 
@@ -3128,11 +3137,13 @@ namespace stew
 
     constexpr T &operator[](size_t i)
     {
+      assert(i < size());
       return _data[i];
     }
 
     constexpr const T &operator[](size_t i) const
     {
+      assert(i < size());
       return _data[i];
     }
 
@@ -3477,13 +3488,16 @@ namespace stew
     }
 
     auto begin() const
+      requires(m == mode::r)
     {
       if constexpr (m == mode::r)
       {
         return ifile_iterator(*this);
       }
     }
+
     auto end() const
+      requires(m == mode::r)
     {
       if constexpr (m == mode::r)
       {
