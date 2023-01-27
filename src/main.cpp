@@ -15,7 +15,9 @@ namespace stew
   class xml_descriptor<address>
   {
   public:
-    constexpr static auto describe(string_view<char> name, const address &addr)
+    constexpr static auto describe(
+        string_view<char> name,
+        const address &addr)
     {
       return make_xml_node(
           name,
@@ -37,7 +39,9 @@ namespace stew
   class xml_descriptor<person>
   {
   public:
-    constexpr static auto describe(string_view<char> name, const person &p)
+    constexpr static auto describe(
+        string_view<char> name,
+        const person &p)
     {
       return make_xml_node(
           name,
@@ -50,6 +54,7 @@ namespace stew
 
 int main()
 {
+  
   person p{"MARLEY"_sv, "Bob"_sv, {"mapple street"_sv}};
   console<char>::printfln("{}", pretty<0, 2>(xml_describe("person", p)));
 

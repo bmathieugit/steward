@@ -417,6 +417,30 @@ namespace stew
 
   //-----------------------------------
   //
+  // Meta : integral validation
+  //
+  //-----------------------------------
+
+  template <auto I0, auto I1>
+  constexpr bool value_more_than = (I0 > I1);
+
+  template <auto I0, auto I1>
+  constexpr bool value_moreeq_than = (I0 >= I1);
+
+  template <auto I0, auto I1>
+  constexpr bool value_less_than = (I0 < I1);
+
+  template <auto I0, auto I1>
+  constexpr bool value_lesseq_than = (I0 <= I1);
+
+  template <auto I0, auto I1>
+  constexpr bool value_eq_to = (I0 == I1);
+
+  template <auto I0, auto I1>
+  constexpr bool value_noteq_to = (I0 != I1);
+
+  //-----------------------------------
+  //
   // Utilities functions
   //
   //-----------------------------------
