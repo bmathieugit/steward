@@ -731,7 +731,7 @@ namespace stew
   public:
     constexpr ~forward_reference() = default;
     constexpr forward_reference() = default;
-    constexpr forward_reference(T &&t) : _t(t) {}
+    constexpr forward_reference(T t) : _t(transfer(t)) {}
     constexpr forward_reference(const forward_reference &) = default;
     constexpr forward_reference &operator=(const forward_reference &) = default;
 
@@ -742,6 +742,16 @@ namespace stew
     }
 
     constexpr T &get()
+    {
+      return _t;
+    }
+
+    constexpr operator const T &() const
+    {
+      return _t;
+    }
+
+    constexpr const T &get() const
     {
       return _t;
     }
@@ -760,12 +770,22 @@ namespace stew
     constexpr forward_reference &operator=(const forward_reference &) = default;
 
   public:
-    constexpr operator T &&() const
+    constexpr operator T &&()
     {
       return _t.get();
     }
 
-    constexpr T &&get() const
+    constexpr T &&get()
+    {
+      return _t.get();
+    }
+
+    constexpr operator const T &&() const
+    {
+      return _t.get();
+    }
+
+    constexpr const T &&get() const
     {
       return _t.get();
     }
@@ -784,12 +804,21 @@ namespace stew
     constexpr forward_reference &operator=(const forward_reference &) = default;
 
   public:
-    constexpr operator T &() const
+    constexpr operator T &()
     {
       return _t.get();
     }
 
-    constexpr T &get() const
+    constexpr T &get()
+    {
+      return _t.get();
+    }
+    constexpr operator const T &() const
+    {
+      return _t.get();
+    }
+
+    constexpr const T &get() const
     {
       return _t.get();
     }
@@ -1175,6 +1204,9 @@ namespace stew
     }
   };
 
+  template <typename... T>
+  tuple(T...) -> tuple<T...>;
+
   template <size_t I, typename T0, typename... Tn>
   constexpr auto get(tuple<T0, Tn...> &t) -> decltype(auto)
   {
@@ -1198,6 +1230,9 @@ namespace stew
   {
     return t.template get<I>();
   }
+
+  template <typename T0, typename T1>
+  using pair = tuple<T0, T1>;
 
   //----------------------------------
   //
@@ -4165,7 +4200,7 @@ namespace stew
   {
   public:
     template <ostream O>
-    static constexpr void to(O &o, cpu_timer<u> timer)
+    static constexpr void to(O &o, const cpu_timer<u> &timer)
     {
       formatter<double>::to(o, timer.duration());
     }
@@ -4191,7 +4226,7 @@ namespace stew
   {
   public:
     template <ostream O>
-    static constexpr void to(O &o, wall_timer timer)
+    static constexpr void to(O &o, const wall_timer &timer)
     {
       formatter<double>::to(o, timer.duration());
     }
@@ -4297,23 +4332,135 @@ namespace stew
   //------------------------
 
   template <typename T>
-  class xml
+  class xml_descriptor;
+
+  template <typename T>
+  concept xml_descriptable =
+      requires(const T &t) { xml_descriptor<T>::describe(string_view<char>(), t); };
+
+  struct xml_open_tag
+  {
+    string_view<char> _name;
+  };
+
+  struct xml_close_tag
+  {
+    string_view<char> _name;
+  };
+
+  template <typename T>
+  struct xml_leaf
+  {
+    string_view<char> _name;
+    const_reference<T> _t;
+  };
+
+  template <typename... T>
+  struct xml_node
+  {
+    string_view<char> _name;
+    tuple<T...> _nodes;
+  };
+
+  template <>
+  class formatter<xml_open_tag>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, const xml_open_tag &tag)
+    {
+      formatter<char>::to(o, '<');
+      formatter<string_view<char>>::to(o, tag._name);
+      formatter<char>::to(o, '>');
+    }
+  };
+
+  template <>
+  class formatter<xml_close_tag>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, const xml_close_tag &tag)
+    {
+      formatter<char>::to(o, '<');
+      formatter<char>::to(o, '/');
+      formatter<string_view<char>>::to(o, tag._name);
+      formatter<char>::to(o, '>');
+    }
+  };
+
+  template <typename T>
+  class formatter<xml_leaf<T>>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, const xml_leaf<T> &leaf)
+    {
+      formatter<xml_open_tag>::to(o, xml_open_tag{leaf._name});
+      formatter<T>::to(o, leaf._t.get());
+      formatter<xml_close_tag>::to(o, xml_close_tag{leaf._name});
+    }
+  };
+
+  template <typename... T>
+  class formatter<xml_node<T...>>
   {
   private:
-    const_reference<T> _t;
-
-  public:
-    ~xml() = default;
-    xml(const T &t) : _t(t) {}
-    xml(const xml &) = default;
-    xml(xml &&) = default;
-    xml &operator=(const xml &) = default;
-    xml &operator=(xml &&) = default;
-
-  public:
-    const T &operator*() const
+    template <size_t I, size_t MAX, ostream O>
+    constexpr static void node_to(O &o, const xml_node<T...> &node)
     {
-      return _t;
+      formatter<rm_cvref<decltype(get<I>(node._nodes))>>::to(o, get<I>(node._nodes));
+
+      if constexpr (I + 1 < MAX)
+      {
+        node_to<I + 1, MAX>(o, node);
+      }
+    }
+
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, const xml_node<T...> &node)
+    {
+      formatter<xml_open_tag>::to(o, xml_open_tag{node._name});
+      node_to<0, sizeof...(T)>(o, node);
+      formatter<xml_close_tag>::to(o, xml_close_tag{node._name});
+    }
+  };
+
+  template <typename... T>
+  constexpr auto make_xml_node(
+      string_view<char> name, T &&...t)
+  {
+    return xml_node<T...>{name, tuple<T...>{t...}};
+  }
+
+  template <character C>
+  class xml_descriptor<string<C>>
+  {
+  public:
+    constexpr static auto describe(string_view<char> name, const string<C> &s)
+    {
+      return xml_leaf<string<C>>{name, s};
+    }
+  };
+
+  template <character C>
+  class xml_descriptor<string_view<C>>
+  {
+  public:
+    constexpr static auto describe(string_view<char> name, const string_view<C> &s)
+    {
+      return xml_leaf<string_view<C>>{name, s};
+    }
+  };
+
+  template <integral I>
+  class xml_descriptor<I>
+  {
+  public:
+    constexpr static auto describe(string_view<char> name, const I &i)
+    {
+      return xml_leaf<I>{name, i};
     }
   };
 
@@ -4707,7 +4854,7 @@ namespace stew
   {
   private:
     T _t;
-    mutex _mtx;
+    mutable mutex _mtx;
 
   public:
     ~atomic() = default;

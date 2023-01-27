@@ -4,61 +4,54 @@
 
 using namespace stew;
 
-// void foo()
-// {
-//   console<char>::print("foo function\n");
-// }
-
-// template <typename F>
-// void benchmark(F &&f, string_view<char> desc)
-// {
-//   cpu_timer<time::unit::ms> cpu;
-
-//   f();
-
-//   console<char>::printfln("{} : {} ms", desc, cpu);
-// }
-
-struct person
+struct address
 {
-  string<char> _name;
-  size_t _age;
+  string_view<char> _street;
 };
-
-
 
 namespace stew
 {
   template <>
-  class formatter<xml<person>>
+  class xml_descriptor<address>
   {
   public:
-    template <ostream O>
-    constexpr static void to(O &o, const xml<person> &p)
+    constexpr static auto describe(string_view<char> name, const address &addr)
     {
-      formatter<xml_member<string<char>>>::to(o, xml_member("name", (*p)._name));
+      return make_xml_node(
+          name,
+          xml_descriptor<string_view<char>>::describe("street", addr._street));
+    }
+  };
+}
 
-      formatter<string_view<char>>::to(o, "<person>");
+struct person
+{
+  string_view<char> _name;
+  string_view<char> _firstname;
+  address _addr;
+};
 
-      formatter<string_view<char>>::to(o, "<name>");
-      formatter<string<char>>::to(o, (*p)._name);
-      formatter<string_view<char>>::to(o, "</name>");
-
-      formatter<string_view<char>>::to(o, "<age>");
-      formatter<size_t>::to(o, (*p)._age);
-      formatter<string_view<char>>::to(o, "</age>");
-
-      formatter<string_view<char>>::to(o, "</person>");
+namespace stew
+{
+  template <>
+  class xml_descriptor<person>
+  {
+  public:
+    constexpr static auto describe(string_view<char> name, const person &p)
+    {
+      return make_xml_node(
+          name,
+          xml_descriptor<string_view<char>>::describe("name"_sv, p._name),
+          xml_descriptor<string_view<char>>::describe("firstname"_sv, p._firstname),
+          xml_descriptor<address>::describe("address", p._addr));
     }
   };
 }
 
 int main()
 {
-  person p{"Jackson"_sv, 34};
-  console<char>::printfln("{}", xml(p));
-  console<char>::printfln("{}", xml(p));
-  console<char>::printfln("{}", xml(p));
-  console<char>::printfln("{}", xml(p));
+  person p{"MARLEY"_sv, "Bob"_sv, {"mapple street"_sv}};
+  console<char>::printfln("{}", xml_descriptor<person>::describe("person", p));
+
   return 0;
 }
