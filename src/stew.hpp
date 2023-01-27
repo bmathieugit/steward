@@ -4427,6 +4427,95 @@ namespace stew
     }
   };
 
+  template <size_t N, typename T>
+  struct recursive_prettifier
+  {
+    T _t;
+  };
+
+  template <size_t N>
+  class formatter<recursive_prettifier<N, xml_open_tag>>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(
+        O &o, const recursive_prettifier<N, xml_open_tag> &tag)
+    {
+      for (size_t i : upto(size_t(0), N))
+      {
+        formatter<char>::to(o, ' ');
+      }
+
+      formatter<char>::to(o, '<');
+      formatter<string_view<char>>::to(o, tag._t._name);
+      formatter<char>::to(o, '>');
+    }
+  };
+
+  template <size_t N>
+  class formatter<recursive_prettifier<N, xml_close_tag>>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(
+        O &o, const recursive_prettifier<N, xml_close_tag> &tag)
+    {
+      formatter<char>::to(o, '<');
+      formatter<char>::to(o, '/');
+      formatter<string_view<char>>::to(o, tag._t._name);
+      formatter<char>::to(o, '>');
+      formatter<char>::to(o, '\n');
+    }
+  };
+
+  template <size_t N, typename T>
+  class formatter<recursive_prettifier<N, xml_leaf<T>>>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(
+        O &o, const recursive_prettifier<N, xml_leaf<T>> &leaf)
+    {
+      formatter<recursive_prettifier<N, xml_open_tag>>::to(o, recursive_prettifier<N, xml_open_tag>{xml_open_tag{leaf._t._name}});
+      formatter<T>::to(o, leaf._t._t.get());
+      formatter<recursive_prettifier<N, xml_close_tag>>::to(o, recursive_prettifier<N, xml_close_tag>{xml_close_tag{leaf._t._name}});
+    }
+  };
+
+  template <size_t N, typename... T>
+  class formatter<recursive_prettifier<N, xml_node<T...>>>
+  {
+  private:
+    template <size_t I, size_t MAX, ostream O>
+    constexpr static void node_to(
+        O &o, const recursive_prettifier<N, xml_node<T...>> &node)
+    {
+      formatter<recursive_prettifier<N + 2, rm_cvref<decltype(get<I>(node._t._nodes))>>>::to(
+          o, recursive_prettifier<N + 2, rm_cvref<decltype(get<I>(node._t._nodes))>>{get<I>(node._t._nodes)});
+
+      if constexpr (I + 1 < MAX)
+      {
+        node_to<I + 1, MAX>(o, node);
+      }
+    }
+
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, const recursive_prettifier<N, xml_node<T...>> &node)
+    {
+      formatter<recursive_prettifier<N, xml_open_tag>>::to(o, recursive_prettifier<N, xml_open_tag>{xml_open_tag{node._t._name}});
+      formatter<char>::to(o, '\n');
+      node_to<0, sizeof...(T)>(o, node);
+      
+      for (size_t i : upto(size_t(0), N))
+      {
+        formatter<char>::to(o, ' ');
+      }
+
+      formatter<recursive_prettifier<N, xml_close_tag>>::to(o, recursive_prettifier<N, xml_close_tag>{xml_close_tag{node._t._name}});
+    }
+  };
+
   template <typename... T>
   constexpr auto make_xml_node(
       string_view<char> name, T &&...t)

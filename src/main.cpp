@@ -51,7 +51,7 @@ namespace stew
 int main()
 {
   person p{"MARLEY"_sv, "Bob"_sv, {"mapple street"_sv}};
-  console<char>::printfln("{}", xml_descriptor<person>::describe("person", p));
+  console<char>::printfln("{}", recursive_prettifier<0, decltype(xml_descriptor<person>::describe("person", p))>{xml_descriptor<person>::describe("person", p)});
 
   return 0;
 }
