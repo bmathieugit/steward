@@ -3707,6 +3707,12 @@ namespace stew
   template <typename T>
   class formatter;
 
+  template <ostream O, typename T>
+  constexpr void format_to(O &o, const T &t)
+  {
+    formatter<T>::to(o, t);
+  }
+
   namespace impl
   {
     template <size_t I, size_t N,
@@ -3715,8 +3721,8 @@ namespace stew
     constexpr void format_to_one(
         O &o, const format_string<C, N> &fmt, const H &h, const T &...t)
     {
-      formatter<string_view<C>>::to(o, get<I>(fmt.parts()));
-      formatter<H>::to(o, h);
+      format_to(o, get<I>(fmt.parts()));
+      format_to(o, h);
 
       if constexpr (sizeof...(T) > 0)
       {
@@ -3730,13 +3736,13 @@ namespace stew
         const H &h, const T &...t)
     {
       format_to_one<0>(o, fmt, h, t...);
-      formatter<string_view<C>>::to(o, get<sizeof...(T) + 1>(fmt.parts()));
+      format_to(o, get<sizeof...(T) + 1>(fmt.parts()));
     }
 
     template <ostream O, character C>
     constexpr void format_to(O &o, const format_string<C, 1> &fmt)
     {
-      formatter<string_view<C>>::to(o, get<0>(fmt.parts()));
+      format_to(o, get<0>(fmt.parts()));
     }
   }
 
@@ -3825,7 +3831,7 @@ namespace stew
 
       if (tmp == 0)
       {
-        formatter<char>::to(o, '0');
+        format_to(o, '0');
       }
       else
       {
@@ -3838,10 +3844,10 @@ namespace stew
 
       if (neg)
       {
-        formatter<char>::to(o, '-');
+        format_to(o, '-');
       }
 
-      formatter<string_view<char>>::to(o, tbuff);
+      format_to(o, tbuff);
     }
   };
 
@@ -3857,7 +3863,7 @@ namespace stew
 
       if (tmp == 0)
       {
-        formatter<char>::to(o, '0');
+        format_to(o, '0');
       }
       else
       {
@@ -3868,7 +3874,7 @@ namespace stew
         }
       }
 
-      formatter<string_view<char>>::to(o, tbuff);
+      format_to(o, tbuff);
     }
   };
 
@@ -3881,9 +3887,9 @@ namespace stew
     {
       size_t i = static_cast<size_t>(d);
       size_t e = static_cast<size_t>((d - i) * 10'000.0);
-      formatter<size_t>::to(o, i);
-      formatter<char>::to(o, '.');
-      formatter<size_t>::to(o, e);
+      format_to(o, i);
+      format_to(o, '.');
+      format_to(o, e);
     }
   };
 
@@ -3894,7 +3900,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, bool b)
     {
-      formatter<string_view<char>>::to(o, b ? "true"_sv : "false"_sv);
+      format_to(o, b ? "true"_sv : "false"_sv);
     }
   };
 
@@ -3905,7 +3911,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &os, P p)
     {
-      formatter<size_t>::to(os, (size_t)(void *)(p));
+      format_to(os, (size_t)(void *)(p));
     }
   };
 
@@ -4202,7 +4208,7 @@ namespace stew
     template <ostream O>
     static constexpr void to(O &o, const cpu_timer<u> &timer)
     {
-      formatter<double>::to(o, timer.duration());
+      format_to(o, timer.duration());
     }
   };
 
@@ -4228,7 +4234,7 @@ namespace stew
     template <ostream O>
     static constexpr void to(O &o, const wall_timer &timer)
     {
-      formatter<double>::to(o, timer.duration());
+      format_to(o, timer.duration());
     }
   };
 
@@ -4311,17 +4317,17 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const date<z> &d)
     {
-      formatter<decltype(d.mday())>::to(o, d.mday());
-      formatter<char>::to(o, '/');
-      formatter<decltype(d.month())>::to(o, d.month());
-      formatter<char>::to(o, '/');
-      formatter<decltype(d.year())>::to(o, d.year());
-      formatter<char>::to(o, ' ');
-      formatter<decltype(d.hour())>::to(o, d.hour());
-      formatter<char>::to(o, ':');
-      formatter<decltype(d.min())>::to(o, d.min());
-      formatter<char>::to(o, ':');
-      formatter<decltype(d.sec())>::to(o, d.sec());
+      format_to(o, d.mday());
+      format_to(o, '/');
+      format_to(o, d.month());
+      format_to(o, '/');
+      format_to(o, d.year());
+      format_to(o, ' ');
+      format_to(o, d.hour());
+      format_to(o, ':');
+      format_to(o, d.min());
+      format_to(o, ':');
+      format_to(o, d.sec());
     }
   };
 
@@ -4369,9 +4375,9 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_open_tag &tag)
     {
-      formatter<char>::to(o, '<');
-      formatter<string_view<char>>::to(o, tag._name);
-      formatter<char>::to(o, '>');
+      format_to(o, '<');
+      format_to(o, tag._name);
+      format_to(o, '>');
     }
   };
 
@@ -4382,10 +4388,10 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_close_tag &tag)
     {
-      formatter<char>::to(o, '<');
-      formatter<char>::to(o, '/');
-      formatter<string_view<char>>::to(o, tag._name);
-      formatter<char>::to(o, '>');
+      format_to(o, '<');
+      format_to(o, '/');
+      format_to(o, tag._name);
+      format_to(o, '>');
     }
   };
 
@@ -4396,9 +4402,9 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_leaf<T> &leaf)
     {
-      formatter<xml_open_tag>::to(o, xml_open_tag{leaf._name});
-      formatter<T>::to(o, leaf._t.get());
-      formatter<xml_close_tag>::to(o, xml_close_tag{leaf._name});
+      format_to(o, xml_open_tag{leaf._name});
+      format_to(o, leaf._t.get());
+      format_to(o, xml_close_tag{leaf._name});
     }
   };
 
@@ -4409,7 +4415,7 @@ namespace stew
     template <size_t I, size_t MAX, ostream O>
     constexpr static void node_to(O &o, const xml_node<T...> &node)
     {
-      formatter<rm_cvref<decltype(get<I>(node._nodes))>>::to(o, get<I>(node._nodes));
+      format_to(o, get<I>(node._nodes));
 
       if constexpr (I + 1 < MAX)
       {
@@ -4421,77 +4427,88 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_node<T...> &node)
     {
-      formatter<xml_open_tag>::to(o, xml_open_tag{node._name});
+      format_to(o, xml_open_tag{node._name});
       node_to<0, sizeof...(T)>(o, node);
-      formatter<xml_close_tag>::to(o, xml_close_tag{node._name});
+      format_to(o, xml_close_tag{node._name});
     }
   };
 
-  template <size_t N, typename T>
+  template <size_t N, size_t TAB, typename T>
   struct recursive_prettifier
   {
+    static_assert(TAB >= 1);
     T _t;
   };
 
-  template <size_t N>
-  class formatter<recursive_prettifier<N, xml_open_tag>>
+  template <size_t N, size_t TAB>
+  class formatter<recursive_prettifier<N, TAB, xml_open_tag>>
   {
   public:
     template <ostream O>
     constexpr static void to(
-        O &o, const recursive_prettifier<N, xml_open_tag> &tag)
+        O &o, const recursive_prettifier<N, TAB, xml_open_tag> &tag)
     {
-      for (size_t i : upto(size_t(0), N))
+      if constexpr (N > 0)
       {
-        formatter<char>::to(o, ' ');
+        for (size_t i : upto(size_t(0), N * TAB))
+        {
+          format_to(o, ' ');
+        }
       }
 
-      formatter<char>::to(o, '<');
-      formatter<string_view<char>>::to(o, tag._t._name);
-      formatter<char>::to(o, '>');
+      format_to(o, '<');
+      format_to(o, tag._t._name);
+      format_to(o, '>');
     }
   };
 
-  template <size_t N>
-  class formatter<recursive_prettifier<N, xml_close_tag>>
+  template <size_t N, size_t TAB>
+  class formatter<recursive_prettifier<N, TAB, xml_close_tag>>
   {
   public:
     template <ostream O>
     constexpr static void to(
-        O &o, const recursive_prettifier<N, xml_close_tag> &tag)
+        O &o, const recursive_prettifier<N, TAB, xml_close_tag> &tag)
     {
-      formatter<char>::to(o, '<');
-      formatter<char>::to(o, '/');
-      formatter<string_view<char>>::to(o, tag._t._name);
-      formatter<char>::to(o, '>');
-      formatter<char>::to(o, '\n');
+      if constexpr (N > 0)
+      {
+        for (size_t i : upto(size_t(0), N * TAB))
+        {
+          format_to(o, ' ');
+        }
+      }
+
+      format_to(o, '<');
+      format_to(o, '/');
+      format_to(o, tag._t._name);
+      format_to(o, '>');
+      format_to(o, '\n');
     }
   };
 
-  template <size_t N, typename T>
-  class formatter<recursive_prettifier<N, xml_leaf<T>>>
+  template <size_t N, size_t TAB, typename T>
+  class formatter<recursive_prettifier<N, TAB, xml_leaf<T>>>
   {
   public:
     template <ostream O>
     constexpr static void to(
-        O &o, const recursive_prettifier<N, xml_leaf<T>> &leaf)
+        O &o, const recursive_prettifier<N, TAB, xml_leaf<T>> &leaf)
     {
-      formatter<recursive_prettifier<N, xml_open_tag>>::to(o, recursive_prettifier<N, xml_open_tag>{xml_open_tag{leaf._t._name}});
-      formatter<T>::to(o, leaf._t._t.get());
-      formatter<recursive_prettifier<N, xml_close_tag>>::to(o, recursive_prettifier<N, xml_close_tag>{xml_close_tag{leaf._t._name}});
+      format_to(o, recursive_prettifier<N, TAB, xml_open_tag>{xml_open_tag{leaf._t._name}});
+      format_to(o, leaf._t._t.get());
+      format_to(o, recursive_prettifier<0, TAB, xml_close_tag>{xml_close_tag{leaf._t._name}});
     }
   };
 
-  template <size_t N, typename... T>
-  class formatter<recursive_prettifier<N, xml_node<T...>>>
+  template <size_t N, size_t TAB, typename... T>
+  class formatter<recursive_prettifier<N, TAB, xml_node<T...>>>
   {
   private:
     template <size_t I, size_t MAX, ostream O>
     constexpr static void node_to(
-        O &o, const recursive_prettifier<N, xml_node<T...>> &node)
+        O &o, const recursive_prettifier<N, TAB, xml_node<T...>> &node)
     {
-      formatter<recursive_prettifier<N + 2, rm_cvref<decltype(get<I>(node._t._nodes))>>>::to(
-          o, recursive_prettifier<N + 2, rm_cvref<decltype(get<I>(node._t._nodes))>>{get<I>(node._t._nodes)});
+      format_to(o, recursive_prettifier<N + 1, TAB, rm_cvref<decltype(get<I>(node._t._nodes))>>{get<I>(node._t._nodes)});
 
       if constexpr (I + 1 < MAX)
       {
@@ -4501,18 +4518,12 @@ namespace stew
 
   public:
     template <ostream O>
-    constexpr static void to(O &o, const recursive_prettifier<N, xml_node<T...>> &node)
+    constexpr static void to(O &o, const recursive_prettifier<N, TAB, xml_node<T...>> &node)
     {
-      formatter<recursive_prettifier<N, xml_open_tag>>::to(o, recursive_prettifier<N, xml_open_tag>{xml_open_tag{node._t._name}});
-      formatter<char>::to(o, '\n');
+      format_to(o, recursive_prettifier<N, TAB, xml_open_tag>{xml_open_tag{node._t._name}});
+      format_to(o, '\n');
       node_to<0, sizeof...(T)>(o, node);
-      
-      for (size_t i : upto(size_t(0), N))
-      {
-        formatter<char>::to(o, ' ');
-      }
-
-      formatter<recursive_prettifier<N, xml_close_tag>>::to(o, recursive_prettifier<N, xml_close_tag>{xml_close_tag{node._t._name}});
+      format_to(o, recursive_prettifier<N, TAB, xml_close_tag>{xml_close_tag{node._t._name}});
     }
   };
 
