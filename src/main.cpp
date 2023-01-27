@@ -19,7 +19,7 @@ namespace stew
     {
       return make_xml_node(
           name,
-          xml_descriptor<string_view<char>>::describe("street", addr._street));
+          xml_describe("street", addr._street));
     }
   };
 }
@@ -41,9 +41,9 @@ namespace stew
     {
       return make_xml_node(
           name,
-          xml_descriptor<string_view<char>>::describe("name"_sv, p._name),
-          xml_descriptor<string_view<char>>::describe("firstname"_sv, p._firstname),
-          xml_descriptor<address>::describe("address", p._addr));
+          xml_describe("name"_sv, p._name),
+          xml_describe("firstname"_sv, p._firstname),
+          xml_describe("address", p._addr));
     }
   };
 }
@@ -51,7 +51,7 @@ namespace stew
 int main()
 {
   person p{"MARLEY"_sv, "Bob"_sv, {"mapple street"_sv}};
-  console<char>::printfln("{}", recursive_prettifier<0, 2, decltype(xml_descriptor<person>::describe("person", p))>{xml_descriptor<person>::describe("person", p)});
+  console<char>::printfln("{}", pretty<0, 2>(xml_describe("person", p)));
 
   return 0;
 }

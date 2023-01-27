@@ -3707,7 +3707,12 @@ namespace stew
   template <typename T>
   class formatter;
 
-  template <ostream O, typename T>
+  template <typename T, typename O>
+  concept formattable =
+      ostream<O> &&
+      requires(const T &t, O &o) { formatter<T>::to(o, t); };
+
+  template <ostream O, formattable<O> T>
   constexpr void format_to(O &o, const T &t)
   {
     formatter<T>::to(o, t);
@@ -4344,6 +4349,12 @@ namespace stew
   concept xml_descriptable =
       requires(const T &t) { xml_descriptor<T>::describe(string_view<char>(), t); };
 
+  template <xml_descriptable T>
+  constexpr auto xml_describe(string_view<char> name, const T &t)
+  {
+    return xml_descriptor<T>::describe(name, t);
+  }
+
   struct xml_open_tag
   {
     string_view<char> _name;
@@ -4434,19 +4445,25 @@ namespace stew
   };
 
   template <size_t N, size_t TAB, typename T>
-  struct recursive_prettifier
+  struct prettifier
   {
     static_assert(TAB >= 1);
-    T _t;
+    const T &_t;
   };
 
+  template <size_t N, size_t TAB, typename T>
+  constexpr auto pretty(T &&t)
+  {
+    return prettifier<N, TAB, rm_cvref<T>>{forward<T>(t)};
+  }
+
   template <size_t N, size_t TAB>
-  class formatter<recursive_prettifier<N, TAB, xml_open_tag>>
+  class formatter<prettifier<N, TAB, xml_open_tag>>
   {
   public:
     template <ostream O>
     constexpr static void to(
-        O &o, const recursive_prettifier<N, TAB, xml_open_tag> &tag)
+        O &o, const prettifier<N, TAB, xml_open_tag> &tag)
     {
       if constexpr (N > 0)
       {
@@ -4463,12 +4480,12 @@ namespace stew
   };
 
   template <size_t N, size_t TAB>
-  class formatter<recursive_prettifier<N, TAB, xml_close_tag>>
+  class formatter<prettifier<N, TAB, xml_close_tag>>
   {
   public:
     template <ostream O>
     constexpr static void to(
-        O &o, const recursive_prettifier<N, TAB, xml_close_tag> &tag)
+        O &o, const prettifier<N, TAB, xml_close_tag> &tag)
     {
       if constexpr (N > 0)
       {
@@ -4487,28 +4504,28 @@ namespace stew
   };
 
   template <size_t N, size_t TAB, typename T>
-  class formatter<recursive_prettifier<N, TAB, xml_leaf<T>>>
+  class formatter<prettifier<N, TAB, xml_leaf<T>>>
   {
   public:
     template <ostream O>
     constexpr static void to(
-        O &o, const recursive_prettifier<N, TAB, xml_leaf<T>> &leaf)
+        O &o, const prettifier<N, TAB, xml_leaf<T>> &leaf)
     {
-      format_to(o, recursive_prettifier<N, TAB, xml_open_tag>{xml_open_tag{leaf._t._name}});
+      format_to(o, pretty<N, TAB>(xml_open_tag{leaf._t._name}));
       format_to(o, leaf._t._t.get());
-      format_to(o, recursive_prettifier<0, TAB, xml_close_tag>{xml_close_tag{leaf._t._name}});
+      format_to(o, pretty<0, TAB>(xml_close_tag{leaf._t._name}));
     }
   };
 
   template <size_t N, size_t TAB, typename... T>
-  class formatter<recursive_prettifier<N, TAB, xml_node<T...>>>
+  class formatter<prettifier<N, TAB, xml_node<T...>>>
   {
   private:
     template <size_t I, size_t MAX, ostream O>
     constexpr static void node_to(
-        O &o, const recursive_prettifier<N, TAB, xml_node<T...>> &node)
+        O &o, const prettifier<N, TAB, xml_node<T...>> &node)
     {
-      format_to(o, recursive_prettifier<N + 1, TAB, rm_cvref<decltype(get<I>(node._t._nodes))>>{get<I>(node._t._nodes)});
+      format_to(o, pretty<N + 1, TAB>(get<I>(node._t._nodes)));
 
       if constexpr (I + 1 < MAX)
       {
@@ -4518,12 +4535,12 @@ namespace stew
 
   public:
     template <ostream O>
-    constexpr static void to(O &o, const recursive_prettifier<N, TAB, xml_node<T...>> &node)
+    constexpr static void to(O &o, const prettifier<N, TAB, xml_node<T...>> &node)
     {
-      format_to(o, recursive_prettifier<N, TAB, xml_open_tag>{xml_open_tag{node._t._name}});
+      format_to(o, pretty<N, TAB>(xml_open_tag{node._t._name}));
       format_to(o, '\n');
       node_to<0, sizeof...(T)>(o, node);
-      format_to(o, recursive_prettifier<N, TAB, xml_close_tag>{xml_close_tag{node._t._name}});
+      format_to(o, pretty<N, TAB>(xml_close_tag{node._t._name}));
     }
   };
 
