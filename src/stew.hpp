@@ -458,6 +458,12 @@ namespace stew
   }
 
   template <typename T>
+  constexpr auto relay(T&& t) -> T&&
+  {
+     return static_cast<T&&>(T);
+  } 
+
+  template <typename T>
   constexpr add_rref<rm_ref<T>> transfer(T &&t)
   {
     return static_cast<add_rref<rm_ref<T>>>(t);
