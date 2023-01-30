@@ -446,22 +446,16 @@ namespace stew
   //-----------------------------------
 
   template <typename T>
-  constexpr T &&forward(rm_ref<T> &t) noexcept
-  {
-    return static_cast<T &&>(t);
-  }
-
-  template <not_const_reference_like T>
-  constexpr T &&forward(rm_ref<T> &&t) noexcept
+  constexpr T&& relay(rm_ref<T> &t) noexcept
   {
     return static_cast<T &&>(t);
   }
 
   template <typename T>
-  constexpr auto relay(T&& t) -> T&&
+  constexpr T&& relay(rm_ref<T> &&t) noexcept
   {
-     return static_cast<T&&>(T);
-  } 
+    return static_cast<T &&>(t);
+  }
 
   template <typename T>
   constexpr add_rref<rm_ref<T>> transfer(T &&t)
@@ -986,11 +980,11 @@ namespace stew
     template <typename F>
     constexpr auto map(F &&f) &
     {
-      using U = decltype(forward<F>(f)(static_cast<T &>(_t)));
+      using U = decltype(relay<F>(f)(static_cast<T &>(_t)));
 
       if (_has)
       {
-        return maybe<U>(forward<F>(f)(static_cast<T &>(_t)));
+        return maybe<U>(relay<F>(f)(static_cast<T &>(_t)));
       }
       else
       {
@@ -1001,11 +995,11 @@ namespace stew
     template <typename F>
     constexpr auto map(F &&f) const &
     {
-      using U = decltype(forward<F>(f)(static_cast<const T &>(_t)));
+      using U = decltype(relay<F>(f)(static_cast<const T &>(_t)));
 
       if (_has)
       {
-        return maybe<U>(forward<F>(f)(static_cast<const T &>(_t)));
+        return maybe<U>(relay<F>(f)(static_cast<const T &>(_t)));
       }
       else
       {
@@ -1017,11 +1011,11 @@ namespace stew
     constexpr auto map(F &&f) &&
     {
 
-      using U = decltype(forward<F>(f)(static_cast<T &&>(_t)));
+      using U = decltype(relay<F>(f)(static_cast<T &&>(_t)));
 
       if (_has)
       {
-        return maybe<U>(forward<F>(f)(static_cast<T &&>(_t)));
+        return maybe<U>(relay<F>(f)(static_cast<T &&>(_t)));
       }
       else
       {
@@ -1032,11 +1026,11 @@ namespace stew
     template <typename F>
     constexpr auto map(F &&f) const &&
     {
-      using U = decltype(forward<F>(f)(static_cast<const T &&>(_t)));
+      using U = decltype(relay<F>(f)(static_cast<const T &&>(_t)));
 
       if (_has)
       {
-        return maybe<U>(forward<F>(f)(static_cast<const T &&>(_t)));
+        return maybe<U>(relay<F>(f)(static_cast<const T &&>(_t)));
       }
       else
       {
@@ -1076,7 +1070,7 @@ namespace stew
     public:
       virtual ~function_handler() = default;
       function_handler() = default;
-      function_handler(F &&func) : _func(forward<F>(func)) {}
+      function_handler(F &&func) : _func(relay<F>(func)) {}
       function_handler(const function_handler &) = default;
       function_handler(function_handler &&) = default;
       function_handler &operator=(const function_handler &) = default;
@@ -1085,7 +1079,7 @@ namespace stew
     public:
       virtual R invoke(A &&...args) override
       {
-        return _func(forward<A>(args)...);
+        return _func(relay<A>(args)...);
       }
 
       virtual basic_function_handler *clone() override
@@ -1106,7 +1100,7 @@ namespace stew
     function(R (*f)(A...)) : _func(f) {}
 
     template <typename F>
-    function(F &&f) : _handler(new function_handler<F>(forward<F>(f)))
+    function(F &&f) : _handler(new function_handler<F>(relay<F>(f)))
     {
     }
 
@@ -1140,8 +1134,8 @@ namespace stew
     R operator()(T &&...t)
     {
       return _handler.get() != nullptr
-                 ? _handler->invoke(forward<T>(t)...)
-                 : _func(forward<T>(t)...);
+                 ? _handler->invoke(relay<T>(t)...)
+                 : _func(relay<T>(t)...);
     }
   };
 
@@ -1176,7 +1170,7 @@ namespace stew
   public:
     template <convertible_to<T0> U0, convertible_to<Tn>... Un>
     constexpr tuple(U0 &&u0, Un &&...un)
-        : _t{forward<U0>(u0)}, tuple<Tn...>(forward<Un>(un)...)
+        : _t{relay<U0>(u0)}, tuple<Tn...>(relay<Un>(un)...)
     {
     }
 
@@ -1275,7 +1269,7 @@ namespace stew
   {
     return [&t]<typename... A>(A &&...args) -> decltype(auto)
     {
-      return forward<T>(t);
+      return relay<T>(t);
     };
   };
 
@@ -1287,11 +1281,11 @@ namespace stew
     {
       if constexpr (N == 0)
       {
-        return forward<T0>(t0);
+        return relay<T0>(t0);
       }
       else
       {
-        return placeholder<N - 1>{}(forward<Tn>(tn)...);
+        return placeholder<N - 1>{}(relay<Tn>(tn)...);
       }
     }
 
@@ -1300,7 +1294,7 @@ namespace stew
     {
       return [this, op]<typename... A>(A &&...args)
       {
-        return (*this)(forward<A>(args)...) = op(forward<A>(args)...);
+        return (*this)(relay<A>(args)...) = op(relay<A>(args)...);
       };
     }
   };
@@ -1333,7 +1327,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return ++pn0(forward<A>(args)...);
+      return ++pn0(relay<A>(args)...);
     };
   }
 
@@ -1342,7 +1336,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return pn0(forward<A>(args)...)++;
+      return pn0(relay<A>(args)...)++;
     };
   }
 
@@ -1351,7 +1345,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return --pn0(forward<A>(args)...);
+      return --pn0(relay<A>(args)...);
     };
   }
 
@@ -1360,7 +1354,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return pn0(forward<A>(args)...)--;
+      return pn0(relay<A>(args)...)--;
     };
   }
 
@@ -1369,7 +1363,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return !pn0(forward<A>(args)...);
+      return !pn0(relay<A>(args)...);
     };
   }
 
@@ -1378,7 +1372,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return +pn0(forward<A>(args)...);
+      return +pn0(relay<A>(args)...);
     };
   }
 
@@ -1387,7 +1381,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return -pn0(forward<A>(args)...);
+      return -pn0(relay<A>(args)...);
     };
   }
 
@@ -1396,7 +1390,7 @@ namespace stew
   {
     return [pn0]<typename... A>(A &&...args)
     {
-      return ~pn0(forward<A>(args)...);
+      return ~pn0(relay<A>(args)...);
     };
   }
 
@@ -1406,7 +1400,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) + p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) + p1(relay<A>(args)...);
     };
   }
 
@@ -1416,7 +1410,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) - p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) - p1(relay<A>(args)...);
     };
   }
 
@@ -1426,7 +1420,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) / p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) / p1(relay<A>(args)...);
     };
   }
 
@@ -1436,7 +1430,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) * p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) * p1(relay<A>(args)...);
     };
   }
 
@@ -1446,7 +1440,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) % p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) % p1(relay<A>(args)...);
     };
   }
 
@@ -1456,7 +1450,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) | p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) | p1(relay<A>(args)...);
     };
   }
 
@@ -1466,7 +1460,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) & p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) & p1(relay<A>(args)...);
     };
   }
 
@@ -1476,7 +1470,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) ^ p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) ^ p1(relay<A>(args)...);
     };
   }
 
@@ -1486,7 +1480,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) || p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) || p1(relay<A>(args)...);
     };
   }
 
@@ -1496,7 +1490,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) && p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) && p1(relay<A>(args)...);
     };
   }
 
@@ -1506,7 +1500,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) << p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) << p1(relay<A>(args)...);
     };
   }
 
@@ -1516,7 +1510,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) >> p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) >> p1(relay<A>(args)...);
     };
   }
 
@@ -1526,7 +1520,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) == p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) == p1(relay<A>(args)...);
     };
   }
 
@@ -1536,7 +1530,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) != p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) != p1(relay<A>(args)...);
     };
   }
 
@@ -1546,7 +1540,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) < p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) < p1(relay<A>(args)...);
     };
   }
 
@@ -1556,7 +1550,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) > p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) > p1(relay<A>(args)...);
     };
   }
 
@@ -1566,7 +1560,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) <= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) <= p1(relay<A>(args)...);
     };
   }
 
@@ -1576,7 +1570,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) >= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) >= p1(relay<A>(args)...);
     };
   }
 
@@ -1586,7 +1580,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) <=> p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) <=> p1(relay<A>(args)...);
     };
   }
 
@@ -1596,7 +1590,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) += p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) += p1(relay<A>(args)...);
     };
   }
 
@@ -1606,7 +1600,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) -= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) -= p1(relay<A>(args)...);
     };
   }
 
@@ -1616,7 +1610,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) /= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) /= p1(relay<A>(args)...);
     };
   }
 
@@ -1626,7 +1620,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) *= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) *= p1(relay<A>(args)...);
     };
   }
 
@@ -1636,7 +1630,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) %= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) %= p1(relay<A>(args)...);
     };
   }
 
@@ -1646,7 +1640,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) &= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) &= p1(relay<A>(args)...);
     };
   }
 
@@ -1656,7 +1650,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) |= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) |= p1(relay<A>(args)...);
     };
   }
 
@@ -1666,7 +1660,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) ^= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) ^= p1(relay<A>(args)...);
     };
   }
 
@@ -1676,7 +1670,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) >>= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) >>= p1(relay<A>(args)...);
     };
   }
 
@@ -1686,7 +1680,7 @@ namespace stew
   {
     return [p0, p1]<typename... A>(A &&...args)
     {
-      return p0(forward<A>(args)...) <<= p1(forward<A>(args)...);
+      return p0(relay<A>(args)...) <<= p1(relay<A>(args)...);
     };
   }
 
@@ -1839,13 +1833,13 @@ namespace stew
   template <range R>
   constexpr auto begin(R &&r)
   {
-    return forward<R>(r).begin();
+    return relay<R>(r).begin();
   }
 
   template <range R>
   constexpr auto end(R &&r)
   {
-    return forward<R>(r).end();
+    return relay<R>(r).end();
   }
 
   template <typename T, size_t N>
@@ -1927,7 +1921,7 @@ namespace stew
   };
 
   template <range R>
-  view(R &&r) -> view<decltype(begin(forward<R>(r)))>;
+  view(R &&r) -> view<decltype(begin(relay<R>(r)))>;
 
   template <input_or_output_iterator I>
   view(I b, I e) -> view<I>;
@@ -2032,7 +2026,7 @@ namespace stew
     auto b = begin(r);
     auto e = end(r);
 
-    while (b != e && !forward<P>(pred)(*b))
+    while (b != e && !relay<P>(pred)(*b))
     {
       ++b;
     }
@@ -2047,7 +2041,7 @@ namespace stew
 
     for (const auto &i : r)
     {
-      if (i == forward<T>(t))
+      if (i == relay<T>(t))
       {
         ++c;
       }
@@ -2063,7 +2057,7 @@ namespace stew
 
     for (const auto &i : r)
     {
-      if (forward<P>(pred)(i))
+      if (relay<P>(pred)(i))
       {
         ++c;
       }
@@ -2129,8 +2123,8 @@ namespace stew
   template <input_range R, output_iterator I>
   constexpr void copy(R &&r, I i)
   {
-    auto b = begin(forward<R>(r));
-    auto e = end(forward<R>(r));
+    auto b = begin(relay<R>(r));
+    auto e = end(relay<R>(r));
 
     while (b != e)
     {
@@ -2159,7 +2153,7 @@ namespace stew
     template <convertible_to<decltype(_value)> T>
     constexpr generator_iterator(G &&gener, T &&sentinel)
         : _gener(transfer(gener)),
-          _value(forward<T>(sentinel)) {}
+          _value(relay<T>(sentinel)) {}
 
   public:
     constexpr auto operator==(const generator_iterator &o) const
@@ -2340,8 +2334,8 @@ namespace stew
   constexpr auto transfer_view(R &&r)
   {
     return transfer_view(
-        begin(forward<R>(r)),
-        end(forward<R>(r)));
+        begin(relay<R>(r)),
+        end(relay<R>(r)));
   }
 
   template <bidirectional_iterator I>
@@ -2409,8 +2403,8 @@ namespace stew
   constexpr auto reverse_view(R &&r)
   {
     return reverse_view(
-        begin(forward<R>(r)),
-        end(forward<R>(r)));
+        begin(relay<R>(r)),
+        end(relay<R>(r)));
   }
 
   template <input_iterator I, typename M>
@@ -2470,8 +2464,8 @@ namespace stew
   constexpr auto map_view(R &&r, M map)
   {
     return map_view(
-        begin(forward<R>(r)),
-        end(forward<R>(r)), map);
+        begin(relay<R>(r)),
+        end(relay<R>(r)), map);
   }
 
   template <input_iterator I, predicate<decltype(*I{})> F>
@@ -2540,8 +2534,8 @@ namespace stew
   constexpr auto filter_view(R &&r, F filter)
   {
     return filter_view(
-        begin(forward<R>(r)),
-        end(forward<R>(r)), filter);
+        begin(relay<R>(r)),
+        end(relay<R>(r)), filter);
   }
 
   // ---------------------------------
@@ -2636,7 +2630,7 @@ namespace stew
     template <input_range R>
     constexpr static_stack(R &&r)
     {
-      push(forward<R>(r));
+      push(relay<R>(r));
     }
 
     constexpr static_stack(const static_stack &) = default;
@@ -2647,7 +2641,7 @@ namespace stew
     template <input_range R>
     constexpr static_stack &operator=(R &&r)
     {
-      return (*this = transfer(static_stack(forward<R>(r))));
+      return (*this = transfer(static_stack(relay<R>(r))));
     }
 
   public:
@@ -2693,14 +2687,14 @@ namespace stew
     {
       if (!full())
       {
-        _data[--_idx] = forward<U>(u);
+        _data[--_idx] = relay<U>(u);
       }
     }
 
     template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter<T>(*this));
+      copy(relay<R>(r), push_inserter<T>(*this));
     }
 
     constexpr maybe<T> pop()
@@ -2736,7 +2730,7 @@ namespace stew
       requires distanciable_iterator<decltype(stew::begin(r))>
         : fixed_stack(stew::end(r) - stew::begin(r))
     {
-      push(forward<R>(r));
+      push(relay<R>(r));
     }
 
     constexpr fixed_stack(const fixed_stack &) = default;
@@ -2747,7 +2741,7 @@ namespace stew
     template <input_range R>
     constexpr fixed_stack &operator=(R &&r)
     {
-      return (*this = transfer(fixed_stack(forward<R>(r))));
+      return (*this = transfer(fixed_stack(relay<R>(r))));
     }
 
   public:
@@ -2793,14 +2787,14 @@ namespace stew
     {
       if (!full())
       {
-        _data[--_idx] = forward<U>(u);
+        _data[--_idx] = relay<U>(u);
       }
     }
 
     template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter<T>(*this));
+      copy(relay<R>(r), push_inserter<T>(*this));
     }
 
     constexpr maybe<T> pop()
@@ -2831,7 +2825,7 @@ namespace stew
       requires distanciable_iterator<decltype(stew::begin(r))>
         : stack(stew::end(r) - stew::begin(r))
     {
-      push(forward<R>(r));
+      push(relay<R>(r));
     }
 
     constexpr stack(const stack &) = default;
@@ -2843,7 +2837,7 @@ namespace stew
     template <input_range R>
     constexpr stack &operator=(R &&r)
     {
-      return (*this = transfer(stack(forward<R>(r))));
+      return (*this = transfer(stack(relay<R>(r))));
     }
 
   public:
@@ -2895,13 +2889,13 @@ namespace stew
         _data.push(transfer(tmp));
       }
 
-      _data.push(forward<U>(u));
+      _data.push(relay<U>(u));
     }
 
     template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter<T>(*this));
+      copy(relay<R>(r), push_inserter<T>(*this));
     }
 
     constexpr auto pop()
@@ -2924,7 +2918,7 @@ namespace stew
     template <input_range R>
     constexpr static_vector(R &&r)
     {
-      push(forward<R>(r));
+      push(relay<R>(r));
     }
 
     constexpr static_vector(const static_vector &) = default;
@@ -2935,7 +2929,7 @@ namespace stew
     template <input_range R>
     constexpr static_vector &operator=(R &&r)
     {
-      return (*this = transfer(static_vector(forward<R>(r))));
+      return (*this = transfer(static_vector(relay<R>(r))));
     }
 
   public:
@@ -2993,7 +2987,7 @@ namespace stew
     {
       if (!full())
       {
-        _data[_size] = forward<U>(u);
+        _data[_size] = relay<U>(u);
         ++_size;
       }
     }
@@ -3001,7 +2995,7 @@ namespace stew
     template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter<T>(*this));
+      copy(relay<R>(r), push_inserter<T>(*this));
     }
 
     constexpr maybe<T> pop()
@@ -3051,10 +3045,10 @@ namespace stew
     template <input_range R>
     constexpr fixed_vector(R &&r)
       requires distanciable_iterator<decltype(stew::begin(r))>
-        : fixed_vector(stew::end(forward<R>(r)) -
-                       stew::begin(forward<R>(r)))
+        : fixed_vector(stew::end(relay<R>(r)) -
+                       stew::begin(relay<R>(r)))
     {
-      push(forward<R>(r));
+      push(relay<R>(r));
     }
 
     constexpr fixed_vector &operator=(fixed_vector o)
@@ -3068,7 +3062,7 @@ namespace stew
     template <input_range R>
     constexpr fixed_vector &operator=(R &&r)
     {
-      return (*this = transfer(fixed_vector(forward<R>(r))));
+      return (*this = transfer(fixed_vector(relay<R>(r))));
     }
 
   public:
@@ -3126,7 +3120,7 @@ namespace stew
     {
       if (!full())
       {
-        _data[_size] = forward<U>(u);
+        _data[_size] = relay<U>(u);
         _size += 1;
       }
     }
@@ -3135,7 +3129,7 @@ namespace stew
     constexpr void push(R &&r)
       requires not_convertible_to<R, T>
     {
-      copy(forward<R>(r), push_inserter<T>(*this));
+      copy(relay<R>(r), push_inserter<T>(*this));
     }
 
     constexpr maybe<T> pop()
@@ -3164,10 +3158,10 @@ namespace stew
 
     template <input_range R>
     constexpr vector(R &&r)
-        : vector(stew::end(forward<R>(r)) -
-                 stew::begin(forward<R>(r)))
+        : vector(stew::end(relay<R>(r)) -
+                 stew::begin(relay<R>(r)))
     {
-      push(forward<R>(r));
+      push(relay<R>(r));
     }
 
     constexpr vector(const vector &) = default;
@@ -3178,7 +3172,7 @@ namespace stew
     template <input_range R>
     constexpr vector &operator=(R &&r)
     {
-      return (*this = transfer(vector(forward<R>(r))));
+      return (*this = transfer(vector(relay<R>(r))));
     }
 
   public:
@@ -3241,13 +3235,13 @@ namespace stew
         _data.push(transfer(tmp));
       }
 
-      _data.push(forward<U>(u));
+      _data.push(relay<U>(u));
     }
 
     template <input_range R>
     constexpr void push(R &&r)
     {
-      copy(forward<R>(r), push_inserter<T>(*this));
+      copy(relay<R>(r), push_inserter<T>(*this));
     }
 
     constexpr auto pop()
@@ -3599,7 +3593,7 @@ namespace stew
       {
         if (_fp != nullptr)
         {
-          string_view<char> tmp(forward<R>(r));
+          string_view<char> tmp(relay<R>(r));
           fwrite(tmp.begin(), sizeof(char), tmp.size(), _fp);
         }
       }
@@ -3607,15 +3601,15 @@ namespace stew
       {
         if (_fp != nullptr)
         {
-          string_view<wchar_t> tmp(forward<R>(r));
+          string_view<wchar_t> tmp(relay<R>(r));
           fwrite(tmp.begin(), sizeof(wchar_t), tmp.size(), _fp);
         }
       }
       else
       {
-        for (auto &&i : forward<R>(r))
+        for (auto &&i : relay<R>(r))
         {
-          push(forward<decltype(i)>(i));
+          push(relay<decltype(i)>(i));
         }
       }
     }
@@ -3699,7 +3693,7 @@ namespace stew
   public:
     template <string_view_like<C> FMT>
     consteval format_string(FMT &&fmt)
-        : _parts(split(forward<FMT>(fmt)))
+        : _parts(split(relay<FMT>(fmt)))
     {
     }
 
@@ -4484,7 +4478,7 @@ namespace stew
   template <size_t N, size_t TAB, typename T>
   constexpr auto pretty(T &&t)
   {
-    return prettifier<N, TAB, rm_cvref<T>>{forward<T>(t)};
+    return prettifier<N, TAB, rm_cvref<T>>{relay<T>(t)};
   }
 
   template <size_t N, size_t TAB>
@@ -4636,7 +4630,7 @@ namespace stew
     ~thread() = default;
 
     thread(F &&f)
-        : _call(forward<F>(f)),
+        : _call(relay<F>(f)),
           _joinable(false)
     {
       if (thrd_create(&_thrid, fcall_wrapper, &_call) == thrd_success)
@@ -4690,7 +4684,7 @@ namespace stew
       _t.join();
     }
 
-    jthread(F &&f) : _t(forward<F>(f)) {}
+    jthread(F &&f) : _t(relay<F>(f)) {}
     jthread(const jthread &) = delete;
     jthread(jthread &&) = default;
     jthread &operator=(const jthread &) = delete;
@@ -4731,7 +4725,7 @@ namespace stew
 
   public:
     ~dthread() = default;
-    dthread(F &&f) : _t(forward<F>(f)) { detach(); }
+    dthread(F &&f) : _t(relay<F>(f)) { detach(); }
     dthread(const dthread &) = delete;
     dthread(dthread &&) = default;
     dthread &operator=(const dthread &) = delete;
@@ -4774,7 +4768,7 @@ namespace stew
     future() = default;
 
     template <typename F>
-    future(F &&func) : _func(forward<F>(func))
+    future(F &&func) : _func(relay<F>(func))
     {
     }
 
@@ -4793,28 +4787,28 @@ namespace stew
   template <typename F, typename... A>
   auto defer(F &&f, A &&...args) -> decltype(auto)
   {
-    using res_t = decltype(forward<F>(f)(forward<A>(args)...));
+    using res_t = decltype(relay<F>(f)(relay<A>(args)...));
 
     return future<res_t>([&]
-                         { return forward<F>(f)(forward<A>(args)...); });
+                         { return relay<F>(f)(relay<A>(args)...); });
   }
 
   template <typename F, typename... A>
   auto async(F &&f, A &&...args) -> decltype(auto)
   {
-    using res_t = decltype(forward<F>(f)(forward<A>(args)...));
+    using res_t = decltype(relay<F>(f)(relay<A>(args)...));
 
     return future<res_t>([&]
                          {
       if constexpr (!same_as<res_t, void>) 
       {
         res_t res;
-        thread([&] { res = forward<F>(f)(forward<A>(args)...);}).join();
+        thread([&] { res = relay<F>(f)(relay<A>(args)...);}).join();
         return res;
       }
       else 
       {
-        jthread([&] { forward<F>(f)(forward<A>(args)...);});
+        jthread([&] { relay<F>(f)(relay<A>(args)...);});
       } });
   }
 
@@ -5017,14 +5011,14 @@ namespace stew
     void apply(F &&f)
     {
       scoped_lock lck(_mtx);
-      forward<F>(f)(_t);
+      relay<F>(f)(_t);
     }
 
     template <typename F>
     void apply(F &&f) const
     {
       scoped_lock lck(_mtx);
-      forward<F>(f)(_t);
+      relay<F>(f)(_t);
     }
   };
 
@@ -5047,13 +5041,13 @@ namespace stew
     template <typename F>
     void apply(F &&f)
     {
-      forward<F>(f)(_t);
+      relay<F>(f)(_t);
     }
 
     template <typename F>
     void apply(F &&f) const
     {
-      forward<F>(f)(_t);
+      relay<F>(f)(_t);
     }
   };
 
@@ -5113,7 +5107,7 @@ namespace stew
     {
       if (_useable)
       {
-        while (!forward<P>(pred)())
+        while (!relay<P>(pred)())
         {
           wait(m);
         }
@@ -5202,11 +5196,11 @@ namespace stew
     {
       if constexpr (S == signal::destroyed)
       {
-        _destroyed = forward<F>(sl);
+        _destroyed = relay<F>(sl);
       }
       else if constexpr (S == signal ::changed)
       {
-        _changed = forward<F>(sl);
+        _changed = relay<F>(sl);
       }
     }
   };
@@ -5327,15 +5321,15 @@ namespace stew
     {
       if constexpr (S == signal::pre_destroyed)
       {
-        _pre_destroyed = forward<F>(sl);
+        _pre_destroyed = relay<F>(sl);
       }
       else if constexpr (S == signal::pre_changed)
       {
-        _pre_changed = forward<F>(sl);
+        _pre_changed = relay<F>(sl);
       }
       else if constexpr (S == signal ::changed)
       {
-        _changed = forward<F>(sl);
+        _changed = relay<F>(sl);
       }
     }
   };

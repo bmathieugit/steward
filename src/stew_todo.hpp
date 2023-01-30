@@ -111,13 +111,13 @@ namespace stew
     template <typename T, typename F, size_t... I>
     consteval auto apply(T &&t, F &&f, isequence<I...>) -> decltype(auto)
     {
-      return forward<F>(f)(get<I>(forward<T>(t))...);
+      return relay<F>(f)(get<I>(relay<T>(t))...);
     }
 
     template <typename T, typename F>
     consteval auto apply(T &&t, F &&f) -> decltype(auto)
     {
-      return apply(forward<T>(t), forward<F>(f), make_isequence<array_size<rm_cvref<T>>>());
+      return apply(relay<T>(t), relay<F>(f), make_isequence<array_size<rm_cvref<T>>>());
     }
   }
 
@@ -135,7 +135,7 @@ namespace stew
         ~node() = default;
         node() = default;
         template <convertible_to<T> U>
-        node(U &&u) : _t(forward<U>(u)) {}
+        node(U &&u) : _t(relay<U>(u)) {}
         node(const node &o) : _t(o._t), _next(o._next) {}
         node(node &&o) : _t(transfer(o._t)), _next(transfer(o._next))
         {
@@ -242,7 +242,7 @@ namespace stew
       template <convertible_to<T> U>
       void push(U &&u)
       {
-        _nodes.push(node(forward<U>(u)));
+        _nodes.push(node(relay<U>(u)));
 
         if (_last == static_cast<size_t>(-1))
         {
@@ -259,16 +259,16 @@ namespace stew
       template <range R>
       void push(R &&r)
       {
-        for (auto &&i : forward<R>(r))
+        for (auto &&i : relay<R>(r))
         {
-          push(forward<decltype(i)>(i));
+          push(relay<decltype(i)>(i));
         }
       }
 
       template <convertible_to<T> U>
       void push_front(U &&u)
       {
-        _nodes.push(node(forward<U>(u)));
+        _nodes.push(node(relay<U>(u)));
 
         if (_first == static_cast<size_t>(-1))
         {
@@ -285,9 +285,9 @@ namespace stew
       template <range R>
       void push_front(R &&r)
       {
-        for (auto &&i : forward<R>(r))
+        for (auto &&i : relay<R>(r))
         {
-          push_front(forward<decltype(i)>(i));
+          push_front(relay<decltype(i)>(i));
         }
       }
 
@@ -381,9 +381,9 @@ namespace stew
       template <convertible_to<T> U>
       void push(U &&u)
       {
-        if (find(_data, forward<U>(u)) == _data.end())
+        if (find(_data, relay<U>(u)) == _data.end())
         {
-          _data.push(forward<U>(u));
+          _data.push(relay<U>(u));
         }
       }
 

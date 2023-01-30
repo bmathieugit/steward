@@ -54,9 +54,15 @@ namespace stew
 
 int main()
 {
-  
-  person p{"MARLEY"_sv, "Bob"_sv, {"mapple street"_sv}};
-  console<char>::printfln("{}", pretty<0, 2>(xml_describe("person", p)));
+  int i = 12;
+  const int i1 = 12;
+  int&& i2 = static_cast<int&&>(12);
+
+  static_assert(same_as<decltype(relay<int&&>(12)), int&&>);
+  static_assert(same_as<decltype(relay<int&>(i)), int &>);
+  static_assert(same_as<decltype(relay<const int&>(i1)), const int &>);
+  static_assert(same_as<decltype(relay<int&&>(static_cast<int &&>(i))), int &&>);
+  static_assert(same_as<decltype(relay<int&&>(i2)), int &&>);
 
   return 0;
 }
