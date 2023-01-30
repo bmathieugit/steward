@@ -446,13 +446,13 @@ namespace stew
   //-----------------------------------
 
   template <typename T>
-  constexpr T&& relay(rm_ref<T> &t) noexcept
+  constexpr T &&relay(rm_ref<T> &t) noexcept
   {
     return static_cast<T &&>(t);
   }
 
   template <typename T>
-  constexpr T&& relay(rm_ref<T> &&t) noexcept
+  constexpr T &&relay(rm_ref<T> &&t) noexcept
   {
     return static_cast<T &&>(t);
   }
@@ -463,20 +463,41 @@ namespace stew
     return static_cast<add_rref<rm_ref<T>>>(t);
   }
 
-  template <native_number T>
-  constexpr auto transfer(T &t)
+  template <typename T>
+  concept native_number_reference =
+      native_number<rm_cvref<T>>;
+
+  template <native_number_reference T>
+  constexpr auto transfer(T &&t)
   {
-    T copy = static_cast<rm_ref<T> &&>(t);
-    t = 0;
-    return copy;
+    if constexpr (native_number<T>)
+    {
+      return t;
+    }
+    else
+    {
+      rm_cvref<T> copy = t;
+      t = 0;
+      return copy;
+    }
   }
 
-  template <pointer_like T>
-  constexpr auto transfer(T &p)
+  template <typename T>
+  concept pointer_reference = pointer_like<rm_cvref<T>>;
+
+  template <pointer_reference T>
+  constexpr auto transfer(T &&p)
   {
-    auto copy = p;
-    p = nullptr;
-    return copy;
+    if constexpr (pointer_like<T>)
+    {
+      return p;
+    }
+    else
+    {
+      rm_cvref<T> copy = p;
+      p = nullptr;
+      return copy;
+    }
   }
 
   //---------------------------------
@@ -492,19 +513,19 @@ namespace stew
     rm_array<T> *_ptr = nullptr;
 
   public:
-    ~non_owning() = default;
-    non_owning() = default;
+    constexpr ~non_owning() = default;
+    constexpr non_owning() = default;
 
     template <typename U>
-    non_owning(U *ptr) : _ptr(ptr) {}
+    constexpr non_owning(U *ptr) : _ptr(ptr) {}
 
-    non_owning(nullptr_t) : non_owning() {}
+    constexpr non_owning(nullptr_t) : non_owning() {}
 
-    non_owning(const non_owning &) = default;
-    non_owning(non_owning &&) = default;
+    constexpr non_owning(const non_owning &) = default;
+    constexpr non_owning(non_owning &&) = default;
 
     template <typename U>
-    non_owning &operator=(U *ptr)
+    constexpr non_owning &operator=(U *ptr)
     {
       if (_ptr != ptr)
       {
@@ -514,17 +535,17 @@ namespace stew
       return *this;
     }
 
-    non_owning &operator=(nullptr_t)
+    constexpr non_owning &operator=(nullptr_t)
     {
       _ptr = nullptr;
       return *this;
     }
 
-    non_owning &operator=(const non_owning &) = default;
-    non_owning &operator=(non_owning &&) = default;
+    constexpr non_owning &operator=(const non_owning &) = default;
+    constexpr non_owning &operator=(non_owning &&) = default;
 
   public:
-    auto get()
+    constexpr auto get()
     {
       return _ptr;
     }
@@ -535,43 +556,43 @@ namespace stew
     }
 
   public:
-    operator bool() const
+    constexpr operator bool() const
     {
       return _ptr != nullptr;
     }
 
-    auto operator*() -> decltype(auto)
+    constexpr auto operator*() -> decltype(auto)
       requires(!native_array_like<T>)
     {
       return (*_ptr);
     }
 
-    auto operator*() const
+    constexpr auto operator*() const
         -> decltype(auto)
       requires(!native_array_like<T>)
     {
       return (*_ptr);
     }
 
-    auto operator->() -> decltype(auto)
+    constexpr auto operator->() -> decltype(auto)
       requires(!native_array_like<T>)
     {
       return _ptr;
     }
 
-    auto operator->() const -> decltype(auto)
+    constexpr auto operator->() const -> decltype(auto)
       requires(!native_array_like<T>)
     {
       return _ptr;
     }
 
-    auto operator[](size_t i) -> decltype(auto)
+    constexpr auto operator[](size_t i) -> decltype(auto)
       requires(native_array_like<T>)
     {
       return (_ptr[i]);
     }
 
-    auto operator[](size_t i) const -> decltype(auto)
+    constexpr auto operator[](size_t i) const -> decltype(auto)
       requires(native_array_like<T>)
     {
       return (_ptr[i]);
@@ -1868,7 +1889,7 @@ namespace stew
         : _begin(b), _end(e) {}
 
     template <range_or_bounded_array R>
-    constexpr view(const R &r)
+    constexpr view(R &&r)
         : view(stew::begin(r), stew::end(r))
     {
     }
@@ -3781,11 +3802,11 @@ namespace stew
     impl::format_to(o, fmt, a...);
   }
 
-  template <ostream O, typename... A>
-  constexpr void format_to(O &o, const format_string<wchar_t, sizeof...(A) + 1> &fmt, const A &...a)
-  {
-    impl::format_to(o, fmt, a...);
-  }
+  // template <ostream O, typename... A>
+  // constexpr void format_to(O &o, const format_string<wchar_t, sizeof...(A) + 1> &fmt, const A &...a)
+  // {
+  //   impl::format_to(o, fmt, a...);
+  // }
 
   template <character C>
   class formatter<C>
@@ -3795,6 +3816,20 @@ namespace stew
     constexpr static void to(O &os, C o)
     {
       os.push(o);
+    }
+  };
+
+  template <typename I>
+  class formatter<view<I>>
+  {
+  public:
+    template <ostream O>
+    constexpr static void to(O &o, const view<I> &v)
+    {
+      for (const auto &i : v)
+      {
+        format_to(o, i);
+      }
     }
   };
 
@@ -3852,31 +3887,30 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, I i)
     {
-      bool neg = i < 0;
-
-      I tmp = neg ? -i : i;
-
       static_stack<char, 20> tbuff;
 
-      if (tmp == 0)
+      if (i == 0)
       {
-        format_to(o, '0');
+        tbuff.push('0');
       }
       else
       {
+        const bool neg = i < 0;
+        I tmp = neg ? -i : i;
+
         while (tmp != 0)
         {
           tbuff.push("0123456789"[tmp % 10]);
           tmp /= 10;
         }
+
+        if (neg)
+        {
+          tbuff.push('-');
+        }
       }
 
-      if (neg)
-      {
-        format_to(o, '-');
-      }
-
-      format_to(o, tbuff);
+      format_to(o, view(tbuff));
     }
   };
 
@@ -3888,22 +3922,21 @@ namespace stew
     constexpr static void to(O &o, I i)
     {
       static_stack<char, 20> tbuff;
-      I tmp = i;
 
-      if (tmp == 0)
+      if (i == 0)
       {
-        format_to(o, '0');
+        tbuff.push(o, '0');
       }
       else
       {
-        while (tmp != 0)
+        while (i != 0)
         {
-          tbuff.push("0123456789"[tmp % 10]);
-          tmp /= 10;
+          tbuff.push("0123456789"[i % 10]);
+          i /= 10;
         }
       }
 
-      format_to(o, tbuff);
+      format_to(o, view(tbuff));
     }
   };
 
@@ -4139,13 +4172,13 @@ namespace stew
   {
   public:
     template <typename... T>
-    static void printf(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
+    static void printf(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
       format_to(termout, fmt, t...);
     }
 
     template <typename... T>
-    static void printfln(format_string<C, sizeof...(T) + 1> fmt, const T &...t)
+    static void printfln(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
       format_to(termout, fmt, t...);
       termout.push('\n');

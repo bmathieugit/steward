@@ -54,9 +54,9 @@ namespace stew
 
 int main()
 {
-  
-  person p{"MARLEY"_sv, "Bob"_sv, {"mapple street"_sv}};
-  console<char>::printfln("{}", pretty<0, 2>(xml_describe("person", p)));
+  int i = -12;
+ 
+  format_to(termout, "{}"_sv, i);
 
   return 0;
 }
