@@ -768,17 +768,17 @@ namespace stew
   };
 
   template <typename T>
-  class forward_reference
+  class universal_reference
   {
   private:
     T _t;
 
   public:
-    constexpr ~forward_reference() = default;
-    constexpr forward_reference() = default;
-    constexpr forward_reference(T t) : _t(transfer(t)) {}
-    constexpr forward_reference(const forward_reference &) = default;
-    constexpr forward_reference &operator=(const forward_reference &) = default;
+    constexpr ~universal_reference() = default;
+    constexpr universal_reference() = default;
+    constexpr universal_reference(T t) : _t(transfer(t)) {}
+    constexpr universal_reference(const universal_reference &) = default;
+    constexpr universal_reference &operator=(const universal_reference &) = default;
 
   public:
     constexpr operator T &()
@@ -803,16 +803,16 @@ namespace stew
   };
 
   template <typename T>
-  class forward_reference<T &&>
+  class universal_reference<T &&>
   {
   private:
     move_reference<T> _t;
 
   public:
-    constexpr ~forward_reference() = default;
-    constexpr forward_reference(T &&t) : _t(t) {}
-    constexpr forward_reference(const forward_reference &) = default;
-    constexpr forward_reference &operator=(const forward_reference &) = default;
+    constexpr ~universal_reference() = default;
+    constexpr universal_reference(T &&t) : _t(t) {}
+    constexpr universal_reference(const universal_reference &) = default;
+    constexpr universal_reference &operator=(const universal_reference &) = default;
 
   public:
     constexpr operator T &&()
@@ -837,16 +837,16 @@ namespace stew
   };
 
   template <typename T>
-  class forward_reference<T &>
+  class universal_reference<T &>
   {
   private:
     reference<T> _t;
 
   public:
-    constexpr ~forward_reference() = default;
-    constexpr forward_reference(T &t) : _t(t) {}
-    constexpr forward_reference(const forward_reference &) = default;
-    constexpr forward_reference &operator=(const forward_reference &) = default;
+    constexpr ~universal_reference() = default;
+    constexpr universal_reference(T &t) : _t(t) {}
+    constexpr universal_reference(const universal_reference &) = default;
+    constexpr universal_reference &operator=(const universal_reference &) = default;
 
   public:
     constexpr operator T &()
@@ -870,16 +870,16 @@ namespace stew
   };
 
   template <typename T>
-  class forward_reference<const T &>
+  class universal_reference<const T &>
   {
   private:
     const_reference<T> _t;
 
   public:
-    constexpr ~forward_reference() = default;
-    constexpr forward_reference(const T &t) : _t(t) {}
-    constexpr forward_reference(const forward_reference &) = default;
-    constexpr forward_reference &operator=(const forward_reference &) = default;
+    constexpr ~universal_reference() = default;
+    constexpr universal_reference(const T &t) : _t(t) {}
+    constexpr universal_reference(const universal_reference &) = default;
+    constexpr universal_reference &operator=(const universal_reference &) = default;
 
   public:
     constexpr operator const T &() const
@@ -1178,7 +1178,7 @@ namespace stew
   class tuple<T0, Tn...> : public tuple<Tn...>
   {
   private:
-    forward_reference<T0> _t;
+    universal_reference<T0> _t;
 
   public:
     constexpr ~tuple() = default;
@@ -3404,12 +3404,24 @@ namespace stew
   //
   //---------------------
 
-  constexpr array<const char *, 3> modechr = {"r", "w"};
+  constexpr array<const char *, 6> modechr =
+      {"r", "w", "r+", "w+", "a", "a+"};
 
   enum class mode : size_t
   {
     r = 0,
-    w = 1
+    w = 1,
+    rp = 2,
+    wp = 3,
+    a = 4,
+    ap = 5
+  };
+
+  enum class seek : int
+  {
+    set = SEEK_SET,
+    cur = SEEK_CUR,
+    end = SEEK_END
   };
 
   template <typename T, mode m>
@@ -3428,7 +3440,8 @@ namespace stew
 
     template <character C>
     file(string_view<C> path)
-        : _fp(fopen(path.begin(), modechr[size_t(m)]))
+        : _fp(fopen(path.begin(),
+                    modechr[size_t(m)]))
     {
     }
 
@@ -3547,7 +3560,7 @@ namespace stew
   public:
     auto begin()
     {
-      if constexpr (m == mode::w)
+      if constexpr (m == mode::w || m == mode::rp || m == mode::wp)
       {
         return ofile_iterator(*this);
       }
@@ -3559,7 +3572,7 @@ namespace stew
 
     auto end()
     {
-      if constexpr (m == mode::w)
+      if constexpr (m == mode::w || m == mode::rp || m == mode::wp)
       {
         return ofile_iterator();
       }
@@ -3572,24 +3585,33 @@ namespace stew
     auto begin() const
       requires(m == mode::r)
     {
-      if constexpr (m == mode::r)
-      {
-        return ifile_iterator(*this);
-      }
+      return ifile_iterator(*this);
     }
 
     auto end() const
       requires(m == mode::r)
     {
-      if constexpr (m == mode::r)
+
+      return ifile_iterator();
+    }
+
+  public:
+    void seekg(long offset, seek fr)
+    {
+      if (_fp != nullptr)
       {
-        return ifile_iterator();
+        fseek(_fp, offset, (int)fr);
       }
+    }
+
+    long tellg()
+    {
+      return _fp != nullptr ? ftell(_fp) : 0;
     }
 
   public:
     void push(T &&t)
-      requires(m == mode::w)
+      requires(m == mode::w || m == mode::rp || m == mode::wp)
     {
       if (_fp != nullptr)
       {
@@ -3598,7 +3620,7 @@ namespace stew
     }
 
     void push(const T &t)
-      requires(m == mode::w)
+      requires(m == mode::w || m == mode::rp || m == mode::wp)
     {
       if (_fp != nullptr)
       {
@@ -3608,7 +3630,7 @@ namespace stew
 
     template <input_range R>
     void push(R &&r)
-      requires(m == mode::w)
+      requires(m == mode::w || m == mode::rp || m == mode::wp)
     {
       if constexpr (string_view_like<R, char>)
       {

@@ -4,59 +4,45 @@
 
 using namespace stew;
 
-struct address
-{
-  string_view<char> _street;
-};
-
-namespace stew
-{
-  template <>
-  class xml_descriptor<address>
-  {
-  public:
-    constexpr static auto describe(
-        string_view<char> name,
-        const address &addr)
-    {
-      return make_xml_node(
-          name,
-          xml_describe("street", addr._street));
-    }
-  };
-}
-
-struct person
-{
-  string_view<char> _name;
-  string_view<char> _firstname;
-  address _addr;
-};
-
-namespace stew
-{
-  template <>
-  class xml_descriptor<person>
-  {
-  public:
-    constexpr static auto describe(
-        string_view<char> name,
-        const person &p)
-    {
-      return make_xml_node(
-          name,
-          xml_describe("name"_sv, p._name),
-          xml_describe("firstname"_sv, p._firstname),
-          xml_describe("address", p._addr));
-    }
-  };
-}
-
 int main()
 {
   int i = -12;
- 
-  format_to(termout, "{}"_sv, i);
+  console<char>::printfln("{}", i);
+
+  {
+    file<char, mode::w> out("./test.txt"_sv);
+
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+    format_to(out, "un jolie phrase{}\n", 0);
+  }
+
+  long pos = 0;
+
+  {
+    file<char, mode::r> in("./test.txt"_sv);
+    maybe<char> m;
+
+    while ((m = in.pop()).has() && m.operator*() != '\n')
+      ;
+
+    pos = in.tellg();
+  }
+
+  {
+    file<char, mode::rp> out("./test.txt"_sv);
+    out.seekg(pos, seek::set);
+    format_to(out, "un jolie phrase{}\n", 1);  
+  }
 
   return 0;
 }
