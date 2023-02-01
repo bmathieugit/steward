@@ -4261,7 +4261,7 @@ namespace stew
 
     static void print(file_writer<C> &o, string_view<C> s)
     {
-      o.writer().push(s);
+      o.push(s);
     }
 
     static void println(file_writer<C> &o, string_view<C> s)
@@ -4331,6 +4331,51 @@ namespace stew
         extract_response<T...> &response)
     {
       files<C>::readf(termin, fmt, response);
+    }
+  };
+
+  //------------------------
+  //
+  // Dialogs
+  //
+  //------------------------
+
+  template <character C>
+  struct dialog
+  {
+    template <typename... T>
+    const dialog &printf(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t) const
+    {
+      files<C>::printf(termout, fmt, t...);
+      return *this;
+    }
+
+    template <typename... T>
+    const dialog & printfln(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t) const
+    {
+      files<C>::printfln(termout, fmt, t...);
+      return *this;
+    }
+
+    const dialog &print(string_view<C> s) const
+    {
+      files<C>::print(termout, s);
+      return *this;
+    }
+
+    const dialog &println(string_view<C> s) const
+    {
+      files<C>::println(termout, s);
+      return *this;
+    }
+
+    template <typename... T>
+    const dialog &readf(
+        format_string<C, sizeof...(T) + 1> fmt,
+        extract_response<T...> &response) const
+    {
+      files<C>::readf(termin, fmt, response);
+      return *this;
     }
   };
 
