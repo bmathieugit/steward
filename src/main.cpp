@@ -48,5 +48,11 @@ int main()
     files<char>::printfln(writer, "un jolie phrase{}", 1);
   }
 
+
+  extract_response<int> response;
+  console<char>::println("quel est ton age ?");
+  console<char>::readf("{}", response);
+  console<char>::printfln("tu as dit avoir {} an(s)", response.get<0>().operator*());
+
   return 0;
 }

@@ -4269,6 +4269,23 @@ namespace stew
       o.push(s);
       o.push('\n');
     }
+
+    template <typename... T>
+    static void readf(
+        file_reader<C> &i,
+        format_string<C, sizeof...(T) + 1> fmt,
+        extract_response<T...> &response)
+    {
+      maybe<C> mb;
+      string<C> s;
+
+      while ((mb = i.pop()).has() && *mb != '\n')
+      {
+        s.push(*mb);
+      }
+
+      extract_to(s, fmt, response);
+    }
   };
 
   //------------------------
@@ -4313,15 +4330,7 @@ namespace stew
         format_string<C, sizeof...(T) + 1> fmt,
         extract_response<T...> &response)
     {
-      maybe<C> mb;
-      string<C> s;
-
-      while ((mb = termin.pop()).has() && *mb != '\n')
-      {
-        s.push(*mb);
-      }
-
-      extract_to(s, fmt, response);
+      files<C>::readf(termin, fmt, response);
     }
   };
 
