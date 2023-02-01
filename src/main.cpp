@@ -42,9 +42,10 @@ int main()
 
   {
     file<char, mode::rp> out("./test.txt"_sv);
+
     auto writer = out.writer();
     out.seekg(pos, seek::set);
-    format_to(writer, "un jolie phrase{}\n", 1);  
+    format_to(writer, "un jolie phrase{}\n", 1);
   }
 
   return 0;

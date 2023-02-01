@@ -3398,396 +3398,6 @@ namespace stew
     }
   }
 
-  //---------------------
-  //
-  // I/O Containers
-  //
-  //---------------------
-
-  constexpr array<const char *, 6> modechr =
-      {"r", "w", "r+", "w+", "a", "a+"};
-
-  enum class mode : size_t
-  {
-    r = 0,
-    w = 1,
-    rp = 2,
-    wp = 3,
-    a = 4,
-    ap = 5
-  };
-
-  template <mode m>
-  constexpr bool readable_mode =
-      m == mode::r ||
-      m == mode::rp ||
-      m == mode::wp ||
-      m == mode::ap;
-
-  template <mode m>
-  constexpr bool writable_mode =
-      m == mode::w ||
-      m == mode::a ||
-      m == mode::rp ||
-      m == mode::wp ||
-      m == mode::ap;
-
-  enum class seek : int
-  {
-    set = SEEK_SET,
-    cur = SEEK_CUR,
-    end = SEEK_END
-  };
-
-  template <typename T, mode m>
-  class file;
-
-  template <typename T>
-  class file_reader
-  {
-  private:
-    non_owning<FILE> _file;
-
-  public:
-    template <mode m>
-      requires readable_mode<m>
-    file_reader(file<T, m> &f) : _file(f.fd())
-    {
-    }
-
-    file_reader() = default;
-
-  public:
-    class ifile_iterator
-    {
-    private:
-      non_owning<file_reader> _reader = nullptr;
-      maybe<T> _value;
-
-    public:
-      ~ifile_iterator() = default;
-      ifile_iterator() = default;
-      ifile_iterator(file_reader &f) : _reader(&f)
-      {
-        ++(*this);
-      }
-
-      ifile_iterator(const ifile_iterator &) = default;
-      ifile_iterator(ifile_iterator &&) = default;
-      ifile_iterator &operator=(const ifile_iterator &) = default;
-      ifile_iterator &operator=(ifile_iterator &&) = default;
-
-    public:
-      auto operator==(const ifile_iterator &o) const
-      {
-        return _reader.get() == o._reader.get();
-      }
-
-      maybe<T> &operator*()
-      {
-        return _value;
-      }
-
-      ifile_iterator &operator++()
-      {
-        if (_reader.get() != nullptr)
-        {
-          _value = _reader.get()->pop();
-
-          if (!_value.has())
-          {
-            _reader = nullptr;
-          }
-        }
-
-        return *this;
-      }
-
-      ifile_iterator &operator++(int)
-      {
-        return ++(*this);
-      }
-    };
-
-  public:
-    auto begin()
-    {
-      return ifile_iterator(*this);
-    }
-
-    auto end()
-    {
-      return ifile_iterator();
-    }
-
-    auto begin() const
-    {
-      return ifile_iterator(*this);
-    }
-
-    auto end() const
-    {
-      return ifile_iterator();
-    }
-
-  public:
-    maybe<T> pop()
-    {
-      maybe<T> res;
-
-      if (_file.get() != nullptr)
-      {
-        T buff;
-
-        if (fread(&buff, sizeof(T), 1, _file.get()) == 1)
-        {
-          res = transfer(buff);
-        }
-      }
-
-      return res;
-    }
-
-    template <push_container<T> R>
-    void pop(R &r, size_t n)
-    {
-      if (_file.get() != nullptr)
-      {
-        T buff;
-
-        for (size_t i : upto(size_t(0), n))
-        {
-          if (fread(&buff, sizeof(T), 1, _file.get()) == 1)
-          {
-            r.push(transfer(buff));
-          }
-          else
-          {
-            break;
-          }
-        }
-      }
-    }
-  };
-
-  template <typename T>
-  class file_writer
-  {
-  private:
-    non_owning<FILE> _file = nullptr;
-
-  public:
-    template <mode m>
-      requires writable_mode<m>
-    file_writer(file<T, m> &f) : _file(f.fd())
-    {
-    }
-
-    file_writer() = default;
-
-  public:
-    class ofile_iterator
-    {
-    private:
-      non_owning<file_writer> _writer = nullptr;
-
-    public:
-      ~ofile_iterator() = default;
-      ofile_iterator() = default;
-      ofile_iterator(file_writer &f) : _writer(&f) {}
-      ofile_iterator(const ofile_iterator &) = default;
-      ofile_iterator(ofile_iterator &&) = default;
-      ofile_iterator &operator=(const ofile_iterator &) = default;
-      ofile_iterator &operator=(ofile_iterator &&) = default;
-
-    public:
-      ofile_iterator &operator*()
-      {
-        return *this;
-      }
-
-      ofile_iterator &operator++()
-      {
-        return *this;
-      }
-
-      ofile_iterator &operator++(int)
-      {
-        return *this;
-      }
-
-      ofile_iterator &operator=(const T &t)
-      {
-        if (_writer.get() != nullptr)
-        {
-          _writer.get()->push(t);
-        }
-      }
-
-      ofile_iterator &operator=(T &&t)
-      {
-        if (_writer.get() != nullptr)
-        {
-          _writer.get()->push(t);
-        }
-      }
-    };
-
-  public:
-    auto begin()
-    {
-      return ofile_iterator(*this);
-    }
-
-    auto end()
-    {
-      return ofile_iterator();
-    }
-
-  public:
-    void push(T &&t)
-    {
-      if (_file.get() != nullptr)
-      {
-        fwrite(&t, sizeof(rm_cvref<T>), 1, _file.get());
-      }
-    }
-
-    void push(const T &t)
-    {
-      if (_file.get() != nullptr)
-      {
-        fwrite(&t, sizeof(rm_cvref<T>), 1, _file.get());
-      }
-    }
-
-    template <input_range R>
-    void push(R &&r)
-    {
-      if constexpr (string_view_like<R, char>)
-      {
-        if (_file.get() != nullptr)
-        {
-          string_view<char> tmp(relay<R>(r));
-          fwrite(tmp.begin(), sizeof(char), tmp.size(), _file.get());
-        }
-      }
-      else if constexpr (string_view_like<R, wchar_t>)
-      {
-        if (_file.get() != nullptr)
-        {
-          string_view<wchar_t> tmp(relay<R>(r));
-          fwrite(tmp.begin(), sizeof(wchar_t), tmp.size(), _file.get());
-        }
-      }
-      else
-      {
-        for (auto &&i : relay<R>(r))
-        {
-          push(relay<decltype(i)>(i));
-        }
-      }
-    }
-  };
-
-  template <typename T, mode m>
-  class file
-  {
-  private:
-    FILE *_fp = nullptr;
-
-  public:
-    ~file()
-    {
-      close();
-    }
-
-    file() = default;
-
-    template <character C>
-    file(string_view<C> path)
-        : _fp(fopen(path.begin(),
-                    modechr[size_t(m)]))
-    {
-    }
-
-    file(FILE *fp) : _fp(fp) {}
-    file(const file &) = delete;
-    file(file &&) = default;
-    file &operator=(const file &) = delete;
-    file &operator=(file &&) = default;
-
-  public:
-    bool opened()
-    {
-      return _fp != nullptr;
-    }
-
-  public:
-    void seekg(long offset, seek fr)
-    {
-      if (_fp != nullptr)
-      {
-        fseek(_fp, offset, (int)fr);
-      }
-    }
-
-    long tellg()
-    {
-      return _fp != nullptr ? ftell(_fp) : 0;
-    }
-
-    file_reader<T> reader()
-    {
-      if constexpr (readable_mode<m>)
-      {
-        return file_reader<T>(*this);
-      }
-      else
-      {
-        return file_reader<T>();
-      }
-    }
-
-    file_writer<T> writer()
-    {
-      if constexpr (writable_mode<m>)
-      {
-        return file_writer<T>(*this);
-      }
-      else
-      {
-        return file_writer<T>();
-      }
-    }
-
-    auto fd()
-    {
-      return _fp;
-    }
-
-  private:
-    void close()
-    {
-      if (_fp != nullptr)
-      {
-        fflush(_fp);
-        fclose(_fp);
-        _fp = nullptr;
-      }
-    }
-  };
-
-  auto fin = file<char, mode::r>(stdin);
-  auto fout = file<char, mode::w>(stdout);
-  auto termin = fin.reader();
-  auto termout = fout.writer();
-
-  auto fwin = file<wchar_t, mode::r>(stdin);
-  auto fwout = file<wchar_t, mode::w>(stdout);
-  auto termwin = fwin.reader();
-  auto termwout = fwout.writer();
-
   //------------------------------
   //
   // Formatting
@@ -4256,6 +3866,386 @@ namespace stew
       }
     }
   };
+
+  //---------------------
+  //
+  // I/O Containers
+  //
+  //---------------------
+
+  constexpr array<const char *, 6> modechr =
+      {"r", "w", "r+", "w+", "a", "a+"};
+
+  enum class mode : size_t
+  {
+    r = 0,
+    w = 1,
+    rp = 2,
+    wp = 3,
+    a = 4,
+    ap = 5
+  };
+
+  template <mode m>
+  constexpr bool readable_mode =
+      m == mode::r ||
+      m == mode::rp ||
+      m == mode::wp ||
+      m == mode::ap;
+
+  template <mode m>
+  constexpr bool writable_mode =
+      m == mode::w ||
+      m == mode::a ||
+      m == mode::rp ||
+      m == mode::wp ||
+      m == mode::ap;
+
+  enum class seek : int
+  {
+    set = SEEK_SET,
+    cur = SEEK_CUR,
+    end = SEEK_END
+  };
+
+  template <typename T, mode m>
+  class file;
+
+  template <typename T>
+  class file_reader
+  {
+  private:
+    non_owning<FILE> _file;
+
+  public:
+    template <mode m>
+      requires readable_mode<m>
+    file_reader(file<T, m> &f) : _file(f.fd())
+    {
+    }
+
+    file_reader() = default;
+
+  public:
+    class ifile_iterator
+    {
+    private:
+      non_owning<file_reader> _reader = nullptr;
+      maybe<T> _value;
+
+    public:
+      ~ifile_iterator() = default;
+      ifile_iterator() = default;
+      ifile_iterator(file_reader &f)
+          : _reader(&f)
+      {
+        ++(*this);
+      }
+
+      ifile_iterator(const ifile_iterator &) = default;
+      ifile_iterator(ifile_iterator &&) = default;
+      ifile_iterator &operator=(const ifile_iterator &) = default;
+      ifile_iterator &operator=(ifile_iterator &&) = default;
+
+    public:
+      auto operator==(const ifile_iterator &o) const
+      {
+        return _reader.get() == o._reader.get();
+      }
+
+      maybe<T> &operator*()
+      {
+        return _value;
+      }
+
+      ifile_iterator &operator++()
+      {
+        if (_reader.get() != nullptr)
+        {
+          _value = _reader.get()->pop();
+
+          if (!_value.has())
+          {
+            _reader = nullptr;
+          }
+        }
+
+        return *this;
+      }
+
+      ifile_iterator &operator++(int)
+      {
+        return ++(*this);
+      }
+    };
+
+  public:
+    auto begin()
+    {
+      return ifile_iterator(*this);
+    }
+
+    auto end()
+    {
+      return ifile_iterator();
+    }
+
+    auto begin() const
+    {
+      return ifile_iterator(*this);
+    }
+
+    auto end() const
+    {
+      return ifile_iterator();
+    }
+
+  public:
+    maybe<T> pop()
+    {
+      maybe<T> res;
+
+      if (_file.get() != nullptr)
+      {
+        T buff;
+
+        if (fread(&buff, sizeof(T), 1, _file.get()) == 1)
+        {
+          res = transfer(buff);
+        }
+      }
+
+      return res;
+    }
+
+    template <push_container<T> R>
+    void pop(R &r, size_t n)
+    {
+      if (_file.get() != nullptr)
+      {
+        T buff;
+
+        for (size_t i : upto(size_t(0), n))
+        {
+          if (fread(&buff, sizeof(T), 1, _file.get()) == 1)
+          {
+            r.push(transfer(buff));
+          }
+          else
+          {
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  template <typename T>
+  class file_writer
+  {
+  private:
+    non_owning<FILE> _file = nullptr;
+
+  public:
+    template <mode m>
+      requires writable_mode<m>
+    file_writer(file<T, m> &f)
+        : _file(f.fd())
+    {
+    }
+
+    file_writer() = default;
+
+  public:
+    class ofile_iterator
+    {
+    private:
+      non_owning<file_writer> _writer = nullptr;
+
+    public:
+      ~ofile_iterator() = default;
+      ofile_iterator() = default;
+      ofile_iterator(file_writer &f) : _writer(&f) {}
+      ofile_iterator(const ofile_iterator &) = default;
+      ofile_iterator(ofile_iterator &&) = default;
+      ofile_iterator &operator=(const ofile_iterator &) = default;
+      ofile_iterator &operator=(ofile_iterator &&) = default;
+
+    public:
+      ofile_iterator &operator*()
+      {
+        return *this;
+      }
+
+      ofile_iterator &operator++()
+      {
+        return *this;
+      }
+
+      ofile_iterator &operator++(int)
+      {
+        return *this;
+      }
+
+      ofile_iterator &operator=(const T &t)
+      {
+        if (_writer.get() != nullptr)
+        {
+          _writer.get()->push(t);
+        }
+      }
+
+      ofile_iterator &operator=(T &&t)
+      {
+        if (_writer.get() != nullptr)
+        {
+          _writer.get()->push(t);
+        }
+      }
+    };
+
+  public:
+    auto begin()
+    {
+      return ofile_iterator(*this);
+    }
+
+    auto end()
+    {
+      return ofile_iterator();
+    }
+
+  public:
+    void push(T &&t)
+    {
+      if (_file.get() != nullptr)
+      {
+        fwrite(&t, sizeof(rm_cvref<T>), 1, _file.get());
+      }
+    }
+
+    void push(const T &t)
+    {
+      if (_file.get() != nullptr)
+      {
+        fwrite(&t, sizeof(rm_cvref<T>), 1, _file.get());
+      }
+    }
+
+    template <input_range R>
+    void push(R &&r)
+    {
+      if constexpr (string_view_like<R, char>)
+      {
+        if (_file.get() != nullptr)
+        {
+          string_view<char> tmp(relay<R>(r));
+          fwrite(tmp.begin(), sizeof(char), tmp.size(), _file.get());
+        }
+      }
+      else if constexpr (string_view_like<R, wchar_t>)
+      {
+        if (_file.get() != nullptr)
+        {
+          string_view<wchar_t> tmp(relay<R>(r));
+          fwrite(tmp.begin(), sizeof(wchar_t), tmp.size(), _file.get());
+        }
+      }
+      else
+      {
+        for (auto &&i : relay<R>(r))
+        {
+          push(relay<decltype(i)>(i));
+        }
+      }
+    }
+  };
+
+  template <typename T, mode m>
+  class file
+  {
+  private:
+    FILE *_fp = nullptr;
+
+  public:
+    ~file()
+    {
+      close();
+    }
+
+    file() = default;
+
+    template <character C>
+    file(string_view<C> path)
+        : _fp(fopen(path.begin(),
+                    modechr[size_t(m)]))
+    {
+    }
+
+    file(FILE *fp) : _fp(fp) {}
+    file(const file &) = delete;
+    file(file &&) = default;
+    file &operator=(const file &) = delete;
+    file &operator=(file &&) = default;
+
+  public:
+    bool opened()
+    {
+      return _fp != nullptr;
+    }
+
+  public:
+    void seekg(long offset, seek fr)
+    {
+      if (_fp != nullptr)
+      {
+        fseek(_fp, offset, (int)fr);
+      }
+    }
+
+    long tellg()
+    {
+      return _fp != nullptr ? ftell(_fp) : 0;
+    }
+
+    file_reader<T> reader()
+      requires(readable_mode<m>)
+    {
+      return file_reader<T>(*this);
+    }
+
+    file_writer<T> writer()
+      requires(writable_mode<m>)
+    {
+      return file_writer<T>(*this);
+    }
+
+    auto fd()
+    {
+      return _fp;
+    }
+
+  private:
+    void close()
+    {
+      if (_fp != nullptr)
+      {
+        fflush(_fp);
+        fclose(_fp);
+        _fp = nullptr;
+      }
+    }
+  };
+
+  auto fin = file<char, mode::r>(stdin);
+  auto fout = file<char, mode::w>(stdout);
+  auto termin = fin.reader();
+  auto termout = fout.writer();
+
+  auto fwin = file<wchar_t, mode::r>(stdin);
+  auto fwout = file<wchar_t, mode::w>(stdout);
+  auto termwin = fwin.reader();
+  auto termwout = fwout.writer();
 
   //------------------------
   //
