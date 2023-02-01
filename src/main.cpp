@@ -48,12 +48,5 @@ int main()
     files<char>::printfln(writer, "un jolie phrase{}", 1);
   }
 
-  dialog<char> diag;
-
-  extract_response<int> response;
-  diag.println("quel est ton age ?")
-      .readf("{}", response)
-      .printfln("tu as dit avoir {} an(s)", response.get<0>().operator*());
-
   return 0;
 }
