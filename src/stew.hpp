@@ -3442,26 +3442,32 @@ namespace stew
   template <typename T, mode m>
   class file;
 
-  template <typename T, mode m>
+  template <typename T>
   class file_reader
   {
   private:
-    non_owning<file<T, m>> _file;
+    non_owning<FILE> _file;
 
   public:
-    file_reader(file<T, m>& f) : _file(&f) {}
+    template <mode m>
+      requires readable_mode<m>
+    file_reader(file<T, m> &f) : _file(f.fd())
+    {
+    }
+
+    file_reader() = default;
 
   public:
     class ifile_iterator
     {
     private:
-      non_owning<file_reader> _file = nullptr;
+      non_owning<file_reader> _reader = nullptr;
       maybe<T> _value;
 
     public:
       ~ifile_iterator() = default;
       ifile_iterator() = default;
-      ifile_iterator(file_reader &f) : _file(&f)
+      ifile_iterator(file_reader &f) : _reader(&f)
       {
         ++(*this);
       }
@@ -3474,7 +3480,7 @@ namespace stew
     public:
       auto operator==(const ifile_iterator &o) const
       {
-        return _file.get() == o._file.get();
+        return _reader.get() == o._reader.get();
       }
 
       maybe<T> &operator*()
@@ -3484,13 +3490,13 @@ namespace stew
 
       ifile_iterator &operator++()
       {
-        if (_file.get() != nullptr)
+        if (_reader.get() != nullptr)
         {
-          _value = _file.get()->pop();
+          _value = _reader.get()->pop();
 
           if (!_value.has())
           {
-            _file = nullptr;
+            _reader = nullptr;
           }
         }
 
@@ -3506,22 +3512,22 @@ namespace stew
   public:
     auto begin()
     {
-      return ifile_iterator<T, m>(*_file);
+      return ifile_iterator(*this);
     }
 
     auto end()
     {
-      return ifile_iterator<T, m>();
+      return ifile_iterator();
     }
 
     auto begin() const
     {
-      return ifile_iterator<T, m>(*_file);
+      return ifile_iterator(*this);
     }
 
     auto end() const
     {
-      return ifile_iterator<T, m>();
+      return ifile_iterator();
     }
 
   public:
@@ -3529,11 +3535,11 @@ namespace stew
     {
       maybe<T> res;
 
-      if (_file != nullptr)
+      if (_file.get() != nullptr)
       {
         T buff;
 
-        if (fread(&buff, sizeof(T), 1, _file.get()->fd()) == 1)
+        if (fread(&buff, sizeof(T), 1, _file.get()) == 1)
         {
           res = transfer(buff);
         }
@@ -3545,13 +3551,13 @@ namespace stew
     template <push_container<T> R>
     void pop(R &r, size_t n)
     {
-      if (_file != nullptr)
+      if (_file.get() != nullptr)
       {
         T buff;
 
         for (size_t i : upto(size_t(0), n))
         {
-          if (fread(&buff, sizeof(T), 1, _file.get()->fd()) == 1)
+          if (fread(&buff, sizeof(T), 1, _file.get()) == 1)
           {
             r.push(transfer(buff));
           }
@@ -3564,22 +3570,31 @@ namespace stew
     }
   };
 
-  template <typename T, mode m>
+  template <typename T>
   class file_writer
   {
   private:
-    non_owning<file<T, m>> _file = nullptr;
+    non_owning<FILE> _file = nullptr;
+
+  public:
+    template <mode m>
+      requires writable_mode<m>
+    file_writer(file<T, m> &f) : _file(f.fd())
+    {
+    }
+
+    file_writer() = default;
 
   public:
     class ofile_iterator
     {
     private:
-      non_owning<file_writer> _file = nullptr;
+      non_owning<file_writer> _writer = nullptr;
 
     public:
       ~ofile_iterator() = default;
       ofile_iterator() = default;
-      ofile_iterator(file_writer &f) : _file(&f) {}
+      ofile_iterator(file_writer &f) : _writer(&f) {}
       ofile_iterator(const ofile_iterator &) = default;
       ofile_iterator(ofile_iterator &&) = default;
       ofile_iterator &operator=(const ofile_iterator &) = default;
@@ -3603,17 +3618,17 @@ namespace stew
 
       ofile_iterator &operator=(const T &t)
       {
-        if (_file.get() != nullptr)
+        if (_writer.get() != nullptr)
         {
-          _file.get()->push(t);
+          _writer.get()->push(t);
         }
       }
 
       ofile_iterator &operator=(T &&t)
       {
-        if (_file.get() != nullptr)
+        if (_writer.get() != nullptr)
         {
-          _file.get()->push(t);
+          _writer.get()->push(t);
         }
       }
     };
@@ -3621,51 +3636,48 @@ namespace stew
   public:
     auto begin()
     {
-      return ofile_iterator<T, m>(*_file);
+      return ofile_iterator(*this);
     }
 
     auto end()
     {
-      return ofile_iterator<T, m>();
+      return ofile_iterator();
     }
 
   public:
     void push(T &&t)
-      requires(m == mode::w || m == mode::rp || m == mode::wp)
     {
-      if (_fp != nullptr)
+      if (_file.get() != nullptr)
       {
-        fwrite(&t, sizeof(rm_cvref<T>), 1, _fp);
+        fwrite(&t, sizeof(rm_cvref<T>), 1, _file.get());
       }
     }
 
     void push(const T &t)
-      requires(m == mode::w || m == mode::rp || m == mode::wp)
     {
-      if (_fp != nullptr)
+      if (_file.get() != nullptr)
       {
-        fwrite(&t, sizeof(rm_cvref<T>), 1, _fp);
+        fwrite(&t, sizeof(rm_cvref<T>), 1, _file.get());
       }
     }
 
     template <input_range R>
     void push(R &&r)
-      requires(m == mode::w || m == mode::rp || m == mode::wp)
     {
       if constexpr (string_view_like<R, char>)
       {
-        if (_fp != nullptr)
+        if (_file.get() != nullptr)
         {
           string_view<char> tmp(relay<R>(r));
-          fwrite(tmp.begin(), sizeof(char), tmp.size(), _fp);
+          fwrite(tmp.begin(), sizeof(char), tmp.size(), _file.get());
         }
       }
       else if constexpr (string_view_like<R, wchar_t>)
       {
-        if (_fp != nullptr)
+        if (_file.get() != nullptr)
         {
           string_view<wchar_t> tmp(relay<R>(r));
-          fwrite(tmp.begin(), sizeof(wchar_t), tmp.size(), _fp);
+          fwrite(tmp.begin(), sizeof(wchar_t), tmp.size(), _file.get());
         }
       }
       else
@@ -3725,16 +3737,33 @@ namespace stew
       return _fp != nullptr ? ftell(_fp) : 0;
     }
 
-    file_reader<T, m> reader()
-      requires readable_mode<m>
+    file_reader<T> reader()
     {
-      return file_reader<T, m>(this);
+      if constexpr (readable_mode<m>)
+      {
+        return file_reader<T>(*this);
+      }
+      else
+      {
+        return file_reader<T>();
+      }
     }
 
-    file_writer<T, m> writer()
-      requires writable_mode<m>
+    file_writer<T> writer()
     {
-      return file_writer<T, m>(this);
+      if constexpr (writable_mode<m>)
+      {
+        return file_writer<T>(*this);
+      }
+      else
+      {
+        return file_writer<T>();
+      }
+    }
+
+    auto fd()
+    {
+      return _fp;
     }
 
   private:
