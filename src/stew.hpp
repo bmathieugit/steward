@@ -4237,15 +4237,39 @@ namespace stew
     }
   };
 
-  auto fin = file<char, mode::r>(stdin);
-  auto fout = file<char, mode::w>(stdout);
-  auto termin = fin.reader();
-  auto termout = fout.writer();
+  template <character C>
+  struct files
+  {
+    template <typename... T>
+    static void printf(
+        file_writer<C> &o,
+        const format_string<C, sizeof...(T) + 1> &fmt,
+        const T &...t)
+    {
+      format_to(o.writer(), fmt, t...);
+    }
 
-  auto fwin = file<wchar_t, mode::r>(stdin);
-  auto fwout = file<wchar_t, mode::w>(stdout);
-  auto termwin = fwin.reader();
-  auto termwout = fwout.writer();
+    template <typename... T>
+    static void printfln(
+        file_writer<C> &o,
+        const format_string<C, sizeof...(T) + 1> &fmt,
+        const T &...t)
+    {
+      format_to(o, fmt, t...);
+      o.push('\n');
+    }
+
+    static void print(file_writer<C> &o, string_view<C> s)
+    {
+      o.writer().push(s);
+    }
+
+    static void println(file_writer<C> &o, string_view<C> s)
+    {
+      o.push(s);
+      o.push('\n');
+    }
+  };
 
   //------------------------
   //
@@ -4253,32 +4277,35 @@ namespace stew
   //
   //------------------------
 
+  auto fin = file<char, mode::r>(stdin);
+  auto fout = file<char, mode::w>(stdout);
+  auto termin = fin.reader();
+  auto termout = fout.writer();
+
   template <character C>
-  class console
+  struct console
   {
-  public:
     template <typename... T>
     static void printf(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
-      format_to(termout, fmt, t...);
+      files<C>::printf(termout, fmt, t...);
     }
 
     template <typename... T>
     static void printfln(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
-      format_to(termout, fmt, t...);
-      termout.push('\n');
+
+      files<C>::printfln(termout, fmt, t...);
     }
 
     static void print(string_view<C> s)
     {
-      termout.push(s);
+      files<C>::print(termout, s);
     }
 
     static void println(string_view<C> s)
     {
-      termout.push(s);
-      termout.push('\n');
+      files<C>::println(termout, s);
     }
 
     template <typename... T>

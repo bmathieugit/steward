@@ -13,18 +13,18 @@ int main()
     file<char, mode::w> out("./test.txt"_sv);
     auto writer = out.writer();
 
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
-    format_to(writer, "un jolie phrase{}\n", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    files<char>::printfln(writer, "un jolie phrase{}", 0);
   }
 
   long pos = 0;
@@ -45,7 +45,7 @@ int main()
 
     auto writer = out.writer();
     out.seekg(pos, seek::set);
-    format_to(writer, "un jolie phrase{}\n", 1);
+    files<char>::printfln(writer, "un jolie phrase{}", 1);
   }
 
   return 0;
