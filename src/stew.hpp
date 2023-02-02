@@ -5492,10 +5492,290 @@ namespace stew
 
 namespace stew
 {
-  // class benchmark
-  // {
+  // je voudrais mettre en place l'écriture de données d'un type quelconque dans un fichier.
+  // Le seul point commun entre ces données serait qu'elles auraient un identifiant unique qui
+  // permettrait de les localiser rapidement à partir d'un index de "clés primaires".
+  // on va commencer par créer le namespace bdd
+  namespace bdd
+  {
+    template <typename T>
+    class list
+    {
+      // FIXME: voir si on peut mettre constexpr sur ces classes (list et node).
+    private:
+      struct node
+      {
+        T _t;
+        node *_next = nullptr;
+        node *_prev = nullptr;
+      };
 
-  // };
+    private:
+      class iterator
+      {
+        friend list;
+
+      private:
+        node *_cur;
+
+      public:
+        iterator(node *cur = nullptr)
+            : _cur(cur) {}
+
+      public:
+        constexpr iterator &operator++()
+        {
+          if (_cur != nullptr)
+            _cur = _cur->_next;
+
+          return *this;
+        }
+
+        constexpr iterator operator++(int)
+        {
+          auto copy = *this;
+          ++(*this);
+          return copy;
+        }
+
+        constexpr bool operator==(
+            const iterator &o) const
+        {
+          return _cur == o._cur;
+        }
+
+        constexpr T &operator*()
+        {
+          assert(_cur != nullptr);
+          return _cur->_t;
+        }
+      };
+
+      class const_iterator
+      {
+      private:
+        const node *_cur;
+
+      public:
+        const_iterator(const node *cur = nullptr)
+            : _cur(cur) {}
+
+      public:
+        constexpr const_iterator &operator++()
+        {
+          if (_cur != nullptr)
+            _cur = _cur->_next;
+
+          return *this;
+        }
+
+        constexpr const_iterator operator++(int)
+        {
+          auto copy = *this;
+          ++(*this);
+          return copy;
+        }
+
+        constexpr bool operator==(
+            const const_iterator &o) const
+        {
+          return _cur == o._cur;
+        }
+
+        constexpr const T &operator*() const
+        {
+          assert(_cur != nullptr);
+          return _cur->_t;
+        }
+      };
+
+    private:
+      size_t _size = 0;
+      node *_first = nullptr;
+      node *_last = nullptr;
+
+    public:
+      ~list()
+      {
+        auto tmp = _first;
+
+        while (tmp != nullptr)
+        {
+          auto next = tmp->_next;
+          delete tmp;
+          tmp = next;
+        }
+
+        _first = nullptr;
+        _last = nullptr;
+        _size = 0;
+      }
+
+      list() = default;
+
+      list(const list &o)
+      {
+        for (const T &t : o)
+        {
+          push(t);
+        }
+      }
+
+      list(list &&o)
+          : _size(transfer(o._size)),
+            _first(transfer(o._first)),
+            _last(transfer(o._last))
+      {
+      }
+
+      list &operator=(list o)
+      {
+        _size = transfer(o._size);
+        _first = transfer(o._first);
+        _last = transfer(o._last);
+        return *this;
+      }
+
+    public:
+      size_t size() const
+      {
+        return _size;
+      }
+
+      bool empty() const
+      {
+        return _size == 0;
+      }
+
+    public:
+      // par défaut on ira faire du push sur la fin de la liste chainée
+      template <convertible_to<T> U>
+      void push(U &&u) // Commençons par implémenter cette méthode de push
+      {
+        // On veut inserer un nouvel element à la fin de la liste chainée.
+        // Donc on va naturellement regardé si _last est valorisé.
+        // Si oui, on va simplement dire que _last._next = new node(u);
+        // et ensuite dire que _last = _last._next.
+        // Si non on créer un nouvel element comme dans le cas précédent et
+        // l'affecter à _first et à _last.
+        // Dans les deux cas on incrémente la valeur de size de 1.
+
+        node *n = new node{relay<U>(u)};
+
+        if (_last == nullptr)
+        {
+          _first = n;
+          _last = n;
+        }
+        else
+        {
+          _last->_next = n;
+          n->_prev = _last;
+          _last = n;
+        }
+
+        ++_size;
+      }
+
+      // par défaut on ira faire du pop sur la fin de la liste chainée
+      maybe<T> pop()
+      {
+        // on veut remonter le dernier élément de la liste chainée.
+        // on va donc le transferer dans un maybe<T>. Si jamais il
+        // n'y a pas d'élément à remonter, alors le maybe<T> sera vide.
+        // dans le premier cas on décrémente la valeur de _size de 1.
+
+        if (_last != nullptr)
+        {
+          auto tmp = _last;
+          _last = _last->_prev;
+
+          if (_last == nullptr)
+          {
+            _first = nullptr;
+          }
+
+          maybe<T> ret(transfer(tmp->_t));
+
+          delete tmp;
+          --_size;
+
+          return ret;
+        }
+        else
+          return maybe<T>();
+      }
+
+      template <convertible_to<T> U>
+      void insert(U &&u, iterator loc)
+      {
+        if (loc == end() || (empty() && loc == begin()))
+        {
+          push(relay<U>(u));
+        }
+        else
+        {
+          auto n = new node(relay<U>(u));
+          auto cur = loc._cur;
+
+          n->_prev = cur->_prev;
+          n->_next = cur;
+
+          if (n->_prev != nullptr)
+          {
+            n->_prev->_next = n;
+          }
+
+          if (loc == begin())
+          {
+            _first = n;
+          }
+        }
+      }
+
+    public:
+      auto begin()
+      {
+        // Ici on veut retourner un itérateur sur le premier élément
+        // de la liste chainée. Il faut donc un itérateur qui puisse
+        // passer d'un node à l'autre
+        return iterator(_first);
+      }
+
+      auto end()
+      {
+        // Ici on veut retourner un itérateur sur un node vide.
+        return iterator();
+      }
+
+      auto begin() const
+      {
+        // Ici on veut retourner un itérateur sur le premier élément
+        // de la liste chainée. Il faut donc un itérateur qui puisse
+        // passer d'un node à l'autre
+        return const_iterator(_first);
+      }
+
+      auto end() const
+      {
+        // Ici on veut retourner un itérateur sur un node vide.
+        return const_iterator();
+      }
+    };
+
+    // on va faire une classe index qui sera paramétrée par le type de l'index (par défaut un size_t).
+    // cette classe sera simplement un wrapper autour d'une liste chainée de paire {key:T, localisation:long}
+    // On devra maintenir cette liste chainée ordonnée de tel sorte que les insertions/suppression soient
+    // les plus rapides possibles.
+    // Ici le paramètre T représente le type de la clé unique.
+    // Ici le paramètre U représente le type de la localisation/valeur identifiée par T.
+    template <typename T, typename U = long>
+    class index
+    {
+      // On crée la liste chainée ici. On va commencer par une classe toute bête que l'on industrialisera
+      // ensuite dans la section containers.
+    };
+  }
 }
 
 #endif

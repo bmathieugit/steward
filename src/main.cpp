@@ -6,47 +6,25 @@ using namespace stew;
 
 int main()
 {
-  int i = -12;
-  console<char>::printfln("{}", i);
+  bdd::list<int> is;
+  is.push(12);
+  is.push(14);
+  is.push(15);
+  is.push(15);
+  is.push(15);
+  is.push(15);
+  is.push(15);
+  is.push(15);
+  is.push(15);
+  is.push(15);
+  is.push(15);
+  is.push(15);
 
+  is.insert(0, is.begin());
+
+  for (int &i : is)
   {
-    file<char, mode::w> out("./test.txt"_sv);
-    auto writer = out.writer();
-
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
-    files<char>::printfln(writer, "un jolie phrase{}", 0);
+    console<char>::printfln("{}", i);
   }
-
-  long pos = 0;
-
-  {
-    file<char, mode::r> in("./test.txt"_sv);
-    auto reader = in.reader();
-    maybe<char> m;
-
-    while ((m = reader.pop()).has() && m.operator*() != '\n')
-      ;
-
-    pos = in.tellg();
-  }
-
-  {
-    file<char, mode::rp> out("./test.txt"_sv);
-
-    auto writer = out.writer();
-    out.seekg(pos, seek::set);
-    files<char>::printfln(writer, "un jolie phrase{}", 1);
-  }
-
   return 0;
 }
