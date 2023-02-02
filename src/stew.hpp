@@ -5593,6 +5593,10 @@ namespace stew
       size_t _size = 0;
       node *_first = nullptr;
       node *_last = nullptr;
+      node *_bin = nullptr;
+      // TODO: voir intégrer l'utilisation des nodes "supprimés" pour
+      // une réutilistation ultérieur et ainsi éviter un jeu 
+      // d'allocation désallocation. 
 
     public:
       ~list()
