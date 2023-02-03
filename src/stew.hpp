@@ -5594,9 +5594,6 @@ namespace stew
       node *_first = nullptr;
       node *_last = nullptr;
       node *_bin = nullptr;
-      // TODO: voir intégrer l'utilisation des nodes "supprimés" pour
-      // une réutilistation ultérieur et ainsi éviter un jeu 
-      // d'allocation désallocation. 
 
     public:
       ~list()
@@ -5610,8 +5607,18 @@ namespace stew
           tmp = next;
         }
 
+        tmp = _bin;
+
+        while (tmp != nullptr)
+        {
+          auto next = tmp->_next;
+          delete tmp;
+          tmp = next;
+        }
+
         _first = nullptr;
         _last = nullptr;
+        _bin = nullptr;
         _size = 0;
       }
 
@@ -5652,19 +5659,23 @@ namespace stew
       }
 
     public:
-      // par défaut on ira faire du push sur la fin de la liste chainée
       template <convertible_to<T> U>
-      void push(U &&u) // Commençons par implémenter cette méthode de push
+      void push(U &&u)
       {
-        // On veut inserer un nouvel element à la fin de la liste chainée.
-        // Donc on va naturellement regardé si _last est valorisé.
-        // Si oui, on va simplement dire que _last._next = new node(u);
-        // et ensuite dire que _last = _last._next.
-        // Si non on créer un nouvel element comme dans le cas précédent et
-        // l'affecter à _first et à _last.
-        // Dans les deux cas on incrémente la valeur de size de 1.
+        node *n;
 
-        node *n = new node{relay<U>(u)};
+        if (_bin == nullptr)
+        {
+          n = new node{relay<U>(u)};
+        }
+        else
+        {
+          n = _bin;
+          _bin = _bin->_next;
+          n->_t = relay<U>(u);
+          n->_next = nullptr;
+          n->_prev = nullptr;
+        }
 
         if (_last == nullptr)
         {
@@ -5681,27 +5692,29 @@ namespace stew
         ++_size;
       }
 
-      // par défaut on ira faire du pop sur la fin de la liste chainée
       maybe<T> pop()
       {
-        // on veut remonter le dernier élément de la liste chainée.
-        // on va donc le transferer dans un maybe<T>. Si jamais il
-        // n'y a pas d'élément à remonter, alors le maybe<T> sera vide.
-        // dans le premier cas on décrémente la valeur de _size de 1.
-
         if (_last != nullptr)
         {
           auto tmp = _last;
+
           _last = _last->_prev;
 
           if (_last == nullptr)
           {
             _first = nullptr;
           }
+          else
+          {
+            _last->_next = nullptr;
+          }
 
           maybe<T> ret(transfer(tmp->_t));
 
-          delete tmp;
+          tmp->_next = _bin;
+          tmp->_prev = nullptr;
+          _bin = tmp;
+
           --_size;
 
           return ret;
@@ -5719,7 +5732,21 @@ namespace stew
         }
         else
         {
-          auto n = new node(relay<U>(u));
+          node *n;
+
+          if (_bin == nullptr)
+          {
+            n = new node{relay<U>(u)};
+          }
+          else
+          {
+            n = _bin;
+            _bin = _bin->_next;
+            n->_t = relay<U>(u);
+            n->_next = nullptr;
+            n->_prev = nullptr;
+          }
+
           auto cur = loc._cur;
 
           n->_prev = cur->_prev;
@@ -5740,29 +5767,21 @@ namespace stew
     public:
       auto begin()
       {
-        // Ici on veut retourner un itérateur sur le premier élément
-        // de la liste chainée. Il faut donc un itérateur qui puisse
-        // passer d'un node à l'autre
         return iterator(_first);
       }
 
       auto end()
       {
-        // Ici on veut retourner un itérateur sur un node vide.
         return iterator();
       }
 
       auto begin() const
       {
-        // Ici on veut retourner un itérateur sur le premier élément
-        // de la liste chainée. Il faut donc un itérateur qui puisse
-        // passer d'un node à l'autre
         return const_iterator(_first);
       }
 
       auto end() const
       {
-        // Ici on veut retourner un itérateur sur un node vide.
         return const_iterator();
       }
     };
