@@ -139,6 +139,31 @@ namespace stew
 
   //-----------------------------------
   //
+  //  Meta : metaprogramming
+  //
+  //-----------------------------------
+
+  namespace impl
+  {
+    template <bool B, typename T0, typename T1>
+    struct if_;
+
+    template <typename T0, typename T1>
+    struct if_<true, T0, T1> : struct_type<T0>
+    {
+    };
+
+    template <typename T0, typename T1>
+    struct if_<false, T0, T1> : struct_type<T1>
+    {
+    };
+  }
+
+  template <bool B, typename T0, typename T1>
+  using if_ = type<impl::if_<B, T0, T1>>;
+
+  //-----------------------------------
+  //
   // Meta : generals concepts
   //
   //-----------------------------------
@@ -2662,7 +2687,7 @@ namespace stew
     template <input_range R>
     constexpr static_stack &operator=(R &&r)
     {
-      return (*this = transfer(static_stack(relay<R>(r))));
+      return (*this = static_stack(relay<R>(r)));
     }
 
   public:
@@ -2762,7 +2787,7 @@ namespace stew
     template <input_range R>
     constexpr fixed_stack &operator=(R &&r)
     {
-      return (*this = transfer(fixed_stack(relay<R>(r))));
+      return (*this = fixed_stack(relay<R>(r)));
     }
 
   public:
@@ -2858,7 +2883,7 @@ namespace stew
     template <input_range R>
     constexpr stack &operator=(R &&r)
     {
-      return (*this = transfer(stack(relay<R>(r))));
+      return (*this = stack(relay<R>(r)));
     }
 
   public:
@@ -2950,7 +2975,7 @@ namespace stew
     template <input_range R>
     constexpr static_vector &operator=(R &&r)
     {
-      return (*this = transfer(static_vector(relay<R>(r))));
+      return (*this = static_vector(relay<R>(r)));
     }
 
   public:
@@ -3083,7 +3108,7 @@ namespace stew
     template <input_range R>
     constexpr fixed_vector &operator=(R &&r)
     {
-      return (*this = transfer(fixed_vector(relay<R>(r))));
+      return (*this = fixed_vector(relay<R>(r)));
     }
 
   public:
@@ -3193,7 +3218,7 @@ namespace stew
     template <input_range R>
     constexpr vector &operator=(R &&r)
     {
-      return (*this = transfer(vector(relay<R>(r))));
+      return (*this = vector(relay<R>(r)));
     }
 
   public:
@@ -5492,16 +5517,15 @@ namespace stew
 
 namespace stew
 {
-  // je voudrais mettre en place l'écriture de données d'un type quelconque dans un fichier.
-  // Le seul point commun entre ces données serait qu'elles auraient un identifiant unique qui
-  // permettrait de les localiser rapidement à partir d'un index de "clés primaires".
-  // on va commencer par créer le namespace bdd
   namespace bdd
   {
+
     template <typename T>
     class list
     {
       // FIXME: voir si on peut mettre constexpr sur ces classes (list et node).
+      // FIXME: voir si l'on peut utiliser non_owning sur les pointeur node*.
+
     private:
       struct node
       {
@@ -5511,15 +5535,19 @@ namespace stew
       };
 
     private:
+      template <bool CONST>
       class iterator
       {
+      private:
         friend list;
+        using pointer = if_<CONST, const node *, node *>;
+        using reference = if_<CONST, const T &, T &>;
 
       private:
-        node *_cur;
+        pointer _cur;
 
       public:
-        iterator(node *cur = nullptr)
+        iterator(pointer cur = nullptr)
             : _cur(cur) {}
 
       public:
@@ -5544,45 +5572,14 @@ namespace stew
           return _cur == o._cur;
         }
 
-        constexpr T &operator*()
+        constexpr reference operator*()
         {
           assert(_cur != nullptr);
           return _cur->_t;
         }
-      };
 
-      class const_iterator
-      {
-      private:
-        const node *_cur;
-
-      public:
-        const_iterator(const node *cur = nullptr)
-            : _cur(cur) {}
-
-      public:
-        constexpr const_iterator &operator++()
-        {
-          if (_cur != nullptr)
-            _cur = _cur->_next;
-
-          return *this;
-        }
-
-        constexpr const_iterator operator++(int)
-        {
-          auto copy = *this;
-          ++(*this);
-          return copy;
-        }
-
-        constexpr bool operator==(
-            const const_iterator &o) const
-        {
-          return _cur == o._cur;
-        }
-
-        constexpr const T &operator*() const
+        constexpr reference operator*() const
+          requires CONST
         {
           assert(_cur != nullptr);
           return _cur->_t;
@@ -5598,38 +5595,31 @@ namespace stew
     public:
       ~list()
       {
-        auto tmp = _first;
-
-        while (tmp != nullptr)
+        while (_first != nullptr)
         {
-          auto next = tmp->_next;
-          delete tmp;
-          tmp = next;
+          auto next = _first->_next;
+          delete _first;
+          _first = next;
         }
 
-        tmp = _bin;
-
-        while (tmp != nullptr)
+        while (_bin != nullptr)
         {
-          auto next = tmp->_next;
-          delete tmp;
-          tmp = next;
+          auto next = _bin->_next;
+          delete _bin;
+          _bin = next;
         }
 
-        _first = nullptr;
         _last = nullptr;
-        _bin = nullptr;
         _size = 0;
       }
 
       list() = default;
 
-      list(const list &o)
+      template <input_range R>
+      constexpr list(R &&r)
+        requires distanciable_iterator<decltype(stew::begin(r))>
       {
-        for (const T &t : o)
-        {
-          push(t);
-        }
+        push(relay<R>(r));
       }
 
       list(list &&o)
@@ -5647,6 +5637,12 @@ namespace stew
         return *this;
       }
 
+      template <input_range R>
+      constexpr list &operator=(R &&r)
+      {
+        return (*this = list(relay<R>(r)));
+      }
+
     public:
       size_t size() const
       {
@@ -5662,31 +5658,35 @@ namespace stew
       template <convertible_to<T> U>
       void push(U &&u)
       {
-        node *n;
+        node *n = recycle(relay<U>(u), nullptr, _last);
 
-        if (_bin == nullptr)
-        {
-          n = new node{relay<U>(u)};
-        }
-        else
-        {
-          n = _bin;
-          _bin = _bin->_next;
-          n->_t = relay<U>(u);
-          n->_next = nullptr;
-          n->_prev = nullptr;
-        }
-
-        if (_last == nullptr)
+        if (empty())
         {
           _first = n;
-          _last = n;
         }
-        else
+
+        _last = n;
+
+        ++_size;
+      }
+
+      template <input_range R>
+      constexpr void push(R &&r)
+        requires not_convertible_to<R, T>
+      {
+        copy(relay<R>(r), push_inserter<T>(*this));
+      }
+
+      template <convertible_to<T> U>
+      void insert(U &&u, iterator<false> loc)
+      {
+        node *cur = loc._cur;
+        node *n = recycle(relay<U>(u), cur, cur == nullptr ? nullptr : cur->_prev);
+
+        if (empty())
         {
-          _last->_next = n;
-          n->_prev = _last;
           _last = n;
+          _first = n;
         }
 
         ++_size;
@@ -5694,95 +5694,104 @@ namespace stew
 
       maybe<T> pop()
       {
+        auto last = _last;
+
         if (_last != nullptr)
         {
-          auto tmp = _last;
-
           _last = _last->_prev;
-
-          if (_last == nullptr)
-          {
-            _first = nullptr;
-          }
-          else
-          {
-            _last->_next = nullptr;
-          }
-
-          maybe<T> ret(transfer(tmp->_t));
-
-          tmp->_next = _bin;
-          tmp->_prev = nullptr;
-          _bin = tmp;
-
-          --_size;
-
-          return ret;
         }
-        else
-          return maybe<T>();
+
+        --_size;
+
+        return trash(last);
       }
 
+    private:
       template <convertible_to<T> U>
-      void insert(U &&u, iterator loc)
+      node *recycle(U &&u, node *next, node *prev)
       {
-        if (loc == end() || (empty() && loc == begin()))
+        node *n;
+
+        if (_bin == nullptr)
         {
-          push(relay<U>(u));
+          n = new node();
         }
         else
         {
-          node *n;
+          n = _bin;
+          _bin = _bin->_next;
+        }
 
-          if (_bin == nullptr)
+        n->_next = next;
+        n->_prev = prev;
+        n->_t = relay<U>(u);
+
+        if (n->_prev != nullptr)
+        {
+          n->_prev->_next = n;
+        }
+
+        if (n->_next != nullptr)
+        {
+          n->_next->_prev = n;
+        }
+
+        return n;
+      }
+
+      maybe<T> trash(node *n)
+      {
+        node *prev = nullptr;
+        node *next = nullptr;
+
+        if (n != nullptr)
+        {
+          prev = n->_prev;
+          next = n->_next;
+
+          if (_bin != nullptr)
           {
-            n = new node{relay<U>(u)};
-          }
-          else
-          {
-            n = _bin;
-            _bin = _bin->_next;
-            n->_t = relay<U>(u);
-            n->_next = nullptr;
+            n->_next = _bin;
             n->_prev = nullptr;
           }
 
-          auto cur = loc._cur;
-
-          n->_prev = cur->_prev;
-          n->_next = cur;
-
-          if (n->_prev != nullptr)
-          {
-            n->_prev->_next = n;
-          }
-
-          if (loc == begin())
-          {
-            _first = n;
-          }
+          _bin = n;
         }
+
+        if (prev != nullptr)
+        {
+          prev->_next = next;
+        }
+
+        if (next != nullptr)
+        {
+          next->_prev = prev;
+        }
+
+        return n == nullptr
+                   ? maybe<T>()
+                   : maybe<T>(transfer(n->_t));
       }
 
     public:
       auto begin()
       {
-        return iterator(_first);
+        return iterator<false>(_first);
       }
 
       auto end()
       {
-        return iterator();
+        return iterator<false>();
       }
 
       auto begin() const
       {
-        return const_iterator(_first);
+        return iterator<true>(_first);
       }
 
       auto end() const
       {
-        return const_iterator();
+        return iterator<true>();
       }
     };
 

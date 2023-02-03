@@ -3,6 +3,228 @@
 
 namespace stew
 {
+  template <typename T>
+  class forward_list
+  {
+  private:
+    struct node
+    {
+      T _t;
+      node *_next = nullptr;
+    };
+
+  private:
+    class iterator
+    {
+      friend forward_list;
+
+    private:
+      node *_cur;
+
+    public:
+      iterator(node *cur = nullptr)
+          : _cur(cur) {}
+
+    public:
+      constexpr iterator &operator++()
+      {
+        if (_cur != nullptr)
+          _cur = _cur->_next;
+
+        return *this;
+      }
+
+      constexpr iterator operator++(int)
+      {
+        auto copy = *this;
+        ++(*this);
+        return copy;
+      }
+
+      constexpr bool operator==(
+          const iterator &o) const
+      {
+        return _cur == o._cur;
+      }
+
+      constexpr T &operator*()
+      {
+        assert(_cur != nullptr);
+        return _cur->_t;
+      }
+    };
+
+    class const_iterator
+    {
+    private:
+      const node *_cur;
+
+    public:
+      const_iterator(const node *cur = nullptr)
+          : _cur(cur) {}
+
+    public:
+      constexpr const_iterator &operator++()
+      {
+        if (_cur != nullptr)
+          _cur = _cur->_next;
+
+        return *this;
+      }
+
+      constexpr const_iterator operator++(int)
+      {
+        auto copy = *this;
+        ++(*this);
+        return copy;
+      }
+
+      constexpr bool operator==(
+          const const_iterator &o) const
+      {
+        return _cur == o._cur;
+      }
+
+      constexpr const T &operator*() const
+      {
+        assert(_cur != nullptr);
+        return _cur->_t;
+      }
+    };
+
+  private:
+    size_t _size = 0;
+    node *_first = nullptr;
+    node *_bin = nullptr;
+
+  public:
+    ~forward_list()
+    {
+      while (_first != nullptr)
+      {
+        auto next = _first->_next;
+        delete _first;
+        _first = next;
+      }
+
+      while (_bin != nullptr)
+      {
+        auto next = _bin->_next;
+        delete _bin;
+        _bin = next;
+      }
+
+      _size = 0;
+    }
+
+    forward_list() = default;
+
+    template <input_range R>
+    constexpr forward_list(R &&r)
+      requires distanciable_iterator<decltype(stew::begin(r))>
+    {
+      push(relay<R>(r));
+    }
+
+    forward_list(forward_list &&o)
+        : _size(transfer(o._size)),
+          _first(transfer(o._first))
+    {
+    }
+
+    forward_list &operator=(forward_list o)
+    {
+      _size = transfer(o._size);
+      _first = transfer(o._first);
+      return *this;
+    }
+
+    template <input_range R>
+    constexpr forward_list &operator=(R &&r)
+    {
+      return (*this = forward_list(relay<R>(r)));
+    }
+
+  public:
+    size_t size() const
+    {
+      return _size;
+    }
+
+    bool empty() const
+    {
+      return _size == 0;
+    }
+
+  public:
+    template <convertible_to<T> U>
+    void push(U &&u)
+    {
+      node *n;
+
+      if (_bin == nullptr)
+      {
+        n = new node{relay<U>(u), _first};
+      }
+      else
+      {
+        n = _bin;
+        _bin = _bin->_next;
+        n->_t = relay<U>(u);
+        n->_next = _first;
+      }
+
+      _first = n;
+
+      ++_size;
+    }
+
+    template <input_range R>
+    constexpr void push(R &&r)
+      requires not_convertible_to<R, T>
+    {
+      copy(relay<R>(r), push_inserter<T>(*this));
+    }
+
+    maybe<T> pop()
+    {
+      if (_first != nullptr)
+      {
+        auto popped = _first;
+        maybe<T> ret(transfer(popped->_t));
+        _first = popped->_next;
+        popped->_next = _bin;
+        _bin = popped;
+        return ret;
+      }
+      else
+      {
+        return maybe<T>();
+      }
+    }
+
+  public:
+    auto begin()
+    {
+      return iterator(_first);
+    }
+
+    auto end()
+    {
+      return iterator();
+    }
+
+    auto begin() const
+    {
+      return const_iterator(_first);
+    }
+
+    auto end() const
+    {
+      return const_iterator();
+    }
+  };
+
   template <typename T0, typename... Tn>
   consteval size_t sizeofmax()
   {
