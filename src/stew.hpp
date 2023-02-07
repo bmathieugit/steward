@@ -299,51 +299,51 @@ namespace stew
   concept addressable =
       requires(T t) { &t; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept equality_comparable =
       requires(T t, U u) { t == u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept less_comparable =
       requires(T t, U u) { t < u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept greater_comparable =
       requires(T t, U u) { t > u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept lesseq_comparable =
       requires(T t, U u) { t <= u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept greatereq_comparable =
       requires(T t, U u) { t >= u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept and_comparable =
       requires(T t, U u) { t and u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept or_comparable =
       requires(T t, U u) { t or u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept addable =
       requires(T t, U u) { t + u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept substractable =
       requires(T t, U u) { t - u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept multiplyable =
       requires(T t, U u) { t *u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept dividable =
       requires(T t, U u) { t / u; };
 
-  template <typename T, typename U>
+  template <typename T, typename U = T>
   concept modulable =
       requires(T t, U u) { t % u; };
 
@@ -3363,7 +3363,7 @@ namespace stew
     // FIXME: voir si on peut mettre constexpr sur ces classes (list et node).
     // FIXME: voir si l'on peut utiliser non_owning sur les pointeur node*.
 
-  private:
+  public:
     struct node
     {
       T _t;
@@ -3384,7 +3384,7 @@ namespace stew
       pointer _cur;
 
     public:
-      iterator(pointer cur = nullptr)
+      constexpr iterator(pointer cur = nullptr)
           : _cur(cur) {}
 
     public:
@@ -3423,14 +3423,14 @@ namespace stew
       }
     };
 
-  private:
+  public:
     size_t _size = 0;
     node *_first = nullptr;
     node *_last = nullptr;
     node *_bin = nullptr;
 
   public:
-    ~list()
+    constexpr ~list()
     {
       while (_first != nullptr)
       {
@@ -3450,7 +3450,7 @@ namespace stew
       _size = 0;
     }
 
-    list() = default;
+    constexpr list() = default;
 
     template <input_range R>
     constexpr list(R &&r)
@@ -3459,14 +3459,14 @@ namespace stew
       push(relay<R>(r));
     }
 
-    list(list &&o)
+    constexpr list(list &&o)
         : _size(transfer(o._size)),
           _first(transfer(o._first)),
           _last(transfer(o._last))
     {
     }
 
-    list &operator=(list o)
+    constexpr list &operator=(list o)
     {
       _size = transfer(o._size);
       _first = transfer(o._first);
@@ -3481,19 +3481,19 @@ namespace stew
     }
 
   public:
-    size_t size() const
+    constexpr size_t size() const
     {
       return _size;
     }
 
-    bool empty() const
+    constexpr bool empty() const
     {
       return _size == 0;
     }
 
   public:
     template <convertible_to<T> U>
-    void push(U &&u)
+    constexpr void push(U &&u)
     {
       node *n = recycle(relay<U>(u), nullptr, _last);
 
@@ -3515,11 +3515,11 @@ namespace stew
     }
 
     template <convertible_to<T> U>
-    void insert(U &&u, iterator<false> loc)
+    constexpr void insert(U &&u, iterator<false> loc)
     {
-      node *cur = loc._cur;
-      node *prev = cur == nullptr ? nullptr : cur->_prev;
-      node *n = recycle(relay<U>(u), cur, prev);
+      node *next = loc._cur;
+      node *prev = next == nullptr ? _last : next->_prev;
+      node *n = recycle(relay<U>(u), next, prev);
 
       if (empty())
       {
@@ -3530,7 +3530,7 @@ namespace stew
       ++_size;
     }
 
-    maybe<T> pop()
+    constexpr maybe<T> pop()
     {
       auto last = _last;
 
@@ -3546,7 +3546,7 @@ namespace stew
 
   private:
     template <convertible_to<T> U>
-    node *recycle(U &&u, node *next, node *prev)
+    constexpr node *recycle(U &&u, node *next, node *prev)
     {
       node *n;
 
@@ -3577,7 +3577,7 @@ namespace stew
       return n;
     }
 
-    maybe<T> trash(node *n)
+    constexpr maybe<T> trash(node *n)
     {
       node *prev = nullptr;
       node *next = nullptr;
@@ -3612,24 +3612,49 @@ namespace stew
     }
 
   public:
-    auto begin()
+    constexpr auto begin()
     {
       return iterator<false>(_first);
     }
 
-    auto end()
+    constexpr auto end()
     {
       return iterator<false>();
     }
 
-    auto begin() const
+    constexpr auto begin() const
     {
       return iterator<true>(_first);
     }
 
-    auto end() const
+    constexpr auto end() const
     {
       return iterator<true>();
+    }
+  };
+
+  template <less_comparable T>
+  class set : public list<T>
+  {
+  public:
+    constexpr ~set() = default;
+    constexpr set() = default;
+    constexpr set(const set &) = default;
+    constexpr set(set &&) = default;
+    constexpr set &operator=(const set &) = default;
+    constexpr set &operator=(set &&) = default;
+
+  private:
+    using list<T>::insert;
+
+  public:
+    template <convertible_to<T> U>
+    constexpr void push(U &&u)
+    {
+      auto fnd = find(*this, [&u](const T &i)
+                      { return !(u < i); });
+
+      list<T>::insert(relay<U>(u), fnd);
     }
   };
 
@@ -3999,7 +4024,7 @@ namespace stew
 
       if (i == 0)
       {
-        tbuff.push(o, '0');
+        tbuff.push('0');
       }
       else
       {
