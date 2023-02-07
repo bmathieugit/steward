@@ -6,7 +6,7 @@ using namespace stew;
 
 int main()
 {
-  bdd::list<int> is;
+  list<int> is;
 
   is.push(array<int, 3>{0, 1, 2});
   is.pop();
@@ -16,6 +16,11 @@ int main()
   {
     console<char>::printfln("{}", i);
   }
+
+  local<static_string<char, 10>> s = new static_string<char, 10>();
+  *s = "coucou"_sv;
+
+  console<char>::printfln("{}", *s.get());
 
   return 0;
 }

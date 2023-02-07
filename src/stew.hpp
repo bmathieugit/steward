@@ -712,6 +712,67 @@ namespace stew
   };
 
   template <typename T>
+  class local
+  {
+  private:
+    rm_array<T> *_ptr = nullptr;
+
+  public:
+    constexpr ~local()
+    {
+      if (_ptr != nullptr)
+      {
+        if constexpr (native_array_like<T>)
+        {
+          delete[] _ptr;
+        }
+        else
+        {
+          delete _ptr;
+        }
+
+        _ptr = nullptr;
+      }
+    }
+
+    constexpr local() = default;
+    constexpr local(rm_array<T> *ptr) : _ptr(ptr) {}
+    constexpr local(const local &) = delete;
+    constexpr local(local &&) = delete;
+    constexpr local &operator=(const local &) = delete;
+    constexpr local &operator=(local &&) = delete;
+
+  public:
+    constexpr auto get() const
+    {
+      return _ptr;
+    }
+
+  public:
+    constexpr auto operator*() const
+        -> decltype(auto)
+      requires(!native_array_like<T>)
+    {
+      return (*_ptr);
+    }
+
+    constexpr auto operator->() const
+        -> decltype(auto)
+      requires(!native_array_like<T>)
+    {
+      return _ptr;
+    }
+
+    constexpr auto operator[](size_t i) const
+        -> decltype(auto)
+      requires native_array_like<T>
+    {
+      return _ptr[i];
+    }
+  };
+
+  // TODO: To immplement sharing pointer
+  template <typename T>
   class sharing;
 
   //---------------------------------
@@ -3296,6 +3357,282 @@ namespace stew
     }
   };
 
+  template <typename T>
+  class list
+  {
+    // FIXME: voir si on peut mettre constexpr sur ces classes (list et node).
+    // FIXME: voir si l'on peut utiliser non_owning sur les pointeur node*.
+
+  private:
+    struct node
+    {
+      T _t;
+      node *_next = nullptr;
+      node *_prev = nullptr;
+    };
+
+  private:
+    template <bool CONST>
+    class iterator
+    {
+    private:
+      friend list;
+      using pointer = if_<CONST, const node *, node *>;
+      using reference = if_<CONST, const T &, T &>;
+
+    private:
+      pointer _cur;
+
+    public:
+      iterator(pointer cur = nullptr)
+          : _cur(cur) {}
+
+    public:
+      constexpr iterator &operator++()
+      {
+        if (_cur != nullptr)
+          _cur = _cur->_next;
+
+        return *this;
+      }
+
+      constexpr iterator operator++(int)
+      {
+        auto copy = *this;
+        ++(*this);
+        return copy;
+      }
+
+      constexpr bool operator==(
+          const iterator &o) const
+      {
+        return _cur == o._cur;
+      }
+
+      constexpr reference operator*()
+      {
+        assert(_cur != nullptr);
+        return _cur->_t;
+      }
+
+      constexpr reference operator*() const
+        requires CONST
+      {
+        assert(_cur != nullptr);
+        return _cur->_t;
+      }
+    };
+
+  private:
+    size_t _size = 0;
+    node *_first = nullptr;
+    node *_last = nullptr;
+    node *_bin = nullptr;
+
+  public:
+    ~list()
+    {
+      while (_first != nullptr)
+      {
+        auto next = _first->_next;
+        delete _first;
+        _first = next;
+      }
+
+      while (_bin != nullptr)
+      {
+        auto next = _bin->_next;
+        delete _bin;
+        _bin = next;
+      }
+
+      _last = nullptr;
+      _size = 0;
+    }
+
+    list() = default;
+
+    template <input_range R>
+    constexpr list(R &&r)
+      requires distanciable_iterator<decltype(stew::begin(r))>
+    {
+      push(relay<R>(r));
+    }
+
+    list(list &&o)
+        : _size(transfer(o._size)),
+          _first(transfer(o._first)),
+          _last(transfer(o._last))
+    {
+    }
+
+    list &operator=(list o)
+    {
+      _size = transfer(o._size);
+      _first = transfer(o._first);
+      _last = transfer(o._last);
+      return *this;
+    }
+
+    template <input_range R>
+    constexpr list &operator=(R &&r)
+    {
+      return (*this = list(relay<R>(r)));
+    }
+
+  public:
+    size_t size() const
+    {
+      return _size;
+    }
+
+    bool empty() const
+    {
+      return _size == 0;
+    }
+
+  public:
+    template <convertible_to<T> U>
+    void push(U &&u)
+    {
+      node *n = recycle(relay<U>(u), nullptr, _last);
+
+      if (empty())
+      {
+        _first = n;
+      }
+
+      _last = n;
+
+      ++_size;
+    }
+
+    template <input_range R>
+    constexpr void push(R &&r)
+      requires not_convertible_to<R, T>
+    {
+      copy(relay<R>(r), push_inserter<T>(*this));
+    }
+
+    template <convertible_to<T> U>
+    void insert(U &&u, iterator<false> loc)
+    {
+      node *cur = loc._cur;
+      node *prev = cur == nullptr ? nullptr : cur->_prev;
+      node *n = recycle(relay<U>(u), cur, prev);
+
+      if (empty())
+      {
+        _last = n;
+        _first = n;
+      }
+
+      ++_size;
+    }
+
+    maybe<T> pop()
+    {
+      auto last = _last;
+
+      if (_last != nullptr)
+      {
+        _last = _last->_prev;
+      }
+
+      --_size;
+
+      return trash(last);
+    }
+
+  private:
+    template <convertible_to<T> U>
+    node *recycle(U &&u, node *next, node *prev)
+    {
+      node *n;
+
+      if (_bin == nullptr)
+      {
+        n = new node();
+      }
+      else
+      {
+        n = _bin;
+        _bin = _bin->_next;
+      }
+
+      n->_next = next;
+      n->_prev = prev;
+      n->_t = relay<U>(u);
+
+      if (n->_prev != nullptr)
+      {
+        n->_prev->_next = n;
+      }
+
+      if (n->_next != nullptr)
+      {
+        n->_next->_prev = n;
+      }
+
+      return n;
+    }
+
+    maybe<T> trash(node *n)
+    {
+      node *prev = nullptr;
+      node *next = nullptr;
+
+      if (n != nullptr)
+      {
+        prev = n->_prev;
+        next = n->_next;
+
+        if (_bin != nullptr)
+        {
+          n->_next = _bin;
+          n->_prev = nullptr;
+        }
+
+        _bin = n;
+      }
+
+      if (prev != nullptr)
+      {
+        prev->_next = next;
+      }
+
+      if (next != nullptr)
+      {
+        next->_prev = prev;
+      }
+
+      return n == nullptr
+                 ? maybe<T>()
+                 : maybe<T>(transfer(n->_t));
+    }
+
+  public:
+    auto begin()
+    {
+      return iterator<false>(_first);
+    }
+
+    auto end()
+    {
+      return iterator<false>();
+    }
+
+    auto begin() const
+    {
+      return iterator<true>(_first);
+    }
+
+    auto end() const
+    {
+      return iterator<true>();
+    }
+  };
+
   //----------------------------
   //
   // String classes
@@ -3437,14 +3774,14 @@ namespace stew
        push_container<O, string_view<wchar_t>>);
 
   template <character C, size_t N>
-  class format_string
+  class format
   {
   private:
     array<string_view<C>, N> _parts;
 
   public:
     template <string_view_like<C> FMT>
-    consteval format_string(FMT &&fmt)
+    consteval format(FMT &&fmt)
         : _parts(split(relay<FMT>(fmt)))
     {
     }
@@ -3489,7 +3826,7 @@ namespace stew
       requires(const T &t, O &o) { formatter<T>::to(o, t); };
 
   template <ostream O, formattable<O> T>
-  constexpr void format_to(O &o, const T &t)
+  constexpr void format_one_to(O &o, const T &t)
   {
     formatter<T>::to(o, t);
   }
@@ -3500,10 +3837,10 @@ namespace stew
               ostream O, character C,
               typename H, typename... T>
     constexpr void format_to_one(
-        O &o, const format_string<C, N> &fmt, const H &h, const T &...t)
+        O &o, const format<C, N> &fmt, const H &h, const T &...t)
     {
-      format_to(o, get<I>(fmt.parts()));
-      format_to(o, h);
+      format_one_to(o, get<I>(fmt.parts()));
+      format_one_to(o, h);
 
       if constexpr (sizeof...(T) > 0)
       {
@@ -3513,22 +3850,22 @@ namespace stew
 
     template <ostream O, character C, typename H, typename... T>
     constexpr void format_to(
-        O &o, const format_string<C, sizeof...(T) + 2> &fmt,
+        O &o, const format<C, sizeof...(T) + 2> &fmt,
         const H &h, const T &...t)
     {
       format_to_one<0>(o, fmt, h, t...);
-      format_to(o, get<sizeof...(T) + 1>(fmt.parts()));
+      format_one_to(o, get<sizeof...(T) + 1>(fmt.parts()));
     }
 
     template <ostream O, character C>
-    constexpr void format_to(O &o, const format_string<C, 1> &fmt)
+    constexpr void format_to(O &o, const format<C, 1> &fmt)
     {
-      format_to(o, get<0>(fmt.parts()));
+      format_one_to(o, get<0>(fmt.parts()));
     }
   }
 
   template <ostream O, typename... A>
-  constexpr void format_to(O &o, const format_string<char, sizeof...(A) + 1> &fmt, const A &...a)
+  constexpr void format_to(O &o, const format<char, sizeof...(A) + 1> &fmt, const A &...a)
   {
     impl::format_to(o, fmt, a...);
   }
@@ -3559,7 +3896,7 @@ namespace stew
     {
       for (const auto &i : v)
       {
-        format_to(o, i);
+        format_one_to(o, i);
       }
     }
   };
@@ -3595,6 +3932,12 @@ namespace stew
 
   template <character C, size_t N>
   class formatter<C[N]>
+      : public formatter<string_view<C>>
+  {
+  };
+
+  template <character C, size_t N>
+  class formatter<static_string<C, N>>
       : public formatter<string_view<C>>
   {
   };
@@ -3641,7 +3984,7 @@ namespace stew
         }
       }
 
-      format_to(o, view(tbuff));
+      format_one_to(o, view(tbuff));
     }
   };
 
@@ -3667,7 +4010,7 @@ namespace stew
         }
       }
 
-      format_to(o, view(tbuff));
+      format_one_to(o, view(tbuff));
     }
   };
 
@@ -3680,9 +4023,9 @@ namespace stew
     {
       size_t i = static_cast<size_t>(d);
       size_t e = static_cast<size_t>((d - i) * 10'000.0);
-      format_to(o, i);
-      format_to(o, '.');
-      format_to(o, e);
+      format_one_to(o, i);
+      format_one_to(o, '.');
+      format_one_to(o, e);
     }
   };
 
@@ -3693,7 +4036,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, bool b)
     {
-      format_to(o, b ? "true"_sv : "false"_sv);
+      format_one_to(o, b ? "true"_sv : "false"_sv);
     }
   };
 
@@ -3704,7 +4047,7 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &os, P p)
     {
-      format_to(os, (size_t)(void *)(p));
+      format_one_to(os, (size_t)(void *)(p));
     }
   };
 
@@ -3777,7 +4120,7 @@ namespace stew
   template <typename... T>
   constexpr void extract_to(
       string_view<char> input,
-      format_string<char, sizeof...(T) + 1> fmt,
+      format<char, sizeof...(T) + 1> fmt,
       extract_response<T...> &response)
   {
     return impl::extract_to(
@@ -3788,7 +4131,7 @@ namespace stew
   template <typename... T>
   constexpr void extract_to(
       string_view<wchar_t> input,
-      format_string<wchar_t, sizeof...(T) + 1> fmt,
+      format<wchar_t, sizeof...(T) + 1> fmt,
       extract_response<T...> &response)
   {
     return impl::extract_to(
@@ -4268,7 +4611,7 @@ namespace stew
     template <typename... T>
     static void printf(
         file_writer<C> &o,
-        const format_string<C, sizeof...(T) + 1> &fmt,
+        const format<C, sizeof...(T) + 1> &fmt,
         const T &...t)
     {
       format_to(o.writer(), fmt, t...);
@@ -4277,7 +4620,7 @@ namespace stew
     template <typename... T>
     static void printfln(
         file_writer<C> &o,
-        const format_string<C, sizeof...(T) + 1> &fmt,
+        const format<C, sizeof...(T) + 1> &fmt,
         const T &...t)
     {
       format_to(o, fmt, t...);
@@ -4298,7 +4641,7 @@ namespace stew
     template <typename... T>
     static void readf(
         file_reader<C> &i,
-        format_string<C, sizeof...(T) + 1> fmt,
+        format<C, sizeof...(T) + 1> fmt,
         extract_response<T...> &response)
     {
       maybe<C> mb;
@@ -4328,13 +4671,13 @@ namespace stew
   struct console
   {
     template <typename... T>
-    static void printf(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
+    static void printf(const format<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
       files<C>::printf(termout, fmt, t...);
     }
 
     template <typename... T>
-    static void printfln(const format_string<C, sizeof...(T) + 1> &fmt, const T &...t)
+    static void printfln(const format<C, sizeof...(T) + 1> &fmt, const T &...t)
     {
 
       files<C>::printfln(termout, fmt, t...);
@@ -4352,7 +4695,7 @@ namespace stew
 
     template <typename... T>
     static void readf(
-        format_string<C, sizeof...(T) + 1> fmt,
+        format<C, sizeof...(T) + 1> fmt,
         extract_response<T...> &response)
     {
       files<C>::readf(termin, fmt, response);
@@ -4417,7 +4760,7 @@ namespace stew
     template <ostream O>
     static constexpr void to(O &o, const cpu_timer<u> &timer)
     {
-      format_to(o, timer.duration());
+      format_one_to(o, timer.duration());
     }
   };
 
@@ -4443,7 +4786,7 @@ namespace stew
     template <ostream O>
     static constexpr void to(O &o, const wall_timer &timer)
     {
-      format_to(o, timer.duration());
+      format_one_to(o, timer.duration());
     }
   };
 
@@ -4526,17 +4869,17 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const date<z> &d)
     {
-      format_to(o, d.mday());
-      format_to(o, '/');
-      format_to(o, d.month());
-      format_to(o, '/');
-      format_to(o, d.year());
-      format_to(o, ' ');
-      format_to(o, d.hour());
-      format_to(o, ':');
-      format_to(o, d.min());
-      format_to(o, ':');
-      format_to(o, d.sec());
+      format_one_to(o, d.mday());
+      format_one_to(o, '/');
+      format_one_to(o, d.month());
+      format_one_to(o, '/');
+      format_one_to(o, d.year());
+      format_one_to(o, ' ');
+      format_one_to(o, d.hour());
+      format_one_to(o, ':');
+      format_one_to(o, d.min());
+      format_one_to(o, ':');
+      format_one_to(o, d.sec());
     }
   };
 
@@ -4590,9 +4933,9 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_open_tag &tag)
     {
-      format_to(o, '<');
-      format_to(o, tag._name);
-      format_to(o, '>');
+      format_one_to(o, '<');
+      format_one_to(o, tag._name);
+      format_one_to(o, '>');
     }
   };
 
@@ -4603,10 +4946,10 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_close_tag &tag)
     {
-      format_to(o, '<');
-      format_to(o, '/');
-      format_to(o, tag._name);
-      format_to(o, '>');
+      format_one_to(o, '<');
+      format_one_to(o, '/');
+      format_one_to(o, tag._name);
+      format_one_to(o, '>');
     }
   };
 
@@ -4617,9 +4960,9 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_leaf<T> &leaf)
     {
-      format_to(o, xml_open_tag{leaf._name});
-      format_to(o, leaf._t.get());
-      format_to(o, xml_close_tag{leaf._name});
+      format_one_to(o, xml_open_tag{leaf._name});
+      format_one_to(o, leaf._t.get());
+      format_one_to(o, xml_close_tag{leaf._name});
     }
   };
 
@@ -4630,7 +4973,7 @@ namespace stew
     template <size_t I, size_t MAX, ostream O>
     constexpr static void node_to(O &o, const xml_node<T...> &node)
     {
-      format_to(o, get<I>(node._nodes));
+      format_one_to(o, get<I>(node._nodes));
 
       if constexpr (I + 1 < MAX)
       {
@@ -4642,9 +4985,9 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const xml_node<T...> &node)
     {
-      format_to(o, xml_open_tag{node._name});
+      format_one_to(o, xml_open_tag{node._name});
       node_to<0, sizeof...(T)>(o, node);
-      format_to(o, xml_close_tag{node._name});
+      format_one_to(o, xml_close_tag{node._name});
     }
   };
 
@@ -4673,13 +5016,13 @@ namespace stew
       {
         for (size_t i : upto(size_t(0), N * TAB))
         {
-          format_to(o, ' ');
+          format_one_to(o, ' ');
         }
       }
 
-      format_to(o, '<');
-      format_to(o, tag._t._name);
-      format_to(o, '>');
+      format_one_to(o, '<');
+      format_one_to(o, tag._t._name);
+      format_one_to(o, '>');
     }
   };
 
@@ -4695,15 +5038,15 @@ namespace stew
       {
         for (size_t i : upto(size_t(0), N * TAB))
         {
-          format_to(o, ' ');
+          format_one_to(o, ' ');
         }
       }
 
-      format_to(o, '<');
-      format_to(o, '/');
-      format_to(o, tag._t._name);
-      format_to(o, '>');
-      format_to(o, '\n');
+      format_one_to(o, '<');
+      format_one_to(o, '/');
+      format_one_to(o, tag._t._name);
+      format_one_to(o, '>');
+      format_one_to(o, '\n');
     }
   };
 
@@ -4715,9 +5058,9 @@ namespace stew
     constexpr static void to(
         O &o, const prettifier<N, TAB, xml_leaf<T>> &leaf)
     {
-      format_to(o, pretty<N, TAB>(xml_open_tag{leaf._t._name}));
-      format_to(o, leaf._t._t.get());
-      format_to(o, pretty<0, TAB>(xml_close_tag{leaf._t._name}));
+      format_one_to(o, pretty<N, TAB>(xml_open_tag{leaf._t._name}));
+      format_one_to(o, leaf._t._t.get());
+      format_one_to(o, pretty<0, TAB>(xml_close_tag{leaf._t._name}));
     }
   };
 
@@ -4729,7 +5072,7 @@ namespace stew
     constexpr static void node_to(
         O &o, const prettifier<N, TAB, xml_node<T...>> &node)
     {
-      format_to(o, pretty<N + 1, TAB>(get<I>(node._t._nodes)));
+      format_one_to(o, pretty<N + 1, TAB>(get<I>(node._t._nodes)));
 
       if constexpr (I + 1 < MAX)
       {
@@ -4741,10 +5084,10 @@ namespace stew
     template <ostream O>
     constexpr static void to(O &o, const prettifier<N, TAB, xml_node<T...>> &node)
     {
-      format_to(o, pretty<N, TAB>(xml_open_tag{node._t._name}));
-      format_to(o, '\n');
+      format_one_to(o, pretty<N, TAB>(xml_open_tag{node._t._name}));
+      format_one_to(o, '\n');
       node_to<0, sizeof...(T)>(o, node);
-      format_to(o, pretty<N, TAB>(xml_close_tag{node._t._name}));
+      format_one_to(o, pretty<N, TAB>(xml_close_tag{node._t._name}));
     }
   };
 
@@ -5520,281 +5863,6 @@ namespace stew
   namespace bdd
   {
 
-    template <typename T>
-    class list
-    {
-      // FIXME: voir si on peut mettre constexpr sur ces classes (list et node).
-      // FIXME: voir si l'on peut utiliser non_owning sur les pointeur node*.
-
-    private:
-      struct node
-      {
-        T _t;
-        node *_next = nullptr;
-        node *_prev = nullptr;
-      };
-
-    private:
-      template <bool CONST>
-      class iterator
-      {
-      private:
-        friend list;
-        using pointer = if_<CONST, const node *, node *>;
-        using reference = if_<CONST, const T &, T &>;
-
-      private:
-        pointer _cur;
-
-      public:
-        iterator(pointer cur = nullptr)
-            : _cur(cur) {}
-
-      public:
-        constexpr iterator &operator++()
-        {
-          if (_cur != nullptr)
-            _cur = _cur->_next;
-
-          return *this;
-        }
-
-        constexpr iterator operator++(int)
-        {
-          auto copy = *this;
-          ++(*this);
-          return copy;
-        }
-
-        constexpr bool operator==(
-            const iterator &o) const
-        {
-          return _cur == o._cur;
-        }
-
-        constexpr reference operator*()
-        {
-          assert(_cur != nullptr);
-          return _cur->_t;
-        }
-
-        constexpr reference operator*() const
-          requires CONST
-        {
-          assert(_cur != nullptr);
-          return _cur->_t;
-        }
-      };
-
-    private:
-      size_t _size = 0;
-      node *_first = nullptr;
-      node *_last = nullptr;
-      node *_bin = nullptr;
-
-    public:
-      ~list()
-      {
-        while (_first != nullptr)
-        {
-          auto next = _first->_next;
-          delete _first;
-          _first = next;
-        }
-
-        while (_bin != nullptr)
-        {
-          auto next = _bin->_next;
-          delete _bin;
-          _bin = next;
-        }
-
-        _last = nullptr;
-        _size = 0;
-      }
-
-      list() = default;
-
-      template <input_range R>
-      constexpr list(R &&r)
-        requires distanciable_iterator<decltype(stew::begin(r))>
-      {
-        push(relay<R>(r));
-      }
-
-      list(list &&o)
-          : _size(transfer(o._size)),
-            _first(transfer(o._first)),
-            _last(transfer(o._last))
-      {
-      }
-
-      list &operator=(list o)
-      {
-        _size = transfer(o._size);
-        _first = transfer(o._first);
-        _last = transfer(o._last);
-        return *this;
-      }
-
-      template <input_range R>
-      constexpr list &operator=(R &&r)
-      {
-        return (*this = list(relay<R>(r)));
-      }
-
-    public:
-      size_t size() const
-      {
-        return _size;
-      }
-
-      bool empty() const
-      {
-        return _size == 0;
-      }
-
-    public:
-      template <convertible_to<T> U>
-      void push(U &&u)
-      {
-        node *n = recycle(relay<U>(u), nullptr, _last);
-
-        if (empty())
-        {
-          _first = n;
-        }
-
-        _last = n;
-
-        ++_size;
-      }
-
-      template <input_range R>
-      constexpr void push(R &&r)
-        requires not_convertible_to<R, T>
-      {
-        copy(relay<R>(r), push_inserter<T>(*this));
-      }
-
-      template <convertible_to<T> U>
-      void insert(U &&u, iterator<false> loc)
-      {
-        node *cur = loc._cur;
-        node *n = recycle(relay<U>(u), cur, cur == nullptr ? nullptr : cur->_prev);
-
-        if (empty())
-        {
-          _last = n;
-          _first = n;
-        }
-
-        ++_size;
-      }
-
-      maybe<T> pop()
-      {
-        auto last = _last;
-
-        if (_last != nullptr)
-        {
-          _last = _last->_prev;
-        }
-
-        --_size;
-
-        return trash(last);
-      }
-
-    private:
-      template <convertible_to<T> U>
-      node *recycle(U &&u, node *next, node *prev)
-      {
-        node *n;
-
-        if (_bin == nullptr)
-        {
-          n = new node();
-        }
-        else
-        {
-          n = _bin;
-          _bin = _bin->_next;
-        }
-
-        n->_next = next;
-        n->_prev = prev;
-        n->_t = relay<U>(u);
-
-        if (n->_prev != nullptr)
-        {
-          n->_prev->_next = n;
-        }
-
-        if (n->_next != nullptr)
-        {
-          n->_next->_prev = n;
-        }
-
-        return n;
-      }
-
-      maybe<T> trash(node *n)
-      {
-        node *prev = nullptr;
-        node *next = nullptr;
-
-        if (n != nullptr)
-        {
-          prev = n->_prev;
-          next = n->_next;
-
-          if (_bin != nullptr)
-          {
-            n->_next = _bin;
-            n->_prev = nullptr;
-          }
-
-          _bin = n;
-        }
-
-        if (prev != nullptr)
-        {
-          prev->_next = next;
-        }
-
-        if (next != nullptr)
-        {
-          next->_prev = prev;
-        }
-
-        return n == nullptr
-                   ? maybe<T>()
-                   : maybe<T>(transfer(n->_t));
-      }
-
-    public:
-      auto begin()
-      {
-        return iterator<false>(_first);
-      }
-
-      auto end()
-      {
-        return iterator<false>();
-      }
-
-      auto begin() const
-      {
-        return iterator<true>(_first);
-      }
-
-      auto end() const
-      {
-        return iterator<true>();
-      }
-    };
-
     // on va faire une classe index qui sera paramétrée par le type de l'index (par défaut un size_t).
     // cette classe sera simplement un wrapper autour d'une liste chainée de paire {key:T, localisation:long}
     // On devra maintenir cette liste chainée ordonnée de tel sorte que les insertions/suppression soient
@@ -5804,9 +5872,15 @@ namespace stew
     template <typename T, typename U = long>
     class index
     {
-      // On crée la liste chainée ici. On va commencer par une classe toute bête que l'on industrialisera
-      // ensuite dans la section containers.
     };
+
+    // On va créer un wrapper sur file et file_reaeder et writer.
+    // Ce wrapper permettra d'écrire dans un fichier file<w> et de reperer la localisation de cette écriture.
+    // Ainsi on pourra tenir un index sur les emplacement qui auront été libérés et qui sont libres pour
+    // une nouvelle écriture (la taille de cet emplacement étant répéré au moment de la libération).
+    // Pour tenir compte de ces emplacements libres on utilisera une liste chainée ordonnée par la taille
+    // croissante des emplacements disponibles dans le fichier. Si cette liste chainée est vide alors
+    // on écrira tout simplement à la fin du fichier.
   }
 }
 
