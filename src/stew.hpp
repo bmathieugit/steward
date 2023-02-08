@@ -3526,6 +3526,14 @@ namespace stew
         _last = n;
         _first = n;
       }
+      if (n->_prev == nullptr)
+      {
+        _first = n;
+      }
+      if (n->_next == nullptr)
+      {
+        _last = n;
+      }
 
       ++_size;
     }
@@ -3648,11 +3656,24 @@ namespace stew
     using list<T>::insert;
 
   public:
+    using list<T>::begin;
+    using list<T>::end;
+
+  public:
     template <convertible_to<T> U>
     constexpr void push(U &&u)
     {
       auto fnd = find(*this, [&u](const T &i)
-                      { return !(u < i); });
+                      { return !(i < u); });
+
+      if (fnd == end())
+      {
+        printf("insertion de %d à la fin\n", u);
+      }
+      else
+      {
+        printf("insertion de %d avant %d\n", u, *fnd);
+      }
 
       list<T>::insert(relay<U>(u), fnd);
     }
