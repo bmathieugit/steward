@@ -3664,15 +3664,6 @@ namespace stew
       auto fnd = find(*this, [&u](const T &i)
                       { return !(i < u); });
 
-      if (fnd == end())
-      {
-        printf("insertion de %d à la fin\n", u);
-      }
-      else
-      {
-        printf("insertion de %d avant %d\n", u, *fnd);
-      }
-
       list<T>::insert(relay<U>(u), fnd);
     }
   };
