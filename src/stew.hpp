@@ -3536,6 +3536,23 @@ namespace stew
       ++_size;
     }
 
+    constexpr void remove(iterator<false> loc)
+    {
+      if (_first == loc._cur && _first != nullptr)
+      {
+        _first = _first->_next;
+      }
+
+      if (_last == loc._cur && _last != nullptr)
+      {
+        _last = _last->_prev;
+      }
+
+      --_size;
+
+      trash(loc._cur);
+    }
+
     constexpr maybe<T> pop()
     {
       auto last = _last;
@@ -3593,23 +3610,20 @@ namespace stew
         prev = n->_prev;
         next = n->_next;
 
-        if (_bin != nullptr)
-        {
-          n->_next = _bin;
-          n->_prev = nullptr;
-        }
+        n->_next = _bin;
+        n->_prev = nullptr;
 
         _bin = n;
-      }
 
-      if (prev != nullptr)
-      {
-        prev->_next = next;
-      }
+        if (prev != nullptr)
+        {
+          prev->_next = next;
+        }
 
-      if (next != nullptr)
-      {
-        next->_prev = prev;
+        if (next != nullptr)
+        {
+          next->_prev = prev;
+        }
       }
 
       return n == nullptr
@@ -3645,17 +3659,26 @@ namespace stew
   public:
     constexpr ~set() = default;
     constexpr set() = default;
+
+    template <input_range R>
+    constexpr set(R &&r) : list<T>::list(relay<R>(r))
+    {
+    }
+
     constexpr set(const set &) = default;
     constexpr set(set &&) = default;
     constexpr set &operator=(const set &) = default;
     constexpr set &operator=(set &&) = default;
 
+    template <input_range R>
+    constexpr set &operator=(R &&r)
+    {
+      list<T>::operator=(relay<R>(r));
+      return *this;
+    }
+
   private:
     using list<T>::insert;
-
-  public:
-    using list<T>::begin;
-    using list<T>::end;
 
   public:
     template <convertible_to<T> U>
@@ -4058,7 +4081,8 @@ namespace stew
     {
       size_t i = static_cast<size_t>(d);
       size_t e = static_cast<size_t>((d - i) * 10'000.0);
-      format_one_to(o, i);
+
+      lformat_one_to(o, i);
       format_one_to(o, '.');
       format_one_to(o, e);
     }

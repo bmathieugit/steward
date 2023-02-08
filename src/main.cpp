@@ -12,13 +12,15 @@ int main()
   s.push(125);
   s.push(10);
   s.push(4);
-
-  list<int>::node *b = s._first;
+  
+  s.remove(find(s, 4));
 
   for (int i : s)
   {
     console<char>::printfln("{}", i);
   }
+
+
 
   return 0;
 }
