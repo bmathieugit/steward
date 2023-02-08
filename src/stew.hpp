@@ -3521,16 +3521,14 @@ namespace stew
       node *prev = next == nullptr ? _last : next->_prev;
       node *n = recycle(relay<U>(u), next, prev);
 
-      if (empty())
-      {
-        _last = n;
-        _first = n;
-      }
-      if (n->_prev == nullptr)
+      bool empt = empty();
+
+      if (empt || n->_prev == nullptr)
       {
         _first = n;
       }
-      if (n->_next == nullptr)
+
+      if (empt || n->_next == nullptr)
       {
         _last = n;
       }
@@ -3568,19 +3566,19 @@ namespace stew
         _bin = _bin->_next;
       }
 
+      if (prev != nullptr)
+      {
+        prev->_next = n;
+      }
+
+      if (next != nullptr)
+      {
+        next->_prev = n;
+      }
+
       n->_next = next;
       n->_prev = prev;
       n->_t = relay<U>(u);
-
-      if (n->_prev != nullptr)
-      {
-        n->_prev->_next = n;
-      }
-
-      if (n->_next != nullptr)
-      {
-        n->_next->_prev = n;
-      }
 
       return n;
     }
