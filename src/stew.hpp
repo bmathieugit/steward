@@ -4181,7 +4181,7 @@ namespace stew
         ++b;
         input = string_view<C>(i_b, i_e);
         input = extractor<T>::to(input, m);
-        fmt   = string_view<C>(b, e);
+        fmt = string_view<C>(b, e);
       }
     }
 
@@ -5938,6 +5938,45 @@ namespace stew
 {
   namespace bdd
   {
+    // le but de ce namespace est de fournir une base de donnée embarquée qui aura pour persistance les fichiers
+    // IL y aura un fichier principal qui contiendra les données proprement dites.
+    // IL y aura un fichier qui contiendra les localisation des espaces vides dans le fichier principal ainsi que leur taille.
+    // et enfin un fichier contenant l'index du fichier principal.
+    //
+    // Cette base de donnée sera orienté document. Ce qui signifie que chaque "document" enregistrée sera identifié par un
+    // unique id qui sera utilisé pour localiser la donnée à l'aide de l'index.
+    // Les docuemnts seront de taille variable.
+
+    // on va donc commencer par créer une classe collection qui sera la classe représentant la bdd.
+    class collection
+    {
+    private:
+      string<char> _name; // nom de la bdd. Conditionne le nom des fichiers de stockage.
+      size_t _size;       // donne le nombre de document dans la bdd.
+
+    public:
+      ~collection() = default;
+      collection() = delete;
+      collection(string_view<char> name) : _name(name) {}
+      collection(collection &&) = default;
+      collection(const collection &) = delete;
+      collection &operator=(collection &&) = default;
+      collection &operator=(const collection &) = default;
+
+    public:
+      bool create()
+      {
+        string<char> fname(_name.size() + 10);
+        format_to(fname, "\0_db"_sv, _name);
+        console<char>::println(fname);
+        file<char, mode::w> fbdd{string_view<char>(fname)};
+        if (fbdd.opened())
+        {
+          console<char>::println("ouverte");
+        }
+        return true;
+      }
+    };
 
     // on va faire une classe index qui sera paramétrée par le type de l'index (par défaut un size_t).
     // cette classe sera simplement un wrapper autour d'une liste chainée de paire {key:T, localisation:long}
@@ -5957,6 +5996,42 @@ namespace stew
     // Pour tenir compte de ces emplacements libres on utilisera une liste chainée ordonnée par la taille
     // croissante des emplacements disponibles dans le fichier. Si cette liste chainée est vide alors
     // on écrira tout simplement à la fin du fichier.
+
+    // la structure free_location va permettre de recenser les endroits qui sont libres au sein d'un fichier en cours d'écriture;
+    // Cette structure sera sauvegardé dans un fichier afin de pouvoir la récupérer plus tard
+    struct free_location
+    {
+      long _location;
+      size_t _size;
+    };
+
+    constexpr bool operator<(const free_location &a, const free_location &b)
+    {
+      return a._size < b._size;
+    }
+
+    template <typename T, mode m>
+      requires writable_mode<m>
+    auto write_file(file<T, m> &f, const T &t, set<free_location> &free_locations)
+    {
+      long start, stop;
+
+      auto fnd = find(free_locations, [](const free_location &fl)
+                      { return fl._size >= sizeof(T); });
+
+      if (fnd != free_locations.end())
+      {
+        f.seekg((*fnd)._location, seek::set);
+        free_locations.remove(fnd);
+      }
+
+      auto writer = f.writer();
+      start = f.tellg();
+      writer.push(t);
+      stop = f.tellg();
+
+      return tuple(start, stop);
+    }
   }
 }
 
