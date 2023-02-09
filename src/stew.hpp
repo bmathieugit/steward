@@ -3895,8 +3895,8 @@ namespace stew
   namespace impl
   {
     template <ostream O, character C, typename H>
-    constexpr auto format_to_one_by_one(
-        O &o, string_view<C> fmt, const H &h)
+    constexpr void format_to_one_by_one(
+        O &o, string_view<C> &fmt, const H &h)
     {
       auto b = fmt.begin();
       auto e = fmt.end();
@@ -3916,18 +3916,14 @@ namespace stew
       }
 
       format_one_to(o, h);
-
-      return b;
+      fmt = string_view<C>(b, e);
     }
 
     template <ostream O, character C, typename... T>
     constexpr void format_to(
         O &o, string_view<C> fmt, const T &...t)
     {
-      auto b = fmt.begin();
-      auto e = fmt.end();
-
-      ((fmt = string_view<C>(format_to_one_by_one(o, fmt, t), e)), ...);
+      (format_to_one_by_one(o, fmt, t), ...);
       format_one_to(o, fmt);
     }
   }
@@ -4092,7 +4088,7 @@ namespace stew
       size_t i = static_cast<size_t>(d);
       size_t e = static_cast<size_t>((d - i) * 10'000.0);
 
-      lformat_one_to(o, i);
+      format_one_to(o, i);
       format_one_to(o, '.');
       format_one_to(o, e);
     }
@@ -4162,51 +4158,62 @@ namespace stew
       return impl::make_isequence<N - 1>();
     }
 
-    template <size_t I, character C, typename T>
+    template <character C, typename T>
     constexpr void extract_to_one_by_one(
         string_view<C> &input,
-        string_view<C> fmt_part,
-        maybe<T> &response_part)
+        string_view<C> &fmt,
+        maybe<T> &m)
     {
-      if (fmt_part.empty() || starts_with(input, fmt_part))
+      auto b = fmt.begin();
+      auto e = fmt.end();
+
+      auto i_b = input.begin();
+      auto i_e = input.end();
+
+      while (b != e && i_b != i_e && *b == *i_b)
       {
-        input = substr(input, fmt_part.size());
-        input = extractor<T>::to(input, response_part);
+        ++b;
+        ++i_b;
+      }
+
+      if (*b == format_joker<C>)
+      {
+        ++b;
+        input = string_view<C>(i_b, i_e);
+        input = extractor<T>::to(input, m);
+        fmt   = string_view<C>(b, e);
       }
     }
 
-    template <character C, typename... T, size_t... I>
+    template <character C, typename... T>
     constexpr void extract_to(
         string_view<C> input,
-        const array<string_view<C>, sizeof...(T) + 1> fmt_parts,
-        extract_response<T...> &response,
-        isequence<I...>)
+        string_view<C> fmt,
+        maybe<T> &...m)
     {
-      (extract_to_one_by_one<I>(input, get<I>(fmt_parts), get<I>(response)), ...);
+      (extract_to_one_by_one(input, fmt, m), ...);
     }
   }
 
   template <typename... T>
   constexpr void extract_to(
       string_view<char> input,
-      format<char, T...> fmt,
-      extract_response<T...> &response)
+      string_view<char> fmt,
+      maybe<T> &...m)
   {
-    return impl::extract_to(
-        input, fmt.parts(), response,
-        impl::make_isequence<sizeof...(T)>());
+    return impl::extract_to(input, fmt, m...);
   }
 
-  template <typename... T>
-  constexpr void extract_to(
-      string_view<wchar_t> input,
-      format<wchar_t, T...> fmt,
-      extract_response<T...> &response)
-  {
-    return impl::extract_to(
-        input, fmt.parts(), response,
-        impl::make_isequence<sizeof...(T)>());
-  }
+  // template <typename... T>
+  // constexpr void extract_to(
+  //     string_view<wchar_t> input,
+  //     format<wchar_t, T...> fmt,
+  //     extract_response<T...> &response)
+  // {
+  //   return impl::extract_to(
+  //       input, fmt.parts(), response,
+  //       impl::make_isequence<sizeof...(T)>());
+  // }
 
   template <unsigned_integral I>
   class extractor<I>
@@ -4683,7 +4690,7 @@ namespace stew
         string_view<C> fmt,
         const T &...t)
     {
-      format_to(o.writer(), fmt, t...);
+      format_to(o, fmt, t...);
     }
 
     template <typename... T>
