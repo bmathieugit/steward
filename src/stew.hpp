@@ -3360,7 +3360,6 @@ namespace stew
   template <typename T>
   class list
   {
-    // FIXME: voir si on peut mettre constexpr sur ces classes (list et node).
     // FIXME: voir si l'on peut utiliser non_owning sur les pointeur node*.
 
   public:
@@ -3679,6 +3678,7 @@ namespace stew
 
   private:
     using list<T>::insert;
+    // lusing list<T>::remove;
 
   public:
     template <convertible_to<T> U>
@@ -3824,23 +3824,16 @@ namespace stew
   //
   //------------------------------
 
-  template <typename O>
-  concept ostream =
-      (push_container<O, char> &&
-       push_container<O, string_view<char>>) ||
-      (push_container<O, wchar_t> &&
-       push_container<O, string_view<wchar_t>>);
-
-  template <character C, size_t N>
+  template <character C, typename... T>
   class format
   {
   private:
-    array<string_view<C>, N> _parts;
+    array<string_view<C>, sizeof...(T) + 1> _parts;
 
   public:
-    template <string_view_like<C> FMT>
-    consteval format(FMT &&fmt)
-        : _parts(split(relay<FMT>(fmt)))
+    template <string_view_like<C> S>
+    constexpr format(S &&fmt)
+        : _parts(split(relay<S>(fmt)))
     {
     }
 
@@ -3850,9 +3843,9 @@ namespace stew
     }
 
   private:
-    consteval auto split(string_view<C> fmt) const
+    constexpr auto split(string_view<C> fmt) const
     {
-      array<string_view<C>, N> parts;
+      array<string_view<C>, sizeof...(T) + 1> parts;
 
       for (auto &part : parts)
       {
@@ -3875,6 +3868,13 @@ namespace stew
     }
   };
 
+  template <typename O>
+  concept ostream =
+      (push_container<O, char> &&
+       push_container<O, string_view<char>>) ||
+      (push_container<O, wchar_t> &&
+       push_container<O, string_view<wchar_t>>);
+
   template <typename T>
   class formatter;
 
@@ -3889,50 +3889,60 @@ namespace stew
     formatter<T>::to(o, t);
   }
 
+  template <character C>
+  constinit const C format_joker = '\0';
+
   namespace impl
   {
-    template <size_t I, size_t N,
-              ostream O, character C,
-              typename H, typename... T>
-    constexpr void format_to_one(
-        O &o, const format<C, N> &fmt, const H &h, const T &...t)
+    template <ostream O, character C, typename H>
+    constexpr auto format_to_one_by_one(
+        O &o, string_view<C> fmt, const H &h)
     {
-      format_one_to(o, get<I>(fmt.parts()));
+      auto b = fmt.begin();
+      auto e = fmt.end();
+
+      while (b != e)
+      {
+        if (*b == format_joker<C>)
+        {
+          ++b;
+          break;
+        }
+        else
+        {
+          format_one_to(o, *b);
+          ++b;
+        }
+      }
+
       format_one_to(o, h);
 
-      if constexpr (sizeof...(T) > 0)
-      {
-        format_to_one<I + 1>(o, fmt, t...);
-      }
+      return b;
     }
 
-    template <ostream O, character C, typename H, typename... T>
+    template <ostream O, character C, typename... T>
     constexpr void format_to(
-        O &o, const format<C, sizeof...(T) + 2> &fmt,
-        const H &h, const T &...t)
+        O &o, string_view<C> fmt, const T &...t)
     {
-      format_to_one<0>(o, fmt, h, t...);
-      format_one_to(o, get<sizeof...(T) + 1>(fmt.parts()));
-    }
+      auto b = fmt.begin();
+      auto e = fmt.end();
 
-    template <ostream O, character C>
-    constexpr void format_to(O &o, const format<C, 1> &fmt)
-    {
-      format_one_to(o, get<0>(fmt.parts()));
+      ((fmt = string_view<C>(format_to_one_by_one(o, fmt, t), e)), ...);
+      format_one_to(o, fmt);
     }
   }
 
   template <ostream O, typename... A>
-  constexpr void format_to(O &o, const format<char, sizeof...(A) + 1> &fmt, const A &...a)
+  constexpr void format_to(O &o, string_view<char> fmt, const A &...a)
   {
     impl::format_to(o, fmt, a...);
   }
 
-  // template <ostream O, typename... A>
-  // constexpr void format_to(O &o, const format_string<wchar_t, sizeof...(A) + 1> &fmt, const A &...a)
-  // {
-  //   impl::format_to(o, fmt, a...);
-  // }
+  template <ostream O, typename... A>
+  constexpr void format_to(O &o, string_view<wchar_t> fmt, const A &...a)
+  {
+    impl::format_to(o, fmt, a...);
+  }
 
   template <character C>
   class formatter<C>
@@ -4153,7 +4163,7 @@ namespace stew
     }
 
     template <size_t I, character C, typename T>
-    constexpr void extract_to_one(
+    constexpr void extract_to_one_by_one(
         string_view<C> &input,
         string_view<C> fmt_part,
         maybe<T> &response_part)
@@ -4172,14 +4182,14 @@ namespace stew
         extract_response<T...> &response,
         isequence<I...>)
     {
-      (extract_to_one<I>(input, get<I>(fmt_parts), get<I>(response)), ...);
+      (extract_to_one_by_one<I>(input, get<I>(fmt_parts), get<I>(response)), ...);
     }
   }
 
   template <typename... T>
   constexpr void extract_to(
       string_view<char> input,
-      format<char, sizeof...(T) + 1> fmt,
+      format<char, T...> fmt,
       extract_response<T...> &response)
   {
     return impl::extract_to(
@@ -4190,7 +4200,7 @@ namespace stew
   template <typename... T>
   constexpr void extract_to(
       string_view<wchar_t> input,
-      format<wchar_t, sizeof...(T) + 1> fmt,
+      format<wchar_t, T...> fmt,
       extract_response<T...> &response)
   {
     return impl::extract_to(
@@ -4670,7 +4680,7 @@ namespace stew
     template <typename... T>
     static void printf(
         file_writer<C> &o,
-        const format<C, sizeof...(T) + 1> &fmt,
+        string_view<C> fmt,
         const T &...t)
     {
       format_to(o.writer(), fmt, t...);
@@ -4679,7 +4689,7 @@ namespace stew
     template <typename... T>
     static void printfln(
         file_writer<C> &o,
-        const format<C, sizeof...(T) + 1> &fmt,
+        string_view<C> fmt,
         const T &...t)
     {
       format_to(o, fmt, t...);
@@ -4700,7 +4710,7 @@ namespace stew
     template <typename... T>
     static void readf(
         file_reader<C> &i,
-        format<C, sizeof...(T) + 1> fmt,
+        format<C, T...> fmt,
         extract_response<T...> &response)
     {
       maybe<C> mb;
@@ -4730,13 +4740,13 @@ namespace stew
   struct console
   {
     template <typename... T>
-    static void printf(const format<C, sizeof...(T) + 1> &fmt, const T &...t)
+    static void printf(string_view<C> fmt, const T &...t)
     {
       files<C>::printf(termout, fmt, t...);
     }
 
     template <typename... T>
-    static void printfln(const format<C, sizeof...(T) + 1> &fmt, const T &...t)
+    static void printfln(string_view<C> fmt, const T &...t)
     {
 
       files<C>::printfln(termout, fmt, t...);
@@ -4754,7 +4764,7 @@ namespace stew
 
     template <typename... T>
     static void readf(
-        format<C, sizeof...(T) + 1> fmt,
+        format<C, T...> fmt,
         extract_response<T...> &response)
     {
       files<C>::readf(termin, fmt, response);
