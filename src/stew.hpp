@@ -3738,21 +3738,139 @@ namespace stew
       character<C> && convertible_to<S, string_view<C>>;
 
   template <character C>
-  class string
+  class fixed_string
   {
-  public:
+  private:
     owning<C[]> _data;
-    size_t _lgth = 0;
+    size_t _size = 0;
     size_t _max = 0;
 
   public:
-    ~string() = default;
-    string() = default;
+    constexpr ~fixed_string() = default;
+    constexpr fixed_string() = default;
 
-    string(size_t max)
-        : _data(new C[max > 0 ? max : 10]),
-          _lgth(0),
-          _max(max)
+    constexpr fixed_string(size_t n)
+        : _data(new C[n]),
+          _max(n),
+          _size(0)
+    {
+    }
+
+    template <input_range R>
+    constexpr fixed_string(R &&r)
+      requires distanciable_iterator<decltype(stew::begin(r))>
+        : fixed_string(stew::end(relay<R>(r)) - stew::begin(relay<R>(r)))
+    {
+      push(relay<R>(r));
+    }
+
+    constexpr fixed_string(const fixed_string &o)
+        : fixed_string(o._max)
+    {
+      push(o);
+    }
+
+    constexpr fixed_string(fixed_string &&o)
+        : _size{transfer(o._size)},
+          _max{transfer(o._max)},
+          _data{transfer(o._data)}
+    {
+    }
+
+    constexpr fixed_string &operator=(fixed_string o)
+    {
+      _size = transfer(o._size);
+      _max = transfer(o._max);
+      _data = transfer(o._data);
+      return *this;
+    }
+
+    template <input_range R>
+    constexpr fixed_string &operator=(R &&r)
+    {
+      return (*this = fixed_string(relay<R>(r)));
+    }
+
+  public:
+    constexpr size_t size() const
+    {
+      return _size;
+    }
+
+    constexpr bool empty() const
+    {
+      return _size == 0;
+    }
+
+    constexpr bool full() const
+    {
+      return _size == _max - 1;
+    }
+
+  public:
+    constexpr auto begin()
+    {
+      return _data.get();
+    }
+
+    constexpr auto end()
+    {
+      return _data.get() + _size;
+    }
+
+    constexpr auto begin() const
+    {
+      return _data.get();
+    }
+
+    constexpr auto end() const
+    {
+      return _data.get() + _size;
+    }
+
+  public:
+    template <convertible_to<C> U>
+    constexpr void push(U &&u)
+    {
+      if (!full())
+      {
+        _data[_size] = relay<U>(u);
+        _data[_size + 1] = '\0';
+        ++_size;
+      }
+    }
+
+    template <input_range R>
+    constexpr void push(R &&r)
+    {
+      copy(relay<R>(r), push_inserter<C>(*this));
+    }
+
+    constexpr maybe<C> pop()
+    {
+      if (_size != 0)
+      {
+        return maybe<C>(transfer(_data[_size--]));
+      }
+      else
+      {
+        return maybe<C>();
+      }
+    }
+  };
+
+  template <character C>
+  class string
+  {
+  private:
+    fixed_string<C> _data;
+
+  public:
+    constexpr ~string() = default;
+    constexpr string() = default;
+
+    constexpr string(size_t max)
+        : _data(max)
     {
     }
 
@@ -3764,137 +3882,78 @@ namespace stew
       push(relay<R>(r));
     }
 
-    template <size_t N>
-    string(const C (&o)[N])
-        : _data(new C[N + 1]),
-          _max(N + 1)
+    constexpr string(const string &o) = default;
+    constexpr string(string &&) = default;
+
+    constexpr string &operator=(const string &o) = default;
+    constexpr string &operator=(string &&o) = default;
+
+    template <input_range R>
+    constexpr string &operator=(R &&r)
     {
-      auto b = _data.get();
-      auto o_b = o;
-      auto o_e = o + N;
-
-      auto init = b;
-
-      while (o_b != o_e && *o_b != '\0')
-      {
-        *b = *o_b;
-        ++b;
-        ++o_b;
-      }
-
-      *b = '\0';
-      _lgth = b - init;
-    }
-
-    string(const string &o)
-        : _lgth(o._lgth),
-          _max(o._max),
-          _data(new C[_max])
-    {
-      auto b = begin();
-      auto o_b = o.begin();
-      auto o_e = o.end();
-
-      auto init = b;
-
-      while (o_b != o_e && *o_b != '\0')
-      {
-        *b = *o_b;
-        ++b;
-        ++o_b;
-      }
-
-      *b = '\0';
-    }
-
-    string(string &&) = default;
-
-    string &operator=(string o)
-    {
-      _data = transfer(o._data);
-      _lgth = transfer(o._lgth);
-      _max = transfer(o._max);
-
-      return *this;
+      return (*this = string(relay<R>(r)));
     }
 
   public:
-    size_t size() const
+    constexpr size_t size() const
     {
-      return _lgth;
+      return _data.size();
     }
 
-    bool empty() const
+    constexpr bool empty() const
     {
-      return size() == 0;
+      return _data.empty();
     }
 
   public:
-    auto begin()
+    constexpr auto begin()
     {
-      return _data.get();
+      return _data.begin();
     }
 
-    auto end()
+    constexpr auto end()
     {
-      return _data.get() + _lgth;
+      return _data.end();
     }
 
-    auto begin() const
+    constexpr auto begin() const
     {
-      return _data.get();
+      return _data.begin();
     }
 
-    auto end() const
+    constexpr auto end() const
     {
-      return _data.get() + _lgth;
+      return _data.end();
     }
 
   public:
     template <convertible_to<C> U>
-    void push(U &&u)
+    constexpr void push(U &&u)
     {
-      if (_lgth + 1 == _max)
+      if (_data.full())
       {
-        auto l = _lgth;
-        string<C> tmp(_max * 2 + 10);
-        copy(*this, tmp.begin());
-        *this = transfer(tmp);
-        _lgth = l;
+        fixed_string<C> tmp = transfer(_data);
+        _data = fixed_string<C>(tmp.size() * 2 + 10);
+        _data.push(transfer(tmp));
       }
 
-      _data[_lgth] = relay<U>(u);
-      ++_lgth;
-      _data[_lgth] = '\0';
+      _data.push(relay<U>(u));
     }
 
     template <input_range R>
-    void push(R &&r)
+    constexpr void push(R &&r)
     {
       copy(relay<R>(r), push_inserter<C>(*this));
     }
 
     constexpr maybe<C> pop()
     {
-      if (_lgth != 0)
-      {
-        return maybe<C>(transfer(_data[_lgth--]));
-      }
-      else
-      {
-        return maybe<C>();
-      }
+      return _data.pop();
     }
   };
 
   template <character C, size_t N>
   using static_string = static_vector<C, N>;
-
-  template <character C>
-  using fixed_string = fixed_vector<C>;
-
-  // template <character C>
-  // using string = vector<C>;
 
   string<char> operator"" _s(const char *s, size_t n)
   {
@@ -6112,8 +6171,8 @@ namespace stew
     class collection
     {
     private:
-      string<char> _name; // nom de la bdd. Conditionne le nom des fichiers de stockage.
-      size_t _size;       // donne le nombre de document dans la bdd.
+      fixed_string<char> _name; // nom de la bdd. Conditionne le nom des fichiers de stockage.
+      size_t _size;             // donne le nombre de document dans la bdd.
 
     public:
       ~collection() = default;
@@ -6128,7 +6187,7 @@ namespace stew
       bool create()
       {
         string<char> fname(_name.size() + 10);
-        format_to(fname, "\0_db"_sv, _name);
+        format_to(fname, "\0.db"_sv, _name);
         console<char>::println(fname);
         file<char, mode::w> fbdd{string_view<char>(fname)};
         if (fbdd.opened())
