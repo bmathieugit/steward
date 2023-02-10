@@ -3689,6 +3689,17 @@ namespace stew
 
       list<T>::insert(relay<U>(u), fnd);
     }
+
+  public:
+    constexpr auto begin() const
+    {
+      return list<T>::begin();
+    }
+
+    constexpr auto end() const
+    {
+      return list<T>::end();
+    }
   };
 
   //----------------------------
@@ -3726,14 +3737,164 @@ namespace stew
   concept string_view_like =
       character<C> && convertible_to<S, string_view<C>>;
 
+  template <character C>
+  class string
+  {
+  public:
+    owning<C[]> _data;
+    size_t _lgth = 0;
+    size_t _max = 0;
+
+  public:
+    ~string() = default;
+    string() = default;
+
+    string(size_t max)
+        : _data(new C[max > 0 ? max : 10]),
+          _lgth(0),
+          _max(max)
+    {
+    }
+
+    template <input_range R>
+    constexpr string(R &&r)
+        : string(stew::end(relay<R>(r)) -
+                 stew::begin(relay<R>(r)))
+    {
+      push(relay<R>(r));
+    }
+
+    template <size_t N>
+    string(const C (&o)[N])
+        : _data(new C[N + 1]),
+          _max(N + 1)
+    {
+      auto b = _data.get();
+      auto o_b = o;
+      auto o_e = o + N;
+
+      auto init = b;
+
+      while (o_b != o_e && *o_b != '\0')
+      {
+        *b = *o_b;
+        ++b;
+        ++o_b;
+      }
+
+      *b = '\0';
+      _lgth = b - init;
+    }
+
+    string(const string &o)
+        : _lgth(o._lgth),
+          _max(o._max),
+          _data(new C[_max])
+    {
+      auto b = begin();
+      auto o_b = o.begin();
+      auto o_e = o.end();
+
+      auto init = b;
+
+      while (o_b != o_e && *o_b != '\0')
+      {
+        *b = *o_b;
+        ++b;
+        ++o_b;
+      }
+
+      *b = '\0';
+    }
+
+    string(string &&) = default;
+
+    string &operator=(string o)
+    {
+      _data = transfer(o._data);
+      _lgth = transfer(o._lgth);
+      _max = transfer(o._max);
+
+      return *this;
+    }
+
+  public:
+    size_t size() const
+    {
+      return _lgth;
+    }
+
+    bool empty() const
+    {
+      return size() == 0;
+    }
+
+  public:
+    auto begin()
+    {
+      return _data.get();
+    }
+
+    auto end()
+    {
+      return _data.get() + _lgth;
+    }
+
+    auto begin() const
+    {
+      return _data.get();
+    }
+
+    auto end() const
+    {
+      return _data.get() + _lgth;
+    }
+
+  public:
+    template <convertible_to<C> U>
+    void push(U &&u)
+    {
+      if (_lgth + 1 == _max)
+      {
+        auto l = _lgth;
+        string<C> tmp(_max * 2 + 10);
+        copy(*this, tmp.begin());
+        *this = transfer(tmp);
+        _lgth = l;
+      }
+
+      _data[_lgth] = relay<U>(u);
+      ++_lgth;
+      _data[_lgth] = '\0';
+    }
+
+    template <input_range R>
+    void push(R &&r)
+    {
+      copy(relay<R>(r), push_inserter<C>(*this));
+    }
+
+    constexpr maybe<C> pop()
+    {
+      if (_lgth != 0)
+      {
+        return maybe<C>(transfer(_data[_lgth--]));
+      }
+      else
+      {
+        return maybe<C>();
+      }
+    }
+  };
+
   template <character C, size_t N>
   using static_string = static_vector<C, N>;
 
   template <character C>
   using fixed_string = fixed_vector<C>;
 
-  template <character C>
-  using string = vector<C>;
+  // template <character C>
+  // using string = vector<C>;
 
   string<char> operator"" _s(const char *s, size_t n)
   {

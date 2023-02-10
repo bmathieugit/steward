@@ -9,5 +9,6 @@ int main()
   bdd::collection col("a_collection");
   col.create();
 
+
   return 0;
 }
