@@ -1,6 +1,5 @@
 #ifndef __stew_hpp__
 #define __stew_hpp__
-
 #include <stdio.h>
 #include <threads.h>
 #include <time.h>
@@ -3737,6 +3736,114 @@ namespace stew
   concept string_view_like =
       character<C> && convertible_to<S, string_view<C>>;
 
+  template <character C, size_t N>
+  class static_string
+  {
+  private:
+    array<C, N> _data;
+    size_t _size = 0;
+
+  public:
+    constexpr ~static_string() = default;
+    constexpr static_string() = default;
+
+    template <input_range R>
+    constexpr static_string(R &&r)
+    {
+      push(relay<R>(r));
+    }
+
+    constexpr static_string(const static_string &) = default;
+    constexpr static_string(static_string &&) = default;
+    constexpr static_string &operator=(const static_string &) = default;
+    constexpr static_string &operator=(static_string &&) = default;
+
+    template <input_range R>
+    constexpr static_string &operator=(R &&r)
+    {
+      return (*this = static_string(relay<R>(r)));
+    }
+
+  public:
+    constexpr auto size() const
+    {
+      return _size;
+    }
+
+    constexpr auto empty() const
+    {
+      return _size == 0;
+    }
+
+    constexpr auto full() const
+    {
+      return _size == N - 1;
+    }
+
+  public:
+    constexpr auto begin()
+    {
+      return _data.begin();
+    }
+
+    constexpr auto end()
+    {
+      return _data.begin() + _size;
+    }
+
+    constexpr const auto begin() const
+    {
+      return _data.begin();
+    }
+
+    constexpr const auto end() const
+    {
+      return _data.begin() + _size;
+    }
+
+    constexpr C &operator[](size_t i)
+    {
+      assert(i < N - 1);
+      return _data[i];
+    }
+
+    constexpr const C &operator[](size_t i) const
+    {
+      assert(i < N - 1);
+      return _data[i];
+    }
+
+  public:
+    template <convertible_to<C> U>
+    constexpr void push(U &&u)
+    {
+      if (!full())
+      {
+        _data[_size] = relay<U>(u);
+        _data[_size + 1] = '\0';
+        ++_size;
+      }
+    }
+
+    template <input_range R>
+    constexpr void push(R &&r)
+    {
+      copy(relay<R>(r), push_inserter<C>(*this));
+    }
+
+    constexpr maybe<C> pop()
+    {
+      if (_size != 0)
+      {
+        return maybe<C>(transfer(_data[_size--]));
+      }
+      else
+      {
+        return maybe<C>();
+      }
+    }
+  };
+
   template <character C>
   class fixed_string
   {
@@ -3952,15 +4059,12 @@ namespace stew
     }
   };
 
-  template <character C, size_t N>
-  using static_string = static_vector<C, N>;
-
-  string<char> operator"" _s(const char *s, size_t n)
+  inline string<char> operator"" _s(const char *s, size_t n)
   {
     return string<char>(string_view<char>(s, s + n));
   }
 
-  string<wchar_t> operator"" _s(const wchar_t *s, size_t n)
+  inline string<wchar_t> operator"" _s(const wchar_t *s, size_t n)
   {
     return string<wchar_t>(string_view<wchar_t>(s, s + n));
   }
