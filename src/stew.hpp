@@ -9,6 +9,7 @@ namespace stew
 {
   using nullptr_t = decltype(nullptr);
   using size_t = unsigned long;
+  using byte_t = char;
 
   //--------------------------------
   //
