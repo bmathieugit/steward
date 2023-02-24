@@ -2897,16 +2897,17 @@ class set : public list<T> {
   // lusing list<T>::remove;
 
  public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
+  constexpr void push(const T &u) {
     auto fnd = find(*this, [&u](const T &i) { return !(i < u); });
-
-    list<T>::insert(relay<U>(u), fnd);
+    
+    if (fnd == end() || *fnd != u)
+      list<T>::insert(u, fnd);
   }
 
  public:
+  constexpr auto begin() { return list<T>::begin(); }
+  constexpr auto end() { return list<T>::end(); }
   constexpr auto begin() const { return list<T>::begin(); }
-
   constexpr auto end() const { return list<T>::end(); }
 };
 
@@ -3157,6 +3158,32 @@ class string {
 
   constexpr maybe<C> pop() { return _data.pop(); }
 };
+
+template <character C>
+constexpr bool operator<(const string<C> &s0, const string<C> &s1) {
+  auto b0 = s0.begin();
+  auto e0 = s0.end();
+
+  auto b1 = s1.begin();
+  auto e1 = s1.end();
+
+  while (b0 != e0 && b1 != e1 && *b0 == *b1) {
+    ++b0;
+    ++b1;
+  }
+
+  if (b0 != e0) {
+    if (b1 != e1) {
+      return *b0 < *b1;
+    } else {
+      return false;
+    }
+  } else if (b1 == e1) {
+    return false;
+  } else {
+    return true;
+  }
+}
 
 inline string<char> operator"" _s(const char *s, size_t n) {
   return string<char>(string_view<char>(s, s + n));

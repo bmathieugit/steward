@@ -77,32 +77,6 @@ string<char> decrypt(const string<char>& in, const string<char>& master) {
 // je veux maintenant enregistrer ce résultat dans une map ou le mot de passe
 // sera stocker avec un nom (clé)
 
-template <character C>
-constexpr bool operator<(const string<C>& s0, const string<C>& s1) {
-  auto b0 = s0.begin();
-  auto e0 = s0.end();
-
-  auto b1 = s1.begin();
-  auto e1 = s1.end();
-
-  while (b0 != e0 && b1 != e1 && *b0 == *b1) {
-    ++b0;
-    ++b1;
-  }
-
-  if (b0 != e0) {
-    if (b1 != e1) {
-      return *b0 < *b1;
-    } else {
-      return false;
-    }
-  } else if (b1 == e1) {
-    return false;
-  } else {
-    return true;
-  }
-}
-
 struct password {
   string<char> _key;
   string<char> _passwd;
@@ -113,19 +87,18 @@ constexpr bool operator<(const password& p0, const password& p1) {
 }
 
 int main(int argc, char** argv) {
-  console<char>::printfln("encode hex \0", encode_hex("Hello World"_sv));
-  console<char>::printfln("decode hex \0",
-                          decode_hex(encode_hex("Hello World"_sv)));
-  string<char> s = "Hello World"_sv;
-  string<char> master = "masterpass"_sv;
-  console<char>::printfln("cypher hex \0", encode_hex(encrypt(s, master)));
-  console<char>::printfln("uncyper hex \0",
-                          decrypt(encrypt(s, master), master));
 
-  string<char> s0 = "abc"_sv;
-  string<char> s1 = "dbc"_sv;
+  set<string<char>> ss;
+  ss.push("coucou"_sv);
+  ss.push("tutu"_sv);
+  ss.push("tutu"_sv);
+  ss.push("coucouc2"_sv);
+  ss.push("coucou"_sv);
 
-  console<char>::printfln("\0 < \0 : \0", s0, s1, s0 < s1);
+  for (auto && s : ss)
+  {
+    console<char>::printfln("\0", s);
+  }
 
-  return 0;
-}
+
+  return 0; }
