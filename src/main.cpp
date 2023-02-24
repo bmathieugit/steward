@@ -79,6 +79,7 @@ string<char> decrypt(const string<char>& in, const string<char>& master) {
 
 struct password {
   string<char> _key;
+  string<char> _login;
   string<char> _passwd;
 };
 
@@ -86,19 +87,17 @@ constexpr bool operator<(const password& p0, const password& p1) {
   return p0._key < p1._key;
 }
 
+constexpr bool operator!=(const password& p0, const password& p1) {
+  return p0._key != p1._key;
+}
+
 int main(int argc, char** argv) {
+  set<password> ss;
+  ss.push(password{"github.com"_sv, "BobSmith2023"_sv, "bobsimbel12!!!"_sv});
 
-  set<string<char>> ss;
-  ss.push("coucou"_sv);
-  ss.push("tutu"_sv);
-  ss.push("tutu"_sv);
-  ss.push("coucouc2"_sv);
-  ss.push("coucou"_sv);
-
-  for (auto && s : ss)
-  {
-    console<char>::printfln("\0", s);
+  for (auto&& s : ss) {
+    console<char>::printfln("'\0'->('\0':'\0')", s._key, s._login, s._passwd);
   }
 
-
-  return 0; }
+  return 0;
+}
