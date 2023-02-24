@@ -78,14 +78,14 @@ string<char> decrypt(const string<char>& in, const string<char>& master) {
 // sera stocker avec un nom (clé)
 
 template <character C>
-constexpr bool operator<(const string<C>& s0, const string<C>& s1) {
+constexpr bool operator<(string_view<char> s0, string_view<char> s1) {
   auto b0 = s0.begin();
   auto e0 = s0.end();
 
   auto b1 = s1.begin();
   auto e1 = s1.end();
 
-  while (b0 != e0 && b1 != e1) {
+  while (b0 != e0 && b1 != e1 && *b0 == *b1) {
     ++b0;
     ++b1;
   }
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
                           decrypt(encrypt(s, master), master));
 
   string<char> s0 = "abc"_sv;
-  string<char> s1 = "abc"_sv;
+  string<char> s1 = "dbc"_sv;
 
   console<char>::printfln("\0 < \0 : \0", s0, s1, s0 < s1);
 
