@@ -41,10 +41,6 @@ string<char> decode_hex(const string<char>& in) {
   return out;
 }
 
-// J'ai maintenant une fonction de transformation de mot de passe chiffré en
-// quelque chose de lisible par un humain. On va donc faire un algorithme de
-// chiffrement basique.
-
 string<char> encrypt(const string<char>& in, const string<char>& master) {
   string<char> out;
 
@@ -73,10 +69,6 @@ string<char> decrypt(const string<char>& in, const string<char>& master) {
   return out;
 }
 
-// J'ai donc deux fonctions capables de chiffrer et déchiffrer n'importe quoi
-// je veux maintenant enregistrer ce résultat dans une map ou le mot de passe
-// sera stocker avec un nom (clé)
-
 struct password {
   string<char> _key;
   string<char> _login;
@@ -95,32 +87,15 @@ class args {
  public:
   fixed_vector<string_view<char>> _argv;
 
- private:
-  size_t strlen(const char* s) {
-    size_t len = 0;
-
-    if (s != nullptr)
-      while (*s != '\0') {
-        ++len;
-        ++s;
-      }
-
-    return len;  // FIXME: dans le code il va falloir glisser dans
-                     // stringview plutot qu'ici ou c'est bien moche
-  }
-
  public:
   args(int argc, char** argv) : _argv(argc) {
     for (int i = 0; i < argc; ++i) {
-      string_view<char> tmp(argv[i], argv[i] + strlen(argv[i]));
-      _argv.push(string_view<char>(argv[i], argv[i] + strlen(argv[i])));
+      _argv.push(string_view<char>(argv[i]));
     }
   }
 
   bool contains(string_view<char> shortkey, string_view<char> key) {
-    return find(_argv, [&](string_view<char> c) {
-             return c == shortkey || c == key;
-           }) != _argv.end();
+    return find(_argv, val(key) == p0 || val(shortkey) == p0);
   }
 
   string_view<char> get(string_view<char> shortkey, string_view<char> key) {
@@ -150,11 +125,11 @@ int main(int argc, char** argv) {
     set<password> ss;
 
     ss.push(password{"github.com"_sv, "BobSmith2023"_sv, "bobsimbel12!!!"_sv});
-    ss.push(
-        password{"microsoft.com"_sv, "ArandJuvini"_sv, "MeliSanDre@/!!%"_sv});
+    ss.push(password{"microsoft.com"_sv, "ArandJuvini"_sv, "MeliSanDre@/!!%"_sv});
 
     auto fnd = find(ss, [&key](const password& p) {
-      console<char>::printfln("\0(\0) vs \0(\0)", p._key, p._key.size(), key, key.size());
+      console<char>::printfln("\0(\0) vs \0(\0)", p._key, p._key.size(), key,
+                              key.size());
       return p._key == key;
     });
 

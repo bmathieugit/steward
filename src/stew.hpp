@@ -1102,6 +1102,16 @@ struct placeholder {
   }
 };
 
+template <typename OP>
+struct operation {
+  OP op;
+
+  template <typename... T>
+  constexpr auto operator()(T &&...t) const -> decltype(auto) {
+    return op(relay<T>(t)...);
+  }
+};
+
 constexpr auto p0 = placeholder<0>{};
 constexpr auto p1 = placeholder<1>{};
 constexpr auto p2 = placeholder<2>{};
@@ -1119,6 +1129,10 @@ constexpr bool placeholder_like = false;
 
 template <size_t N>
 constexpr bool placeholder_like<placeholder<N>> = true;
+
+template <typename T>
+constexpr bool placeholder_like<operation<T>> = true;
+
 }  // namespace impl
 
 template <typename T>
@@ -1126,274 +1140,282 @@ concept placeholder_like = impl::placeholder_like<T>;
 
 template <size_t N0>
 constexpr auto operator++(placeholder<N0> pn0) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return ++pn0(relay<A>(args)...); };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return ++pn0(relay<A>(args)...); }};
 }
 
 template <size_t N0>
 constexpr auto operator++(placeholder<N0> pn0, int) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return pn0(relay<A>(args)...)++; };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return pn0(relay<A>(args)...)++; }};
 }
 
 template <size_t N0>
 constexpr auto operator--(placeholder<N0> pn0) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return --pn0(relay<A>(args)...); };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return --pn0(relay<A>(args)...); }};
 }
 
 template <size_t N0>
 constexpr auto operator--(placeholder<N0> pn0, int) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return pn0(relay<A>(args)...)--; };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return pn0(relay<A>(args)...)--; }};
 }
 
 template <size_t N0>
 constexpr auto operator!(placeholder<N0> pn0) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return !pn0(relay<A>(args)...); };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return !pn0(relay<A>(args)...); }};
 }
 
 template <size_t N0>
 constexpr auto operator+(placeholder<N0> pn0) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return +pn0(relay<A>(args)...); };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return +pn0(relay<A>(args)...); }};
 }
 
 template <size_t N0>
 constexpr auto operator-(placeholder<N0> pn0) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return -pn0(relay<A>(args)...); };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return -pn0(relay<A>(args)...); }};
 }
 
 template <size_t N0>
 constexpr auto operator~(placeholder<N0> pn0) -> decltype(auto) {
-  return [pn0]<typename... A>(A &&...args) { return ~pn0(relay<A>(args)...); };
+  return operation{
+      [pn0]<typename... A>(A &&...args) { return ~pn0(relay<A>(args)...); }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator+(P0 p0, P1 p1) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) + p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator-(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) - p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator/(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) / p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator*(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) * p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator%(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) % p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator|(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) | p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator&(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) & p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator^(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) ^ p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator||(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) || p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator&&(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) && p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator<<(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) << p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator>>(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) >> p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator==(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) == p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator!=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) != p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator<(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) < p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator>(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) > p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator<=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) <= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator>=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) >= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator<=>(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) <=> p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator+=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) += p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator-=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) -= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator/=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) /= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator*=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) *= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator%=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) %= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator&=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) &= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator|=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) |= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator^=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) ^= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator>>=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) >>= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 template <typename P0, typename P1>
   requires(placeholder_like<P0> || placeholder_like<P1>)
 constexpr auto operator<<=(P0 p0, P1 p1) -> decltype(auto) {
-  return [p0, p1]<typename... A>(A &&...args) {
+  return operation{[p0, p1]<typename... A>(A &&...args) {
     return p0(relay<A>(args)...) <<= p1(relay<A>(args)...);
-  };
+  }};
 }
 
 //---------------------------
@@ -3141,14 +3163,16 @@ class string_view {
  public:
   constexpr ~string_view() = default;
   constexpr string_view() = default;
-  constexpr string_view(const C* b, const C* e):_b(b), _e(e){}
+  constexpr string_view(const C *b, const C *e) : _b(b), _e(e) {}
   constexpr string_view(const C *s) : _b(s), _e(s + limit(s)) {}
   template <size_t N>
   constexpr string_view(const C (&s)[N]) : _b(s), _e(s + limit(s)) {}
   constexpr string_view(const string<C> &s) : _b(s.begin()), _e(s.end()) {}
-  constexpr string_view(const fixed_string<C> &s) : _b(s.begin()), _e(s.end()) {}
+  constexpr string_view(const fixed_string<C> &s)
+      : _b(s.begin()), _e(s.end()) {}
   template <size_t N>
-  constexpr string_view(const static_string<C, N> &s) : _b(s.begin()), _e(s.end()) {}
+  constexpr string_view(const static_string<C, N> &s)
+      : _b(s.begin()), _e(s.end()) {}
   constexpr string_view(const string_view &) = default;
   constexpr string_view(string_view &&) = default;
   constexpr string_view &operator=(const string_view &) = default;
@@ -3164,20 +3188,11 @@ class string_view {
   constexpr auto end() const { return _e; }
 
  public:
-  constexpr auto size() const
-  {
-    return _b == nullptr ? 0 : _e - _b;
-  }
+  constexpr auto size() const { return _b == nullptr ? 0 : _e - _b; }
 
-  constexpr auto empty() const
-  {
-    return size() == 0;
-  }
+  constexpr auto empty() const { return size() == 0; }
 
-  constexpr const auto &operator[](size_t i) const
-  {
-    return (_b[i]);
-  }
+  constexpr const auto &operator[](size_t i) const { return (_b[i]); }
 
  private:
   constexpr size_t limit(const C *s) {
@@ -3193,7 +3208,7 @@ class string_view {
   }
 };
 
-template<typename T, typename C>
+template <typename T, typename C>
 concept string_view_like = convertible_to<T, string_view<C>>;
 
 template <character C>
