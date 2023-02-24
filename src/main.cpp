@@ -78,7 +78,7 @@ string<char> decrypt(const string<char>& in, const string<char>& master) {
 // sera stocker avec un nom (clé)
 
 template <character C>
-constexpr bool operator<(string_view<char> s0, string_view<char> s1) {
+constexpr bool operator<(const string<C>& s0, const string<C>& s1) {
   auto b0 = s0.begin();
   auto e0 = s0.end();
 
