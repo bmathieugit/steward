@@ -25,4 +25,4 @@ building/steward.app: building/main.o
 compile: building/steward.app
 
 run: compile
-	./building/steward.app
+	./building/steward.app -k github.com

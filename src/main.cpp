@@ -91,12 +91,78 @@ constexpr bool operator!=(const password& p0, const password& p1) {
   return p0._key != p1._key;
 }
 
-int main(int argc, char** argv) {
-  set<password> ss;
-  ss.push(password{"github.com"_sv, "BobSmith2023"_sv, "bobsimbel12!!!"_sv});
+class args {
+ public:
+  fixed_vector<string_view<char>> _argv;
 
-  for (auto&& s : ss) {
-    console<char>::printfln("'\0'->('\0':'\0')", s._key, s._login, s._passwd);
+ private:
+  size_t strlen(const char* s) {
+    size_t len = 0;
+
+    if (s != nullptr)
+      while (*s != '\0') {
+        ++len;
+        ++s;
+      }
+
+    return len;  // FIXME: dans le code il va falloir glisser dans
+                     // stringview plutot qu'ici ou c'est bien moche
+  }
+
+ public:
+  args(int argc, char** argv) : _argv(argc) {
+    for (int i = 0; i < argc; ++i) {
+      string_view<char> tmp(argv[i], argv[i] + strlen(argv[i]));
+      _argv.push(string_view<char>(argv[i], argv[i] + strlen(argv[i])));
+    }
+  }
+
+  bool contains(string_view<char> shortkey, string_view<char> key) {
+    return find(_argv, [&](string_view<char> c) {
+             return c == shortkey || c == key;
+           }) != _argv.end();
+  }
+
+  string_view<char> get(string_view<char> shortkey, string_view<char> key) {
+    auto fnd = find(
+        _argv, [&](string_view<char> c) { return c == shortkey || c == key; });
+
+    if (fnd != _argv.end()) {
+      ++fnd;
+
+      if (fnd != _argv.end()) return *fnd;
+    }
+
+    return ""_sv;
+  }
+};
+
+int main(int argc, char** argv) {
+  args a(argc, argv);
+
+  for (string_view<char> arg : a._argv) {
+    console<char>::printfln("arg in argv : '\0'", arg);
+  }
+
+  if (a.contains("-k", "--key")) {
+    string_view<char> key = a.get("-k", "--key");
+
+    set<password> ss;
+
+    ss.push(password{"github.com"_sv, "BobSmith2023"_sv, "bobsimbel12!!!"_sv});
+    ss.push(
+        password{"microsoft.com"_sv, "ArandJuvini"_sv, "MeliSanDre@/!!%"_sv});
+
+    auto fnd = find(ss, [&key](const password& p) {
+      console<char>::printfln("\0(\0) vs \0(\0)", p._key, p._key.size(), key, key.size());
+      return p._key == key;
+    });
+
+    if (fnd != ss.end()) {
+      console<char>::printfln("'\0'", (*fnd)._passwd);
+    }
+  } else {
+    console<char>::println("key not found");
   }
 
   return 0;

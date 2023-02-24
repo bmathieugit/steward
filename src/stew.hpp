@@ -1653,22 +1653,18 @@ view(I b, I e) -> view<I>;
 
 template <input_range R1, input_range R2>
 constexpr bool equals(const R1 &r1, const R2 &r2) {
-  if (&r1 == &r2) {
-    return true;
-  } else {
-    auto b1 = begin(r1);
-    auto b2 = begin(r2);
+  auto b1 = begin(r1);
+  auto b2 = begin(r2);
 
-    auto e1 = end(r1);
-    auto e2 = end(r2);
+  auto e1 = end(r1);
+  auto e2 = end(r2);
 
-    while (b1 != e1 && b2 != e2 && *b1 == *b2) {
-      ++b1;
-      ++b2;
-    }
-
-    return b1 == e1 && b2 == e2;
+  while (b1 != e1 && b2 != e2 && *b1 == *b2) {
+    ++b1;
+    ++b2;
   }
+
+  return b1 == e1 && b2 == e2;
 }
 
 template <input_range R1, input_range R2>
@@ -2899,9 +2895,8 @@ class set : public list<T> {
  public:
   constexpr void push(const T &u) {
     auto fnd = find(*this, [&u](const T &i) { return !(i < u); });
-    
-    if (fnd == end() || *fnd != u)
-      list<T>::insert(u, fnd);
+
+    if (fnd == end() || *fnd != u) list<T>::insert(u, fnd);
   }
 
  public:
@@ -2917,30 +2912,8 @@ class set : public list<T> {
 //
 //----------------------------
 
-template <character C>
-using string_view = view<const C *>;
-
-template <character C>
-constexpr string_view<C> substr(string_view<C> s, size_t from) {
-  return string_view<C>(begin(s) + from, end(s));
-}
-
-template <character C>
-constexpr string_view<C> substr(string_view<C> s, size_t from, size_t n) {
-  return string_view<C>(begin(s) + from, begin(s) + from + n);
-}
-
-constexpr string_view<char> operator"" _sv(const char *s, size_t n) {
-  return string_view<char>(s, s + n);
-}
-
-constexpr string_view<wchar_t> operator"" _sv(const wchar_t *s, size_t n) {
-  return string_view<wchar_t>(s, s + n);
-}
-
-template <typename S, typename C>
-concept string_view_like = character<C> && convertible_to<S, string_view<C>>;
-
+// template <character C>
+// using string_view = view<const C *>;
 template <character C, size_t N>
 class static_string {
  private:
@@ -3158,6 +3131,88 @@ class string {
 
   constexpr maybe<C> pop() { return _data.pop(); }
 };
+
+template <character C>
+class string_view {
+ private:
+  const C *_b = nullptr;
+  const C *_e = nullptr;
+
+ public:
+  constexpr ~string_view() = default;
+  constexpr string_view() = default;
+  constexpr string_view(const C* b, const C* e):_b(b), _e(e){}
+  constexpr string_view(const C *s) : _b(s), _e(s + limit(s)) {}
+  template <size_t N>
+  constexpr string_view(const C (&s)[N]) : _b(s), _e(s + limit(s)) {}
+  constexpr string_view(const string<C> &s) : _b(s.begin()), _e(s.end()) {}
+  constexpr string_view(const fixed_string<C> &s) : _b(s.begin()), _e(s.end()) {}
+  template <size_t N>
+  constexpr string_view(const static_string<C, N> &s) : _b(s.begin()), _e(s.end()) {}
+  constexpr string_view(const string_view &) = default;
+  constexpr string_view(string_view &&) = default;
+  constexpr string_view &operator=(const string_view &) = default;
+  constexpr string_view &operator=(string_view &&) = default;
+
+ public:
+  constexpr auto begin() { return _b; }
+
+  constexpr auto end() { return _e; }
+
+  constexpr auto begin() const { return _b; }
+
+  constexpr auto end() const { return _e; }
+
+ public:
+  constexpr auto size() const
+  {
+    return _b == nullptr ? 0 : _e - _b;
+  }
+
+  constexpr auto empty() const
+  {
+    return size() == 0;
+  }
+
+  constexpr const auto &operator[](size_t i) const
+  {
+    return (_b[i]);
+  }
+
+ private:
+  constexpr size_t limit(const C *s) {
+    size_t lim = 0;
+
+    if (s != nullptr)
+      while (*s != '\0') {
+        ++lim;
+        ++s;
+      }
+
+    return lim;
+  }
+};
+
+template<typename T, typename C>
+concept string_view_like = convertible_to<T, string_view<C>>;
+
+template <character C>
+constexpr string_view<C> substr(string_view<C> s, size_t from) {
+  return string_view<C>(begin(s) + from, end(s));
+}
+
+template <character C>
+constexpr string_view<C> substr(string_view<C> s, size_t from, size_t n) {
+  return string_view<C>(begin(s) + from, begin(s) + from + n);
+}
+
+constexpr string_view<char> operator"" _sv(const char *s, size_t n) {
+  return string_view<char>(s, s + n);
+}
+
+constexpr string_view<wchar_t> operator"" _sv(const wchar_t *s, size_t n) {
+  return string_view<wchar_t>(s, s + n);
+}
 
 template <character C>
 constexpr bool operator<(const string<C> &s0, const string<C> &s1) {
