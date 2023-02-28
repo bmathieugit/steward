@@ -2488,36 +2488,73 @@ class static_vector {
 };
 
 template <typename T>
-class fixed_vector {
+class fixed_contigous_allocator {
+ public:
+   using storage = owning<T[]>;
+
+  static constexpr owning<T[]> init(size_t max) {
+    return owning<T[]>(new T[max]);
+  }
+
+  template <convertible_to<T> U>
+  static constexpr void push(owning<T[]> &store, size_t &size, size_t &max,
+                             U &&u) {
+    if (size != max) {
+      store[size] = relay<U>(u);
+      size += 1;
+    }
+  }
+
+  static constexpr maybe<T> pop(owning<T[]> &store, size_t &size) {
+    if (size != 0) {
+      return maybe<T>(transfer(store[size--]));
+    } else {
+      return maybe<T>();
+    }
+  }
+};
+
+template <typename T>
+class fixed_contigous {
  private:
-  size_t _size{0};
-  size_t _max{0};
+  size_t _size = 0;
+  size_t _max = 0;
   owning<T[]> _data;
 
+  using A = fixed_contigous_allocator<T>;
+
  public:
-  constexpr ~fixed_vector() = default;
-  constexpr fixed_vector() = default;
+  constexpr ~fixed_contigous() = default;
+  constexpr fixed_contigous() = default;
 
-  constexpr fixed_vector(size_t max)
-      : _size{0}, _max{max}, _data{new T[_max]} {}
+  constexpr fixed_contigous(size_t max)
+      : _size(0), _max(max), _data(A::init(max)) {}
 
-  constexpr fixed_vector(const fixed_vector &o) : fixed_vector(o._max) {
+  constexpr fixed_contigous(const fixed_contigous &o)
+      : fixed_contigous(o._max) {
     push(o);
   }
 
-  constexpr fixed_vector(fixed_vector &&o)
-      : _size{transfer(o._size)},
-        _max{transfer(o._max)},
-        _data{transfer(o._data)} {}
+  constexpr fixed_contigous(fixed_contigous &&o)
+      : _size(transfer(o._size)),
+        _max(transfer(o._max)),
+        _data(transfer(o._data)) {}
 
   template <input_range R>
-  constexpr fixed_vector(R &&r)
-    requires distanciable_iterator<decltype(stew::begin(r))>
-      : fixed_vector(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
+  constexpr fixed_contigous(R &&r)
+    requires distanciable_iterator<decltype(stew::begin(relay<R>(r)))>
+      : fixed_contigous(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
     push(relay<R>(r));
   }
 
-  constexpr fixed_vector &operator=(fixed_vector o) {
+  template <input_range R>
+  constexpr fixed_contigous(R &&r)
+    requires(!distanciable_iterator<decltype(stew::begin(relay<R>(r)))>)
+  {
+    push(relay<R>(r));
+  }
+
+  constexpr fixed_contigous &operator=(fixed_contigous o) {
     _size = transfer(o._size);
     _max = transfer(o._max);
     _data = transfer(o._data);
@@ -2525,17 +2562,14 @@ class fixed_vector {
   }
 
   template <input_range R>
-  constexpr fixed_vector &operator=(R &&r) {
-    return (*this = fixed_vector(relay<R>(r)));
+  constexpr fixed_contigous &operator=(R &&r) {
+    return (*this = fixed_contigous(relay<R>(r)));
   }
 
  public:
   constexpr auto begin() { return _data.get(); }
-
   constexpr auto end() { return begin() + _size; }
-
   constexpr const auto begin() const { return _data.get(); }
-
   constexpr const auto end() const { return begin() + _size; }
 
   constexpr T &operator[](size_t i) {
@@ -2550,18 +2584,12 @@ class fixed_vector {
 
  public:
   constexpr bool empty() const { return _size == 0; }
-
-  constexpr bool full() const { return _size == _max; }
-
   constexpr auto size() const { return _size; }
 
  public:
   template <convertible_to<T> U>
   constexpr void push(U &&u) {
-    if (!full()) {
-      _data[_size] = relay<U>(u);
-      _size += 1;
-    }
+    A::push(_data, _size, _max, relay<U>(u));
   }
 
   template <input_range R>
@@ -2571,14 +2599,42 @@ class fixed_vector {
     copy(relay<R>(r), push_inserter<T>(*this));
   }
 
-  constexpr maybe<T> pop() {
-    if (_size != 0) {
-      return maybe<T>(transfer(_data[_size--]));
+  constexpr maybe<T> pop() { return A::pop(_data, _size); }
+};
+
+
+template <typename T>
+class contigous_allocator {
+ public:
+  using storage = fixed_contigous<T>;
+
+
+   static constexpr storage init(size_t max) {
+    return storage(new T[max]);
+  }
+
+  template <convertible_to<T> U>
+  static constexpr void push(owning<T[]> &store, size_t &size, size_t &max,
+                             U &&u) {
+    if (size != max) {
+      store[size] = relay<U>(u);
+      size += 1;
+    }
+  }
+
+  static constexpr maybe<T> pop(owning<T[]> &store, size_t &size) {
+    if (size != 0) {
+      return maybe<T>(transfer(store[size--]));
     } else {
       return maybe<T>();
     }
   }
 };
+
+
+
+template <typename T>
+using fixed_vector = fixed_contigous<T>;
 
 template <typename T>
 class vector {
@@ -4957,9 +5013,9 @@ namespace bdd {
 // taille. et enfin un fichier contenant l'index du fichier principal.
 //
 // Cette base de donnée sera orienté document. Ce qui signifie que chaque
-// "document" enregistrée sera identifié par un unique id qui sera utilisé pour
-// localiser la donnée à l'aide de l'index. Les docuemnts seront de taille
-// variable.
+// "document" enregistrée sera identifié par un unique id qui sera utilisé
+// pour localiser la donnée à l'aide de l'index. Les docuemnts seront de
+// taille variable.
 
 // on va donc commencer par créer une classe collection qui sera la classe
 // représentant la bdd.
@@ -4991,13 +5047,13 @@ class collection {
   }
 };
 
-// on va faire une classe index qui sera paramétrée par le type de l'index (par
-// défaut un size_t). cette classe sera simplement un wrapper autour d'une liste
-// chainée de paire {key:T, localisation:long} On devra maintenir cette liste
-// chainée ordonnée de tel sorte que les insertions/suppression soient les plus
-// rapides possibles. Ici le paramètre T représente le type de la clé unique.
-// Ici le paramètre U représente le type de la localisation/valeur identifiée
-// par T.
+// on va faire une classe index qui sera paramétrée par le type de l'index
+// (par défaut un size_t). cette classe sera simplement un wrapper autour
+// d'une liste chainée de paire {key:T, localisation:long} On devra maintenir
+// cette liste chainée ordonnée de tel sorte que les insertions/suppression
+// soient les plus rapides possibles. Ici le paramètre T représente le type de
+// la clé unique. Ici le paramètre U représente le type de la
+// localisation/valeur identifiée par T.
 template <typename T, typename U = long>
 class index {};
 
@@ -5007,9 +5063,9 @@ class index {};
 // emplacement qui auront été libérés et qui sont libres pour une nouvelle
 // écriture (la taille de cet emplacement étant répéré au moment de la
 // libération). Pour tenir compte de ces emplacements libres on utilisera une
-// liste chainée ordonnée par la taille croissante des emplacements disponibles
-// dans le fichier. Si cette liste chainée est vide alors on écrira tout
-// simplement à la fin du fichier.
+// liste chainée ordonnée par la taille croissante des emplacements
+// disponibles dans le fichier. Si cette liste chainée est vide alors on
+// écrira tout simplement à la fin du fichier.
 
 // la structure free_location va permettre de recenser les endroits qui sont
 // libres au sein d'un fichier en cours d'écriture; Cette structure sera
