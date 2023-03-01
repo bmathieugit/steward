@@ -2487,74 +2487,47 @@ class static_vector {
   }
 };
 
-template <typename T>
-class fixed_contigous_allocator {
- public:
-   using storage = owning<T[]>;
-
-  static constexpr owning<T[]> init(size_t max) {
-    return owning<T[]>(new T[max]);
-  }
-
-  template <convertible_to<T> U>
-  static constexpr void push(owning<T[]> &store, size_t &size, size_t &max,
-                             U &&u) {
-    if (size != max) {
-      store[size] = relay<U>(u);
-      size += 1;
-    }
-  }
-
-  static constexpr maybe<T> pop(owning<T[]> &store, size_t &size) {
-    if (size != 0) {
-      return maybe<T>(transfer(store[size--]));
-    } else {
-      return maybe<T>();
-    }
-  }
-};
-
-template <typename T>
-class fixed_contigous {
+template <typename T, typename ALLOC>
+class basic_container {
  private:
+  using storage = typename ALLOC::storage;
   size_t _size = 0;
   size_t _max = 0;
-  owning<T[]> _data;
-
-  using A = fixed_contigous_allocator<T>;
+  typename ALLOC::storage _data;
 
  public:
-  constexpr ~fixed_contigous() = default;
-  constexpr fixed_contigous() = default;
+  constexpr ~basic_container() { ALLOC::destroy(_data); };
 
-  constexpr fixed_contigous(size_t max)
-      : _size(0), _max(max), _data(A::init(max)) {}
+  constexpr basic_container() = default;
 
-  constexpr fixed_contigous(const fixed_contigous &o)
-      : fixed_contigous(o._max) {
+  constexpr basic_container(size_t max)
+      : _size(0), _max(max), _data(ALLOC::init(max)) {}
+
+  constexpr basic_container(const basic_container &o)
+      : basic_container(o._max) {
     push(o);
   }
 
-  constexpr fixed_contigous(fixed_contigous &&o)
+  constexpr basic_container(basic_container &&o)
       : _size(transfer(o._size)),
         _max(transfer(o._max)),
         _data(transfer(o._data)) {}
 
   template <input_range R>
-  constexpr fixed_contigous(R &&r)
+  constexpr basic_container(R &&r)
     requires distanciable_iterator<decltype(stew::begin(relay<R>(r)))>
-      : fixed_contigous(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
+      : basic_container(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
     push(relay<R>(r));
   }
 
   template <input_range R>
-  constexpr fixed_contigous(R &&r)
+  constexpr basic_container(R &&r)
     requires(!distanciable_iterator<decltype(stew::begin(relay<R>(r)))>)
   {
     push(relay<R>(r));
   }
 
-  constexpr fixed_contigous &operator=(fixed_contigous o) {
+  constexpr basic_container &operator=(basic_container o) {
     _size = transfer(o._size);
     _max = transfer(o._max);
     _data = transfer(o._data);
@@ -2562,15 +2535,15 @@ class fixed_contigous {
   }
 
   template <input_range R>
-  constexpr fixed_contigous &operator=(R &&r) {
-    return (*this = fixed_contigous(relay<R>(r)));
+  constexpr basic_container &operator=(R &&r) {
+    return (*this = basic_container(relay<R>(r)));
   }
 
  public:
-  constexpr auto begin() { return _data.get(); }
-  constexpr auto end() { return begin() + _size; }
-  constexpr const auto begin() const { return _data.get(); }
-  constexpr const auto end() const { return begin() + _size; }
+  constexpr auto begin() { return ALLOC::begin(_data, _size); }
+  constexpr auto end() { return ALLOC::end(_data, _size); }
+  constexpr const auto begin() const { return ALLOC::begin(_data, _size); }
+  constexpr const auto end() const { return ALLOC::end(_data, _size); }
 
   constexpr T &operator[](size_t i) {
     assert(i < _size);
@@ -2589,7 +2562,7 @@ class fixed_contigous {
  public:
   template <convertible_to<T> U>
   constexpr void push(U &&u) {
-    A::push(_data, _size, _max, relay<U>(u));
+    ALLOC::push(_data, _size, _max, relay<U>(u));
   }
 
   template <input_range R>
@@ -2599,114 +2572,73 @@ class fixed_contigous {
     copy(relay<R>(r), push_inserter<T>(*this));
   }
 
-  constexpr maybe<T> pop() { return A::pop(_data, _size); }
+  constexpr maybe<T> pop() { return ALLOC::pop(_data, _size); }
 };
 
-
 template <typename T>
-class contigous_allocator {
+class fixed_vector_allocator {
  public:
-  using storage = fixed_contigous<T>;
+  using storage = owning<T[]>;
 
+  static constexpr void destroy(storage &store) {}
 
-   static constexpr storage init(size_t max) {
-    return storage(new T[max]);
-  }
+  static constexpr storage init(size_t max) { return storage(new T[max]); }
 
   template <convertible_to<T> U>
-  static constexpr void push(owning<T[]> &store, size_t &size, size_t &max,
-                             U &&u) {
+  static constexpr void push(storage &store, size_t &size, size_t &max, U &&u) {
     if (size != max) {
       store[size] = relay<U>(u);
       size += 1;
     }
   }
 
-  static constexpr maybe<T> pop(owning<T[]> &store, size_t &size) {
+  static constexpr maybe<T> pop(storage &store, size_t &size) {
     if (size != 0) {
       return maybe<T>(transfer(store[size--]));
     } else {
       return maybe<T>();
     }
   }
+
+  static constexpr auto begin(const storage &store, size_t size) {
+    return store.get();
+  }
+
+  static constexpr auto end(const storage &store, size_t size) {
+    return store.get() + size;
+  }
 };
 
-
+template <typename T>
+using fixed_vector = basic_container<T, fixed_vector_allocator<T>>;
 
 template <typename T>
-using fixed_vector = fixed_contigous<T>;
-
-template <typename T>
-class vector {
- private:
-  fixed_vector<T> _data;
-
+class vector_allocator {
  public:
-  constexpr ~vector() = default;
-  constexpr vector() = default;
-  constexpr vector(size_t max) : _data(max) {}
+  using storage = fixed_vector<T>;
 
-  template <input_range R>
-  constexpr vector(R &&r)
-      : vector(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
-    push(relay<R>(r));
-  }
+  static constexpr void destroy(storage &store) {}
 
-  constexpr vector(const vector &) = default;
-  constexpr vector(vector &) = default;
-  constexpr vector &operator=(const vector &) = default;
-  constexpr vector &operator=(vector &&) = default;
+  static constexpr storage init(size_t max) { return storage(max); }
 
-  template <input_range R>
-  constexpr vector &operator=(R &&r) {
-    return (*this = vector(relay<R>(r)));
-  }
-
- public:
-  constexpr auto begin() { return stew::begin(_data); }
-
-  constexpr auto end() { return stew::end(_data); }
-
-  constexpr const auto begin() const { return stew::begin(_data); }
-
-  constexpr const auto end() const { return stew::end(_data); }
-
-  constexpr T &operator[](size_t i) {
-    assert(i < size());
-    return _data[i];
-  }
-
-  constexpr const T &operator[](size_t i) const {
-    assert(i < size());
-    return _data[i];
-  }
-
- public:
-  constexpr auto size() const { return _data.size(); }
-
-  constexpr auto empty() const { return _data.empty(); }
-
-  constexpr auto full() const { return _data.full(); }
-
- public:
   template <convertible_to<T> U>
-  constexpr void push(U &&u) {
-    if (_data.full()) {
-      fixed_vector<T> tmp = transfer(_data);
-      _data = fixed_vector<T>(tmp.size() * 2 + 10);
-      _data.push(transfer(tmp));
+  static constexpr void push(storage &store, size_t &size, size_t &max, U &&u) {
+    if (size == max) {
+      storage tmp = transfer(store);
+      store = store(tmp.size() * 2 + 10);
+      store.push(transfer(tmp));
     }
 
-    _data.push(relay<U>(u));
+    store.push(relay<U>(u));
   }
 
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<T>(*this));
+  static constexpr maybe<T> pop(storage &store, size_t &size) {
+    return store.pop();
   }
-
-  constexpr auto pop() { return _data.pop(); }
 };
+
+template <typename T>
+using vector = basic_container<T, vector_allocator<T>>;
 
 template <typename T>
 class list {

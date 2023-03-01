@@ -140,5 +140,17 @@ int main(int argc, char** argv) {
     console<char>::println("key not found");
   }
 
+
+  fixed_vector<int> is(10);
+
+  is.push(1);
+  is.push(2);
+  is.push(3);
+
+  for (int i : is)
+  {
+    console<char>::printfln("\0", i);
+  }
+
   return 0;
 }
