@@ -3,7 +3,7 @@
 #include <stew.hpp>
 
 using namespace stew;
-
+/*
 string<char> encode_hex(const string<char>& in) {
   constexpr string_view<char> encode_table = "0123456789abcdef";
   string<char> out(in.size() * 2);
@@ -112,32 +112,44 @@ class args {
   }
 };
 
+*/
 int main(int argc, char** argv) {
-  args a(argc, argv);
+  /*  args a(argc, argv);
 
-  for (string_view<char> arg : a._argv) {
-    console<char>::printfln("arg in argv : '\0'", arg);
-  }
-
-  if (a.contains("-k", "--key")) {
-    string_view<char> key = a.get("-k", "--key");
-
-    set<password> ss;
-
-    ss.push(password{"github.com"_sv, "BobSmith2023"_sv, "bobsimbel12!!!"_sv});
-    ss.push(password{"microsoft.com"_sv, "ArandJuvini"_sv, "MeliSanDre@/!!%"_sv});
-
-    auto fnd = find(ss, [&key](const password& p) {
-      console<char>::printfln("\0(\0) vs \0(\0)", p._key, p._key.size(), key,
-                              key.size());
-      return p._key == key;
-    });
-
-    if (fnd != ss.end()) {
-      console<char>::printfln("'\0'", (*fnd)._passwd);
+    for (string_view<char> arg : a._argv) {
+      console<char>::printfln("arg in argv : '\0'", arg);
     }
-  } else {
-    console<char>::println("key not found");
+
+    if (a.contains("-k", "--key")) {
+      string_view<char> key = a.get("-k", "--key");
+
+      set<password> ss;
+
+      ss.push(password{"github.com"_sv, "BobSmith2023"_sv,
+    "bobsimbel12!!!"_sv}); ss.push(password{"microsoft.com"_sv,
+    "ArandJuvini"_sv, "MeliSanDre@/!!%"_sv});
+
+      auto fnd = find(ss, [&key](const password& p) {
+        console<char>::printfln("\0(\0) vs \0(\0)", p._key, p._key.size(), key,
+                                key.size());
+        return p._key == key;
+      });
+
+      if (fnd != ss.end()) {
+        console<char>::printfln("'\0'", (*fnd)._passwd);
+      }
+    } else {
+      console<char>::println("key not found");
+    }
+  */
+
+  fixed_vector2<int> ints(3);
+  ints.push(0);
+  ints.push(1);
+  ints.push(2);
+
+  for (int i : ints) {
+    printf("%d\n", i);
   }
 
   return 0;
