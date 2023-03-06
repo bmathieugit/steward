@@ -3,7 +3,7 @@
 #include <stew.hpp>
 
 using namespace stew;
-/*
+
 string<char> encode_hex(const string<char>& in) {
   constexpr string_view<char> encode_table = "0123456789abcdef";
   string<char> out(in.size() * 2);
@@ -83,6 +83,14 @@ constexpr bool operator!=(const password& p0, const password& p1) {
   return p0._key != p1._key;
 }
 
+inline int strlen(const char* s)
+{
+  auto cur = s;
+  while (*cur != '\0')
+    ++cur;
+  return cur -s;
+}
+
 class args {
  public:
   fixed_vector<string_view<char>> _argv;
@@ -90,7 +98,7 @@ class args {
  public:
   args(int argc, char** argv) : _argv(argc) {
     for (int i = 0; i < argc; ++i) {
-      _argv.push(string_view<char>(argv[i]));
+      _argv.push(string_view<char>(argv[i], argv[i]+strlen(argv[i])));
     }
   }
 
@@ -112,9 +120,9 @@ class args {
   }
 };
 
-*/
+
 int main(int argc, char** argv) {
-  /*  args a(argc, argv);
+    args a(argc, argv);
 
     for (string_view<char> arg : a._argv) {
       console<char>::printfln("arg in argv : '\0'", arg);
@@ -141,16 +149,6 @@ int main(int argc, char** argv) {
     } else {
       console<char>::println("key not found");
     }
-  */
-
-  fixed_vector2<int> ints(3);
-  ints.push(0);
-  ints.push(1);
-  ints.push(2);
-
-  for (int i : ints) {
-    printf("%d\n", i);
-  }
 
   return 0;
 }

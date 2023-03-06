@@ -1627,7 +1627,10 @@ class view {
   constexpr ~view() = default;
   constexpr view() = default;
   constexpr view(I b, I e) : _begin(b), _end(e) {}
-
+  
+/*  template<size_t N>
+  constexpr view(const decltype(*I{}) (&t)[N]) : _begin(t), _end(t+N){} 
+*/
   template <range_or_bounded_array R>
   constexpr view(R &&r) : view(stew::begin(r), stew::end(r)) {}
 
@@ -2217,100 +2220,6 @@ constexpr auto get(const array<T, N> &&a) -> decltype(auto) {
   return a[I];
 }
 
-template <typename C>
-class basic_container {
-  using TYPE = typename C::TYPE;
-  using PUSH = typename C::PUSH;
-  using POP = typename C::POP;
-  using ITER = typename C::ITER;
-
- public:
-  friend typename C::PUSH;
-  friend typename C::POP;
-  friend typename C::ITER;
-  friend typename C::TYPE;
-
- public:
-};
-
-template <typename T, typename PUSH, typename POP, typename ITER>
-class contigous {
-  friend ITER;
-  friend PUSH;
-  friend POP;
-
- private:
-  owning<T[]> _data;
-  size_t _size = 0;
-  size_t _max = 0;
-
- public:
-  constexpr ~contigous() = default;
-  constexpr contigous(size_t max) : _data(new T[max]), _size(0), _max(max) {}
-
-  constexpr contigous(const contigous &o) : contigous(o._max) {
-    copy(o, push_inserter(*this));
-  }
-
-  constexpr contigous(contigous &&o)
-      : _data(transfer(o._data)),
-        _size(transfer(o._size)),
-        _max(transfer(o._max)) {}
-
-  constexpr contigous &operator=(contigous o) {
-    _data = transfer(o._data);
-    _size = transfer(o._size);
-    _max = transfer(o._max);
-    return *this;
-  }
-
- public:
-  constexpr auto size() const { return _size; }
-  constexpr auto empty() const { return _size == 0; }
-
-  template <convertible_to<T> U>
-  constexpr auto push(U &&u) {
-    return PUSH::push(*this, relay<U>(u));
-  }
-
-  constexpr maybe<T> pop() { return POP::pop(*this); }
-
-  constexpr auto begin() { return ITER::begin(*this); }
-  constexpr auto end() { return ITER::end(*this); }
-  constexpr auto begin() const { return ITER::begin(*this); }
-  constexpr auto end() const { return ITER::end(*this); }
-};
-
-struct fixed_contigous_push {
-  template <typename T, typename C>
-  static constexpr void push(C &c, T &&t) {
-    if (c._size != c._max) c._data[c._size++] = relay<T>(t);
-  }
-};
-
-struct fixed_contigous_pop {
-  template <typename T, template <typename, typename... O> typename C,
-            typename... O>
-  static constexpr maybe<T> push(C<T, O...> &c) {
-    return c.empty() ? maybe<T>() : maybe<T>(c._data[--c._size]);
-  }
-};
-
-struct fixed_contigous_iter {
-  template <typename C>
-  static constexpr auto begin(C &&c) {
-    return relay<C>(c)._data.get();
-  }
-
-  template <typename C>
-  static constexpr auto end(C &&c) {
-    return relay<C>(c)._data.get() + relay<C>(c)._size;
-  }
-};
-
-template <typename T>
-using fixed_vector2 = contigous<T, fixed_contigous_push, fixed_contigous_pop,
-                                fixed_contigous_iter>;
 
 template <typename T, size_t N>
 class static_stack {
@@ -2593,7 +2502,7 @@ class fixed_vector {
   constexpr fixed_vector() = default;
 
   constexpr fixed_vector(size_t max)
-      : _size{0}, _max{max}, _data{new T[_max]} {}
+      : _size{0}, _max{max}, _data{new T[_max]{}} {}
 
   constexpr fixed_vector(const fixed_vector &o) : fixed_vector(o._max) {
     push(o);
@@ -3105,7 +3014,7 @@ class static_string {
   }
 };
 
-template <character C>
+/*template <character C>
 class fixed_string {
  private:
   owning<C[]> _data;
@@ -3184,71 +3093,15 @@ class fixed_string {
       return maybe<C>();
     }
   }
-};
+};*/
 
-template <character C>
-class string {
- private:
-  fixed_string<C> _data;
+template<character C>
+using fixed_string = fixed_vector<C>;
 
- public:
-  constexpr ~string() = default;
-  constexpr string() = default;
+template<character C>
+using string = vector<C>;
 
-  constexpr string(size_t max) : _data(max) {}
-
-  template <input_range R>
-  constexpr string(R &&r)
-      : string(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
-    push(relay<R>(r));
-  }
-
-  constexpr string(const string &o) = default;
-  constexpr string(string &&) = default;
-
-  constexpr string &operator=(const string &o) = default;
-  constexpr string &operator=(string &&o) = default;
-
-  template <input_range R>
-  constexpr string &operator=(R &&r) {
-    return (*this = string(relay<R>(r)));
-  }
-
- public:
-  constexpr size_t size() const { return _data.size(); }
-
-  constexpr bool empty() const { return _data.empty(); }
-
- public:
-  constexpr auto begin() { return _data.begin(); }
-
-  constexpr auto end() { return _data.end(); }
-
-  constexpr auto begin() const { return _data.begin(); }
-
-  constexpr auto end() const { return _data.end(); }
-
- public:
-  template <convertible_to<C> U>
-  constexpr void push(U &&u) {
-    if (_data.full()) {
-      fixed_string<C> tmp = transfer(_data);
-      _data = fixed_string<C>(tmp.size() * 2 + 10);
-      _data.push(transfer(tmp));
-    }
-
-    _data.push(relay<U>(u));
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<C>(*this));
-  }
-
-  constexpr maybe<C> pop() { return _data.pop(); }
-};
-
-template <character C>
+/*template <character C>
 class string_view {
  private:
   const C *_b = nullptr;
@@ -3300,7 +3153,10 @@ class string_view {
 
     return lim;
   }
-};
+};*/
+
+template<character C>
+using string_view = view<const C*>;
 
 template <typename T, typename C>
 concept string_view_like = convertible_to<T, string_view<C>>;
