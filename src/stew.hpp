@@ -2963,26 +2963,24 @@ static_string<C, N0 + N1> cat(const static_string<C, N0> &s0,
 }
 
 template <character C, size_t N0>
-fixed_string<C> cat(const static_string<C, N0> &s0,
-                    const string_view_like<C> auto &s1) {
-  fixed_string<C> res(s0.size()+ s1.size());
+fixed_string<C> cat(const static_string<C, N0> &s0, string_view<C> s1) {
+  fixed_string<C> res(s0.size() + s1.size());
   copy(s0, pushing<C>(res));
   copy(s0, pushing<C>(res));
   return res;
 }
 
 template <character C>
-fixed_string<C> cat(const fixed_string<C> &s0,
-                    const string_view_like<C> auto &s1) {
-  fixed_string<C> res(s0.size()+ s1.size());
+fixed_string<C> cat(const fixed_string<C> &s0, string_view<C> s1) {
+  fixed_string<C> res(s0.size() + s1.size());
   copy(s0, pushing<C>(res));
   copy(s1, pushing<C>(res));
   return res;
 }
 
 template <character C>
-string<C> cat(const string<C> &s0, const string_view_like<C> auto &s1) {
-  string<C> res(s0.size()+ s1.size());
+string<C> cat(const string<C> &s0, string_view<C> s1) {
+  string<C> res(s0.size() + s1.size());
   copy(s0, pushing<C>(res));
   copy(s1, pushing<C>(res));
   return res;
@@ -2991,14 +2989,57 @@ string<C> cat(const string<C> &s0, const string_view_like<C> auto &s1) {
 template <character C>
 size_t len(const C *s) {
   const C *cur = s;
-  while (*cur != '\0') ++cur;
+  if (cur != nullptr)
+    while (*cur != '\0') ++cur;
   return cur - s;
 }
 
 template <character C>
-size_t len(const string_view_like<C> auto &s) {
+size_t len(string_view<C> s) {
   return s.size();
 }
+
+template <character C>
+constexpr int cmp(string_view<C> s0, string_view<C> s1) {
+  auto b0 = begin(s0);
+  auto e0 = end(s0);
+
+  auto b1 = begin(s1);
+  auto e1 = end(s1);
+
+  while (b0 != e0 && b1 != e1 && *b0 == *b1) {
+    ++b0;
+    ++b1;
+  }
+
+  C c0 = b0 == nullptr ? 0 : *b0;
+  C c1 = b1 == nullptr ? 0 : *b1;
+
+  return c0 - c1;
+}
+
+namespace fixed {
+template <character C>
+fixed_string<C> from(const C *s) {
+  fixed_string<C> res(len(s));
+
+  if (s != nullptr)
+    while (*s != '\0') res.push(*s++);
+
+  return res;
+}
+}  // namespace fixed
+
+template <character C>
+string<C> from(const C *s) {
+  string<C> res(10);
+
+  if (s != nullptr)
+    while (*s != '\0') res.push(*s++);
+
+  return res;
+}
+
 }  // namespace str
 
 template <character C>

@@ -150,10 +150,12 @@ int main(int argc, char** argv) {
       console<char>::println("key not found");
     }*/
 
-  fixed_string<char> s0 =  "hello "_sv;
-  fixed_string<char> s1 = "world !"_sv;
-  fixed_string<char> s = str::cat(s0, s1);
-  console<char>::printfln("\0 de taille \0", s, s.size());
+  
+  string_view<char> s = str::fixed::from("dot");
+  auto s0 = str::fixed::from("coucot");
+  auto s1 = str::fixed::from("coucou");
+   
+  console<char>::printfln("\0", str::cmp<char>(s0, s1));
 
   return 0;
 }
