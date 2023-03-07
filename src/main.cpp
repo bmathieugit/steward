@@ -3,7 +3,7 @@
 #include <stew.hpp>
 
 using namespace stew;
-
+/*
 string<char> encode_hex(const string<char>& in) {
   constexpr string_view<char> encode_table = "0123456789abcdef";
   string<char> out(in.size() * 2);
@@ -119,10 +119,10 @@ class args {
     return ""_sv;
   }
 };
-
+*/
 
 int main(int argc, char** argv) {
-    args a(argc, argv);
+  /*  args a(argc, argv);
 
     for (string_view<char> arg : a._argv) {
       console<char>::printfln("arg in argv : '\0'", arg);
@@ -148,7 +148,12 @@ int main(int argc, char** argv) {
       }
     } else {
       console<char>::println("key not found");
-    }
+    }*/
+
+  fixed_string<char> s0 =  "hello "_sv;
+  fixed_string<char> s1 = "world !"_sv;
+  fixed_string<char> s = str::cat(s0, s1);
+  console<char>::printfln("\0 de taille \0", s, s.size());
 
   return 0;
 }

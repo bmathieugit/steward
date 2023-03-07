@@ -1954,8 +1954,8 @@ class push_iterator {
   }
 };
 
-template<typename T ,push_container<T> C>
-push_iterator<T, C> pushing(C & c) {
+template <typename T, push_container<T> C>
+push_iterator<T, C> pushing(C &c) {
   return push_iterator<T, C>(c);
 }
 
@@ -2936,6 +2936,9 @@ class set : public list<T> {
 //
 //----------------------------
 
+template <character C>
+using string_view = view<const C *>;
+
 template <character C, size_t N>
 using static_string = static_vector<C, N>;
 
@@ -2945,11 +2948,58 @@ using fixed_string = fixed_vector<C>;
 template <character C>
 using string = vector<C>;
 
-template <character C>
-using string_view = view<const C *>;
-
 template <typename T, typename C>
 concept string_view_like = like<T, string_view<C>>;
+
+namespace str {
+
+template <character C, size_t N0, size_t N1>
+static_string<C, N0 + N1> cat(const static_string<C, N0> &s0,
+                              const static_string<C, N1> &s1) {
+  static_string<C, N0 + N1> res;
+  copy(s0, pushing<C>(res));
+  copy(s1, pushing<C>(res));
+  return res;
+}
+
+template <character C, size_t N0>
+fixed_string<C> cat(const static_string<C, N0> &s0,
+                    const string_view_like<C> auto &s1) {
+  fixed_string<C> res(s0.size()+ s1.size());
+  copy(s0, pushing<C>(res));
+  copy(s0, pushing<C>(res));
+  return res;
+}
+
+template <character C>
+fixed_string<C> cat(const fixed_string<C> &s0,
+                    const string_view_like<C> auto &s1) {
+  fixed_string<C> res(s0.size()+ s1.size());
+  copy(s0, pushing<C>(res));
+  copy(s1, pushing<C>(res));
+  return res;
+}
+
+template <character C>
+string<C> cat(const string<C> &s0, const string_view_like<C> auto &s1) {
+  string<C> res(s0.size()+ s1.size());
+  copy(s0, pushing<C>(res));
+  copy(s1, pushing<C>(res));
+  return res;
+}
+
+template <character C>
+size_t len(const C *s) {
+  const C *cur = s;
+  while (*cur != '\0') ++cur;
+  return cur - s;
+}
+
+template <character C>
+size_t len(const string_view_like<C> auto &s) {
+  return s.size();
+}
+}  // namespace str
 
 template <character C>
 constexpr string_view<C> substr(string_view<C> s, size_t from) {
