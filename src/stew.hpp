@@ -161,41 +161,44 @@ concept convertible_to = (same_as<From, void> && same_as<To, void>) ||
 template <typename T, typename U>
 concept not_convertible_to = (!convertible_to<T, U>);
 
-template <typename T>
-concept strict_value_like = same_as<T, rm_ref<T>>;
+template <typename T, typename U>
+concept like = convertible_to<T, U>;
 
 template <typename T>
-concept reference_like = same_as<T, rm_cvref<T> &>;
+concept strict_value_eq = same_as<T, rm_ref<T>>;
 
 template <typename T>
-concept const_reference_like = same_as<T, const rm_cvref<T> &>;
+concept reference_eq = same_as<T, rm_cvref<T> &>;
 
 template <typename T>
-concept double_reference_like = same_as<T, rm_cvref<T> &&>;
+concept const_reference_eq = same_as<T, const rm_cvref<T> &>;
 
 template <typename T>
-concept const_double_reference_like = same_as<T, const rm_cvref<T> &&>;
+concept double_reference_eq = same_as<T, rm_cvref<T> &&>;
 
 template <typename T>
-concept pointer_like = same_as<T, rm_pointer<T> *>;
+concept const_double_reference_eq = same_as<T, const rm_cvref<T> &&>;
 
 template <typename T>
-concept not_strict_value_like = (!strict_value_like<T>);
+concept pointer_eq = same_as<T, rm_pointer<T> *>;
 
 template <typename T>
-concept not_reference_like = (!reference_like<T>);
+concept not_strict_value_eq = (!strict_value_eq<T>);
 
 template <typename T>
-concept not_const_reference_like = (!const_reference_like<T>);
+concept not_reference_eq = (!reference_eq<T>);
 
 template <typename T>
-concept not_double_reference_like = (!double_reference_like<T>);
+concept not_const_reference_eq = (!const_reference_eq<T>);
 
 template <typename T>
-concept not_const_double_reference_like = (!const_double_reference_like<T>);
+concept not_double_reference_eq = (!double_reference_eq<T>);
 
 template <typename T>
-concept not_pointer_like = (!pointer_like<T>);
+concept not_const_double_reference_eq = (!const_double_reference_eq<T>);
+
+template <typename T>
+concept not_pointer_eq = (!pointer_eq<T>);
 
 template <typename T, typename R, typename... A>
 concept callable = requires(T t, A &&...a) {
@@ -419,11 +422,11 @@ constexpr auto transfer(T &&t) {
 }
 
 template <typename T>
-concept pointer_reference = pointer_like<rm_cvref<T>>;
+concept pointer_reference = pointer_eq<rm_cvref<T>>;
 
 template <pointer_reference T>
 constexpr auto transfer(T &&p) {
-  if constexpr (pointer_like<T>) {
+  if constexpr (pointer_eq<T>) {
     return p;
   } else {
     rm_cvref<T> copy = p;
@@ -1457,25 +1460,25 @@ template <typename T>
 concept input_iterator = (forward_incrementable_iterator<T> &&
                           (
                               requires(T t) {
-                                { *t } -> const_double_reference_like;
+                                { *t } -> const_double_reference_eq;
                               } ||
                               requires(T t) {
-                                { *t } -> double_reference_like;
+                                { *t } -> double_reference_eq;
                               } ||
                               requires(T t) {
-                                { *t } -> reference_like;
+                                { *t } -> reference_eq;
                               } ||
                               requires(T t) {
-                                { *t } -> const_reference_like;
+                                { *t } -> const_reference_eq;
                               } ||
                               requires(T t) {
-                                { *t } -> strict_value_like;
+                                { *t } -> strict_value_eq;
                               }));
 
 template <typename T>
 concept output_iterator =
     forward_incrementable_iterator<T> && requires(T t) {
-                                           { *t } -> reference_like;
+                                           { *t } -> reference_eq;
                                          };
 
 template <typename T>
@@ -1627,10 +1630,7 @@ class view {
   constexpr ~view() = default;
   constexpr view() = default;
   constexpr view(I b, I e) : _begin(b), _end(e) {}
-  
-/*  template<size_t N>
-  constexpr view(const decltype(*I{}) (&t)[N]) : _begin(t), _end(t+N){} 
-*/
+
   template <range_or_bounded_array R>
   constexpr view(R &&r) : view(stew::begin(r), stew::end(r)) {}
 
@@ -1954,8 +1954,8 @@ class push_iterator {
   }
 };
 
-template <typename T, push_container<T> C>
-push_iterator<T, C> push_inserter(C &c) {
+template<typename T ,push_container<T> C>
+push_iterator<T, C> pushing(C & c) {
   return push_iterator<T, C>(c);
 }
 
@@ -2220,7 +2220,6 @@ constexpr auto get(const array<T, N> &&a) -> decltype(auto) {
   return a[I];
 }
 
-
 template <typename T, size_t N>
 class static_stack {
  private:
@@ -2272,7 +2271,7 @@ class static_stack {
 
   template <input_range R>
   constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<T>(*this));
+    copy(relay<R>(r), pushing<T>(*this));
   }
 
   constexpr maybe<T> pop() {
@@ -2340,7 +2339,7 @@ class fixed_stack {
 
   template <input_range R>
   constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<T>(*this));
+    copy(relay<R>(r), pushing<T>(*this));
   }
 
   constexpr maybe<T> pop() {
@@ -2410,7 +2409,7 @@ class stack {
 
   template <input_range R>
   constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<T>(*this));
+    copy(relay<R>(r), pushing<T>(*this));
   }
 
   constexpr auto pop() { return _data.pop(); }
@@ -2478,7 +2477,7 @@ class static_vector {
 
   template <input_range R>
   constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<T>(*this));
+    copy(relay<R>(r), pushing<T>(*this));
   }
 
   constexpr maybe<T> pop() {
@@ -2502,7 +2501,7 @@ class fixed_vector {
   constexpr fixed_vector() = default;
 
   constexpr fixed_vector(size_t max)
-      : _size{0}, _max{max}, _data{new T[_max]{}} {}
+      : _size{0}, _max{max}, _data{new T[_max + 1]{}} {}
 
   constexpr fixed_vector(const fixed_vector &o) : fixed_vector(o._max) {
     push(o);
@@ -2571,7 +2570,7 @@ class fixed_vector {
   constexpr void push(R &&r)
     requires not_convertible_to<R, T>
   {
-    copy(relay<R>(r), push_inserter<T>(*this));
+    copy(relay<R>(r), pushing<T>(*this));
   }
 
   constexpr maybe<T> pop() {
@@ -2649,7 +2648,7 @@ class vector {
 
   template <input_range R>
   constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<T>(*this));
+    copy(relay<R>(r), pushing<T>(*this));
   }
 
   constexpr auto pop() { return _data.pop(); }
@@ -2937,229 +2936,20 @@ class set : public list<T> {
 //
 //----------------------------
 
-// template <character C>
-// using string_view = view<const C *>;
 template <character C, size_t N>
-class static_string {
- private:
-  array<C, N> _data;
-  size_t _size = 0;
+using static_string = static_vector<C, N>;
 
- public:
-  constexpr ~static_string() = default;
-  constexpr static_string() = default;
-
-  template <input_range R>
-  constexpr static_string(R &&r) {
-    push(relay<R>(r));
-  }
-
-  constexpr static_string(const static_string &) = default;
-  constexpr static_string(static_string &&) = default;
-  constexpr static_string &operator=(const static_string &) = default;
-  constexpr static_string &operator=(static_string &&) = default;
-
-  template <input_range R>
-  constexpr static_string &operator=(R &&r) {
-    return (*this = static_string(relay<R>(r)));
-  }
-
- public:
-  constexpr auto size() const { return _size; }
-
-  constexpr auto empty() const { return _size == 0; }
-
-  constexpr auto full() const { return _size == N - 1; }
-
- public:
-  constexpr auto begin() { return _data.begin(); }
-
-  constexpr auto end() { return _data.begin() + _size; }
-
-  constexpr const auto begin() const { return _data.begin(); }
-
-  constexpr const auto end() const { return _data.begin() + _size; }
-
-  constexpr C &operator[](size_t i) {
-    assert(i < N - 1);
-    return _data[i];
-  }
-
-  constexpr const C &operator[](size_t i) const {
-    assert(i < N - 1);
-    return _data[i];
-  }
-
- public:
-  template <convertible_to<C> U>
-  constexpr void push(U &&u) {
-    if (!full()) {
-      _data[_size] = relay<U>(u);
-      _data[_size + 1] = '\0';
-      ++_size;
-    }
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<C>(*this));
-  }
-
-  constexpr maybe<C> pop() {
-    if (_size != 0) {
-      return maybe<C>(transfer(_data[_size--]));
-    } else {
-      return maybe<C>();
-    }
-  }
-};
-
-/*template <character C>
-class fixed_string {
- private:
-  owning<C[]> _data;
-  size_t _size = 0;
-  size_t _max = 0;
-
- public:
-  constexpr ~fixed_string() = default;
-  constexpr fixed_string() = default;
-
-  constexpr fixed_string(size_t n) : _data(new C[n]), _max(n), _size(0) {}
-
-  template <input_range R>
-  constexpr fixed_string(R &&r)
-    requires distanciable_iterator<decltype(stew::begin(r))>
-      : fixed_string(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
-    push(relay<R>(r));
-  }
-
-  constexpr fixed_string(const fixed_string &o) : fixed_string(o._max) {
-    push(o);
-  }
-
-  constexpr fixed_string(fixed_string &&o)
-      : _size{transfer(o._size)},
-        _max{transfer(o._max)},
-        _data{transfer(o._data)} {}
-
-  constexpr fixed_string &operator=(fixed_string o) {
-    _size = transfer(o._size);
-    _max = transfer(o._max);
-    _data = transfer(o._data);
-    return *this;
-  }
-
-  template <input_range R>
-  constexpr fixed_string &operator=(R &&r) {
-    return (*this = fixed_string(relay<R>(r)));
-  }
-
- public:
-  constexpr size_t size() const { return _size; }
-
-  constexpr bool empty() const { return _size == 0; }
-
-  constexpr bool full() const { return _max == 0 || _size == _max - 1; }
-
- public:
-  constexpr auto begin() { return _data.get(); }
-
-  constexpr auto end() { return _data.get() + _size; }
-
-  constexpr auto begin() const { return _data.get(); }
-
-  constexpr auto end() const { return _data.get() + _size; }
-
- public:
-  template <convertible_to<C> U>
-  constexpr void push(U &&u) {
-    if (!full()) {
-      _data[_size] = relay<U>(u);
-      _data[_size + 1] = '\0';
-      ++_size;
-    }
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), push_inserter<C>(*this));
-  }
-
-  constexpr maybe<C> pop() {
-    if (_size != 0) {
-      return maybe<C>(transfer(_data[_size--]));
-    } else {
-      return maybe<C>();
-    }
-  }
-};*/
-
-template<character C>
+template <character C>
 using fixed_string = fixed_vector<C>;
 
-template<character C>
+template <character C>
 using string = vector<C>;
 
-/*template <character C>
-class string_view {
- private:
-  const C *_b = nullptr;
-  const C *_e = nullptr;
-
- public:
-  constexpr ~string_view() = default;
-  constexpr string_view() = default;
-  constexpr string_view(const C *b, const C *e) : _b(b), _e(e) {}
-  constexpr string_view(const C *s) : _b(s), _e(s + limit(s)) {}
-  template <size_t N>
-  constexpr string_view(const C (&s)[N]) : _b(s), _e(s + limit(s)) {}
-  constexpr string_view(const string<C> &s) : _b(s.begin()), _e(s.end()) {}
-  constexpr string_view(const fixed_string<C> &s)
-      : _b(s.begin()), _e(s.end()) {}
-  template <size_t N>
-  constexpr string_view(const static_string<C, N> &s)
-      : _b(s.begin()), _e(s.end()) {}
-  constexpr string_view(const string_view &) = default;
-  constexpr string_view(string_view &&) = default;
-  constexpr string_view &operator=(const string_view &) = default;
-  constexpr string_view &operator=(string_view &&) = default;
-
- public:
-  constexpr auto begin() { return _b; }
-
-  constexpr auto end() { return _e; }
-
-  constexpr auto begin() const { return _b; }
-
-  constexpr auto end() const { return _e; }
-
- public:
-  constexpr auto size() const { return _b == nullptr ? 0 : _e - _b; }
-
-  constexpr auto empty() const { return size() == 0; }
-
-  constexpr const auto &operator[](size_t i) const { return (_b[i]); }
-
- private:
-  constexpr size_t limit(const C *s) {
-    size_t lim = 0;
-
-    if (s != nullptr)
-      while (*s != '\0') {
-        ++lim;
-        ++s;
-      }
-
-    return lim;
-  }
-};*/
-
-template<character C>
-using string_view = view<const C*>;
+template <character C>
+using string_view = view<const C *>;
 
 template <typename T, typename C>
-concept string_view_like = convertible_to<T, string_view<C>>;
+concept string_view_like = like<T, string_view<C>>;
 
 template <character C>
 constexpr string_view<C> substr(string_view<C> s, size_t from) {
@@ -3473,7 +3263,7 @@ class formatter<bool> {
   }
 };
 
-template <pointer_like P>
+template <pointer_eq P>
 class formatter<P> {
  public:
   template <ostream O>
