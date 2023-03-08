@@ -151,9 +151,9 @@ int main(int argc, char** argv) {
     }*/
 
   
-  string_view<char> s = str::fixed::from("dot");
-  auto s0 = str::fixed::from("coucot");
-  auto s1 = str::fixed::from("coucou");
+  string_view<char> s = str::view("dot");
+  auto s0 = str::view("coucot");
+  auto s1 = str::view("coucou");
    
   console<char>::printfln("\0", str::cmp<char>(s0, s1));
 

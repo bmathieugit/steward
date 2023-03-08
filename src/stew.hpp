@@ -2782,7 +2782,7 @@ class list {
   constexpr void push(R &&r)
     requires not_convertible_to<R, T>
   {
-    copy(relay<R>(r), push_inserter<T>(*this));
+    copy(relay<R>(r), pushing<T>(*this));
   }
 
   template <convertible_to<T> U>
@@ -2954,7 +2954,7 @@ concept string_view_like = like<T, string_view<C>>;
 namespace str {
 
 template <character C>
-size_t len(const C *s) {
+constexpr size_t len(const C *s) {
   const C *cur = s;
   if (cur != nullptr)
     while (*cur != '\0') ++cur;
@@ -2962,27 +2962,42 @@ size_t len(const C *s) {
 }
 
 template <character C>
-size_t len(const string_view_like<C> auto &s) {
+constexpr size_t len(const string_view_like<C> auto &s) {
   return s.size();
 }
 
 template <character C>
-string_view<C> view(const C *s) {
+constexpr string_view<C> view(const C *s) {
   return string_view<C>(s, s + len(s));
 }
 
-template <character C, size_t N>
-string_view<C> view(const C (&s)[N]) {
-  return string_view<C>(s, s + N);
-}
-
 template <character C>
-string_view<C> view(const string_view_like<C> auto &s) {
+constexpr string_view<C> view(const string_view_like<C> auto &s) {
   return string_view<C>(s.begin(), s.end());
 }
 
 template <character C>
-fixed_string<C> cat(const C *s0, const C *s1) {
+constexpr fixed_string<C> fixed(const C *s) {
+  return fixed_string<C>(string_view<C>(s, s + len(s)));
+}
+
+template <character C>
+constexpr fixed_string<C> fixed(const string_view_like<C> auto &s) {
+  return fixed_string<C>(s);
+}
+
+template <character C>
+constexpr string<C> str(const C *s) {
+  return string<C>(string_view<C>(s, s + len(s)));
+}
+
+template <character C>
+constexpr string<C> str(const string_view_like<C> auto &s) {
+  return string<C>(s);
+}
+
+template <character C>
+constexpr fixed_string<C> cat(const C *s0, const C *s1) {
   string_view<C> v0 = view(s0);
   string_view<C> v1 = view(s1);
   fixed_string<C> s(v0.size() + v1.size());
@@ -2991,28 +3006,9 @@ fixed_string<C> cat(const C *s0, const C *s1) {
   return s;
 }
 
-template <character C, size_t N0>
-fixed_string<C> cat(const C (&s0)[N0], const C *s1) {
-  string_view<C> v0 = view(s0, s0 + N0 - 1);
-  string_view<C> v1 = view(s1);
-  fixed_string<C> s(v0.size() + v1.size());
-  copy(v0, pushing(s));
-  copy(v1, pushing(s));
-  return s;
-}
-
-template <character C, size_t N0, size_t N1>
-fixed_string<C> cat(const C (&s0)[N0], const C (&s1)[N1]) {
-  string_view<C> v0 = view(s0, s0 + N0 - 1);
-  string_view<C> v1 = view(s1, s1 + N1 - 1);
-  static_string<C, N0 + N1> s(v0.size() + v1.size());
-  copy(v0, pushing(s));
-  copy(v1, pushing(s));
-  return s;
-}
-
 template <character C>
-auto cat(const string_view_like<C> auto &s0, const C *s1) -> decltype(auto) {
+constexpr auto cat(const string_view_like<C> auto &s0, const C *s1)
+    -> decltype(auto) {
   string_view<C> v1(s1, s1 + len(s1));
   rm_cvref<decltype(s0)> s(s0.size() + v1.size());
   copy(s0, pushing(s));
@@ -3020,17 +3016,32 @@ auto cat(const string_view_like<C> auto &s0, const C *s1) -> decltype(auto) {
   return s;
 }
 
-template<character C>
-auto cat(const string_view_like<C> auto &s0, const string_view_like<C> auto &s1) -> decltype(auto) {
+template <character C>
+constexpr auto cat(const string_view_like<C> auto &s0,
+                   const string_view_like<C> auto &s1) -> decltype(auto) {
   rm_cvref<decltype(s0)> s(s0.size() + s1.size());
   copy(s0, pushing(s));
   copy(s1, pushing(s));
   return s;
 }
 
+template <character C>
+constexpr int cmp(const C *s0, const C *s1) {
+  if (s0 != nullptr && s1 != nullptr)
+    while (s0 != '\0' && s1 != '\0' && *s0 == *s1) {
+      ++s0;
+      ++s1;
+    }
+
+  C c0 = s0 == nullptr ? 0 : *s0;
+  C c1 = s1 == nullptr ? 0 : *s1;
+
+  return c0 - c1;
+}
 
 template <character C>
-constexpr int cmp(string_view<C> s0, string_view<C> s1) {
+constexpr int cmp(const string_view_like<C> auto &s0,
+                  const string_view_like<C> auto &s1) {
   auto b0 = begin(s0);
   auto e0 = end(s0);
 
@@ -3046,28 +3057,6 @@ constexpr int cmp(string_view<C> s0, string_view<C> s1) {
   C c1 = b1 == nullptr ? 0 : *b1;
 
   return c0 - c1;
-}
-
-namespace fixed {
-template <character C>
-fixed_string<C> from(const C *s) {
-  fixed_string<C> res(len(s));
-
-  if (s != nullptr)
-    while (*s != '\0') res.push(*s++);
-
-  return res;
-}
-}  // namespace fixed
-
-template <character C>
-string<C> from(const C *s) {
-  string<C> res(10);
-
-  if (s != nullptr)
-    while (*s != '\0') res.push(*s++);
-
-  return res;
 }
 
 }  // namespace str
@@ -3091,7 +3080,8 @@ constexpr string_view<wchar_t> operator"" _sv(const wchar_t *s, size_t n) {
 }
 
 template <character C>
-constexpr bool operator<(const string<C> &s0, const string<C> &s1) {
+constexpr bool operator<(const string_view_like<C> auto &s0,
+                         const string_view_like<C> auto &s1) {
   auto b0 = s0.begin();
   auto e0 = s0.end();
 
