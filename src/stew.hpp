@@ -3044,43 +3044,23 @@ constexpr int cmp(const string_view_like<C> auto &s0,
                   const string_view_like<C> auto &s1) {
   return cmp(s0.begin(), s1.begin());
 }
-}  // namespace str
 
 template <character C>
-constexpr string_view<C> substr(string_view<C> s, size_t from) {
+constexpr string_view<C> subv(string_view<C> s, size_t from) {
   return string_view<C>(begin(s) + from, end(s));
 }
 
 template <character C>
-constexpr string_view<C> substr(string_view<C> s, size_t from, size_t n) {
+constexpr string_view<C> subv(string_view<C> s, size_t from, size_t n) {
   return string_view<C>(begin(s) + from, begin(s) + from + n);
 }
+
+}  // namespace str
 
 template <character C>
 constexpr bool operator<(const string_view_like<C> auto &s0,
                          const string_view_like<C> auto &s1) {
-  auto b0 = s0.begin();
-  auto e0 = s0.end();
-
-  auto b1 = s1.begin();
-  auto e1 = s1.end();
-
-  while (b0 != e0 && b1 != e1 && *b0 == *b1) {
-    ++b0;
-    ++b1;
-  }
-
-  if (b0 != e0) {
-    if (b1 != e1) {
-      return *b0 < *b1;
-    } else {
-      return false;
-    }
-  } else if (b1 == e1) {
-    return false;
-  } else {
-    return true;
-  }
+  return str::cmp(s0.begin(), s1.begin()) < 0;
 }
 
 inline string<char> operator"" _s(const char *s, size_t n) {
@@ -3472,10 +3452,10 @@ class extractor<bool> {
   constexpr static auto to(string_view<C> i, maybe<bool> &mb) {
     if (starts_with(i, str::view("true"))) {
       mb = true;
-      return substr(i, 4);
+      return str::subv(i, 4);
     } else if (starts_with(i, str::view("false"))) {
       mb = false;
-      return substr(i, 5);
+      return str::subv(i, 5);
     } else {
       return i;
     }

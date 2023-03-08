@@ -14,7 +14,7 @@ all: clean compile run
 clean: 
 	rm -rf building
 
-building/main.o: src/main.cpp
+building/main.o: src/main.cpp src/stew.hpp
 	mkdir -p building
 	${CC} -o building/main.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
 

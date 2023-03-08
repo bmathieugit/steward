@@ -3,9 +3,9 @@
 #include <stew.hpp>
 
 using namespace stew;
-/*
+
 string<char> encode_hex(const string<char>& in) {
-  constexpr string_view<char> encode_table = "0123456789abcdef";
+  constexpr string_view<char> encode_table = str::view("0123456789abcdef");
   string<char> out(in.size() * 2);
 
   for (char c : in) {
@@ -76,11 +76,11 @@ struct password {
 };
 
 constexpr bool operator<(const password& p0, const password& p1) {
-  return p0._key < p1._key;
+  return str::cmp<char>(p0._key, p1._key) < 0;
 }
 
 constexpr bool operator!=(const password& p0, const password& p1) {
-  return p0._key != p1._key;
+  return str::cmp<char>(p0._key, p1._key)==0;
 }
 
 inline int strlen(const char* s)
@@ -116,43 +116,43 @@ class args {
       if (fnd != _argv.end()) return *fnd;
     }
 
-    return ""_sv;
+    return str::view("");
   }
 };
-*/
+
 
 int main(int argc, char** argv) {
-  /*  args a(argc, argv);
+   args a(argc, argv);
 
     for (string_view<char> arg : a._argv) {
-      console<char>::printfln("arg in argv : '\0'", arg);
+      console<char>::printfln(str::view("arg in argv : '\0'"), arg);
     }
 
-    if (a.contains("-k", "--key")) {
-      string_view<char> key = a.get("-k", "--key");
+    if (a.contains(str::view("-k"), str::view("--key"))) {
+      string_view<char> key = a.get(str::view("-k"), str::view("--key"));
 
       set<password> ss;
 
-      ss.push(password{"github.com"_sv, "BobSmith2023"_sv,
-    "bobsimbel12!!!"_sv}); ss.push(password{"microsoft.com"_sv,
-    "ArandJuvini"_sv, "MeliSanDre@/!!%"_sv});
+      ss.push(password{str::view("github.com"), str::view("BobSmith2023"),
+    str::view("bobsimbel12!!!")}); ss.push(password{str::view("microsoft.com"),
+    str::view("ArandJuvini"), str::view("MeliSanDre@/!!%")});
 
       auto fnd = find(ss, [&key](const password& p) {
-        console<char>::printfln("\0(\0) vs \0(\0)", p._key, p._key.size(), key,
+        console<char>::printfln(str::view("\0(\0) vs \0(\0)"), p._key, p._key.size(), key,
                                 key.size());
         return p._key == key;
       });
 
       if (fnd != ss.end()) {
-        console<char>::printfln("'\0'", (*fnd)._passwd);
+        console<char>::printfln(str::view("'\0'"), (*fnd)._passwd);
       }
     } else {
-      console<char>::println("key not found");
-    }*/
+      console<char>::println(str::view("key not found"));
+    }
 
   
    
-  console<char>::printfln(str::view("\0"), str::cmp<char>("coucou", "coucot"));
+  //console<char>::printfln(str::view("\0"), str::cmp<char>("coucou", "coucot"));
 
   return 0;
 }
