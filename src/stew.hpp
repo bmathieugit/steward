@@ -1631,7 +1631,7 @@ class view {
   constexpr view() = default;
   constexpr view(I b, I e) : _begin(b), _end(e) {}
 
-  template <range_or_bounded_array R>
+  template <input_range R>
   constexpr view(R &&r) : view(stew::begin(r), stew::end(r)) {}
 
   constexpr view(const view &) = default;
@@ -1669,7 +1669,7 @@ class view {
   }
 };
 
-template <range R>
+template <input_range R>
 view(R &&r) -> view<decltype(begin(relay<R>(r)))>;
 
 template <input_or_output_iterator I>
@@ -1693,12 +1693,12 @@ constexpr bool equals(const R1 &r1, const R2 &r2) {
 
 template <input_range R1, input_range R2>
 constexpr bool operator==(const R1 &r1, const R2 &r2) {
-  return stew::equals(r1, r2);
+  return equals(r1, r2);
 }
 
 template <input_range R1, input_range R2>
 constexpr bool operator!=(const R1 &r1, const R2 &r2) {
-  return !stew::equals(r1, r2);
+  return !equals(r1, r2);
 }
 
 template <input_range R1, input_range R2>
@@ -3028,7 +3028,7 @@ constexpr auto cat(const string_view_like<C> auto &s0,
 template <character C>
 constexpr int cmp(const C *s0, const C *s1) {
   if (s0 != nullptr && s1 != nullptr)
-    while (s0 != '\0' && s1 != '\0' && *s0 == *s1) {
+    while (*s0 != '\0' && *s1 != '\0' && *s0 == *s1) {
       ++s0;
       ++s1;
     }
@@ -3042,23 +3042,8 @@ constexpr int cmp(const C *s0, const C *s1) {
 template <character C>
 constexpr int cmp(const string_view_like<C> auto &s0,
                   const string_view_like<C> auto &s1) {
-  auto b0 = begin(s0);
-  auto e0 = end(s0);
-
-  auto b1 = begin(s1);
-  auto e1 = end(s1);
-
-  while (b0 != e0 && b1 != e1 && *b0 == *b1) {
-    ++b0;
-    ++b1;
-  }
-
-  C c0 = b0 == nullptr ? 0 : *b0;
-  C c1 = b1 == nullptr ? 0 : *b1;
-
-  return c0 - c1;
+  return cmp(s0.begin(), s1.begin());
 }
-
 }  // namespace str
 
 template <character C>
@@ -3069,14 +3054,6 @@ constexpr string_view<C> substr(string_view<C> s, size_t from) {
 template <character C>
 constexpr string_view<C> substr(string_view<C> s, size_t from, size_t n) {
   return string_view<C>(begin(s) + from, begin(s) + from + n);
-}
-
-constexpr string_view<char> operator"" _sv(const char *s, size_t n) {
-  return string_view<char>(s, s + n);
-}
-
-constexpr string_view<wchar_t> operator"" _sv(const wchar_t *s, size_t n) {
-  return string_view<wchar_t>(s, s + n);
 }
 
 template <character C>
@@ -3164,37 +3141,6 @@ constexpr around_pair<C> around(string_view<C> input, C sep) {
 // Formatting
 //
 //------------------------------
-
-template <character C, typename... T>
-class format {
- private:
-  array<string_view<C>, sizeof...(T) + 1> _parts;
-
- public:
-  template <string_view_like<C> S>
-  constexpr format(S &&fmt) : _parts(split(relay<S>(fmt))) {}
-
-  constexpr const auto &parts() const { return _parts; }
-
- private:
-  constexpr auto split(string_view<C> fmt) const {
-    array<string_view<C>, sizeof...(T) + 1> parts;
-
-    for (auto &part : parts) {
-      auto [fnd, bef, aft] = around(fmt, "{}"_sv);
-
-      if (fnd) {
-        fmt = aft;
-        part = bef;
-      } else {
-        part = aft;
-        break;
-      }
-    }
-
-    return parts;
-  }
-};
 
 template <typename O>
 concept ostream = (push_container<O, char> &&
@@ -3370,7 +3316,7 @@ class formatter<bool> {
  public:
   template <ostream O>
   constexpr static void to(O &o, bool b) {
-    format_one_to(o, b ? "true"_sv : "false"_sv);
+    format_one_to(o, b ? str::view("true") : str::view("false"));
   }
 };
 
@@ -3524,10 +3470,10 @@ class extractor<bool> {
  public:
   template <character C>
   constexpr static auto to(string_view<C> i, maybe<bool> &mb) {
-    if (starts_with(i, "true"_sv)) {
+    if (starts_with(i, str::view("true"))) {
       mb = true;
       return substr(i, 4);
-    } else if (starts_with(i, "false"_sv)) {
+    } else if (starts_with(i, str::view("false"))) {
       mb = false;
       return substr(i, 5);
     } else {
@@ -3809,7 +3755,7 @@ struct files {
   }
 
   template <typename... T>
-  static void readf(file_reader<C> &i, format<C, T...> fmt,
+  static void readf(file_reader<C> &i, string_view<C> fmt,
                     extract_response<T...> &response) {
     maybe<C> mb;
     string<C> s;
@@ -3850,14 +3796,14 @@ struct console {
   static void println(string_view<C> s) { files<C>::println(termout, s); }
 
   template <typename... T>
-  static void readf(format<C, T...> fmt, extract_response<T...> &response) {
+  static void readf(string_view<C> fmt, extract_response<T...> &response) {
     files<C>::readf(termin, fmt, response);
   }
 };
 
 //------------------------
 //
-//  TImers and Calendars
+//  Timers and Calendars
 //
 //------------------------
 
@@ -4832,11 +4778,11 @@ class collection {
  public:
   bool create() {
     string<char> fname(_name.size() + 10);
-    format_to(fname, "\0.db"_sv, _name);
+    format_to(fname, str::view("\0.db"), _name);
     console<char>::println(fname);
     file<char, mode::w> fbdd{string_view<char>(fname)};
     if (fbdd.opened()) {
-      console<char>::println("ouverte");
+      console<char>::println(str::view("ouverte"));
     }
     return true;
   }

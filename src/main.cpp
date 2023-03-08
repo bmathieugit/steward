@@ -151,11 +151,8 @@ int main(int argc, char** argv) {
     }*/
 
   
-  string_view<char> s = str::view("dot");
-  auto s0 = str::view("coucot");
-  auto s1 = str::view("coucou");
    
-  console<char>::printfln("\0", str::cmp<char>(s0, s1));
+  console<char>::printfln(str::view("\0"), str::cmp<char>("coucou", "coucot"));
 
   return 0;
 }
