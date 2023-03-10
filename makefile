@@ -22,7 +22,19 @@ building/steward.app: building/main.o
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS} ${EXTRA} ${EXPER}
 
+building/string-test.o: src/test/string-test.cpp src/stew.hpp
+	mkdir -p building
+	${CC} -o building/string-test.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
+
+
+building/string-test.app: building/string-test.o
+	mkdir -p building
+	${CC} -o building/string-test.app $^ ${FLAGS} ${EXTRA} ${EXPER}
+
+
 compile: building/steward.app
+
+test: building/string-test.app
 
 run: compile
 	./building/steward.app -k github.com
