@@ -3560,7 +3560,7 @@ class file_reader {
   }
 
   template <push_container<T> R>
-  void pop(R &r, size_t n) {
+  void pop(R &r, size_t n = size_t(-1)) {
     if (_file.get() != nullptr) {
       T buff;
 
