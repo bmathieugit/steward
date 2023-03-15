@@ -12,8 +12,26 @@ bool getline(stew::fixed_string<char>& buff,
       buff.push(*tmp);
     }
 
+    if (!tmp.has()) return false;
+
     return true;
   }
+}
+
+void clear_term() { stew::termout.push(stew::str::view("\033[2J")); }
+
+void origin_cursor() { stew::termout.push(stew::str::view("\033[H")); }
+
+bool is_new_slide_line(stew::string_view<char> line) {
+  return stew::starts_with(line, stew::str::view("======"));
+}
+
+bool is_paragraph_line(stew::string_view<char> line) {
+  return stew::starts_with(line, stew::str::view("p"));
+}
+
+stew::string_view<char> escape_paragraph_prefix(stew::string_view<char> line) {
+  return stew::str::subv(line, 1);
 }
 
 int main(int argc, char** argv) {
@@ -22,10 +40,14 @@ int main(int argc, char** argv) {
     stew::fixed_string<char> buffer(1024);
 
     while (getline(buffer, f)) {
-      stew::console<char>::printfln(stew::str::view("line read : \0"), buffer);
+      stew::string_view<char> line(buffer);
 
-      if (!stew::starts_with(buffer, stew::str::view("======"))) {
-        stew::termout.push(buffer);
+      if (is_new_slide_line(line)) {
+        stew::termin.pop();
+        clear_term();
+        origin_cursor();
+      } else if (is_paragraph_line(line)) {
+        stew::termout.push(escape_paragraph_prefix(line));
       }
 
       buffer.clear();

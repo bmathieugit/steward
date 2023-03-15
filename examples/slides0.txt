@@ -1,12 +1,12 @@
 ======
-
-Ceci est mon premier slide provenant d'un fichier
-
+p
+p Ceci est mon premier slide provenant d'un fichier
+p
 ======
-
-Ceci est le second slide provenant d'un fichier
-
+p
+p Ceci est le second slide provenant d'un fichier
+p
 ======
-
-Merci d'avoir suivi ces trois slides
-
+p
+p Merci d'avoir suivi ces trois slides
+p
