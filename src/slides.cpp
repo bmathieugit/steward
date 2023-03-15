@@ -8,8 +8,9 @@ bool getline(stew::fixed_string<char>& buff,
     stew::maybe<char> tmp;
     auto reader = f.reader();
 
-    while ((tmp = reader.pop()).has() && *tmp != '\n') {
+    while ((tmp = reader.pop()).has()) {
       buff.push(*tmp);
+      if (*tmp == '\n') break;
     }
 
     if (!tmp.has()) return false;
@@ -34,6 +35,14 @@ stew::string_view<char> escape_paragraph_prefix(stew::string_view<char> line) {
   return stew::str::subv(line, 1);
 }
 
+bool is_title_line(stew::string_view<char> line) {
+  return stew::starts_with(line, stew::str::view("t"));
+}
+
+stew::string_view<char> escape_title_prefix(stew::string_view<char> line) {
+  return stew::str::subv(line, 1);
+}
+
 int main(int argc, char** argv) {
   if (argc == 2) {
     stew::file<char, stew::mode::r> f(stew::str::view(argv[1]));
@@ -48,6 +57,8 @@ int main(int argc, char** argv) {
         origin_cursor();
       } else if (is_paragraph_line(line)) {
         stew::termout.push(escape_paragraph_prefix(line));
+      } else if (is_title_line(line)) {
+        stew::termout.push(escape_title_prefix(line));
       }
 
       buffer.clear();

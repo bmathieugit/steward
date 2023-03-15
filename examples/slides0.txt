@@ -1,12 +1,23 @@
 ======
+t Introduction
 p
 p Ceci est mon premier slide provenant d'un fichier
 p
 ======
+t Partie 1
 p
-p Ceci est le second slide provenant d'un fichier
+p La partie 1 parlera de nombreuse chose notamment 
+p comment on peut faire pour obtenir de meilleurs 
+p résultats. 
 p
 ======
+t Partie 2
 p
-p Merci d'avoir suivi ces trois slides
+p Durant la partie 2 nous verrons comment être
+p dégressif vis à vis des résultats de la partie 1
 p
+======
+t Conclusion
+p
+p En conclusion nous pouvons dire que tout cela 
+p marche bien !
