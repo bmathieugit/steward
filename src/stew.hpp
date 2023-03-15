@@ -2552,9 +2552,7 @@ class fixed_vector {
 
  public:
   constexpr bool empty() const { return _size == 0; }
-
   constexpr bool full() const { return _size == _max; }
-
   constexpr auto size() const { return _size; }
 
  public:
@@ -2580,6 +2578,14 @@ class fixed_vector {
       return maybe<T>();
     }
   }
+
+  constexpr void clear() {
+    _size = 0;
+
+    if (_max > 0) {
+      _data[0] = T();
+    }
+  }
 };
 
 template <typename T>
@@ -2599,7 +2605,7 @@ class vector {
   }
 
   constexpr vector(const vector &) = default;
-  constexpr vector(vector &) = default;
+constexpr vector(vector &) = default;
   constexpr vector &operator=(const vector &) = default;
   constexpr vector &operator=(vector &&) = default;
 
@@ -2652,6 +2658,8 @@ class vector {
   }
 
   constexpr auto pop() { return _data.pop(); }
+
+  constexpr auto clear() { return _data.clear(); }
 };
 
 template <typename T>
