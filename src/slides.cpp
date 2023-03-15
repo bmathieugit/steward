@@ -54,7 +54,9 @@ stew::string_view<char> escape_title_prefix(stew::string_view<char> line) {
 }
 
 void on_title(stew::string_view<char> line) {
+  stew::termout.push(stew::str::view("\033[1;31m"));
   stew::termout.push(escape_title_prefix(line));
+  stew::termout.push(stew::str::view("\033[0m"));
 }
 
 int main(int argc, char** argv) {
