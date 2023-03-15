@@ -27,6 +27,12 @@ bool is_new_slide_line(stew::string_view<char> line) {
   return stew::starts_with(line, stew::str::view("======"));
 }
 
+void on_new_slide(stew::string_view<char> line) {
+  stew::termin.pop();
+  clear_term();
+  origin_cursor();
+}
+
 bool is_paragraph_line(stew::string_view<char> line) {
   return stew::starts_with(line, stew::str::view("p"));
 }
@@ -35,12 +41,20 @@ stew::string_view<char> escape_paragraph_prefix(stew::string_view<char> line) {
   return stew::str::subv(line, 1);
 }
 
+void on_paragraph(stew::string_view<char> line) {
+  stew::termout.push(escape_paragraph_prefix(line));
+}
+
 bool is_title_line(stew::string_view<char> line) {
   return stew::starts_with(line, stew::str::view("t"));
 }
 
 stew::string_view<char> escape_title_prefix(stew::string_view<char> line) {
   return stew::str::subv(line, 1);
+}
+
+void on_title(stew::string_view<char> line) {
+  stew::termout.push(escape_title_prefix(line));
 }
 
 int main(int argc, char** argv) {
@@ -52,13 +66,11 @@ int main(int argc, char** argv) {
       stew::string_view<char> line(buffer);
 
       if (is_new_slide_line(line)) {
-        stew::termin.pop();
-        clear_term();
-        origin_cursor();
+        on_new_slide(line);
       } else if (is_paragraph_line(line)) {
-        stew::termout.push(escape_paragraph_prefix(line));
+        on_paragraph(line);
       } else if (is_title_line(line)) {
-        stew::termout.push(escape_title_prefix(line));
+        on_title(line);
       }
 
       buffer.clear();
