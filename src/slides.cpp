@@ -87,37 +87,29 @@ void on_new_slide(line l) {
   origin_cursor();
 }
 
-stew::string_view<char> escape_paragraph_prefix(stew::string_view<char> line) {
-  return stew::str::subv(line, 1);
-}
-
-void on_paragraph(line l) { stew::termout.push(escape_paragraph_prefix(line)); }
-
-stew::string_view<char> escape_title_prefix(stew::string_view<char> line) {
-  return stew::str::subv(line, 1);
-}
+void on_paragraph(line l) { stew::termout.push(l.data()); }
 
 void on_title1(line l) {
   stew::termout.push(stew::str::view("\033[1;31m"));
-  stew::termout.push(escape_title_prefix(line));
+  stew::termout.push(l.data());
   stew::termout.push(stew::str::view("\033[0m"));
 }
 
 void on_title2(line l) {
   stew::termout.push(stew::str::view("\033[1;32m"));
-  stew::termout.push(escape_title_prefix(line));
+  stew::termout.push(l.data());
   stew::termout.push(stew::str::view("\033[0m"));
 }
 
 void on_title3(line l) {
   stew::termout.push(stew::str::view("\033[1;33m"));
-  stew::termout.push(escape_title_prefix(line));
+  stew::termout.push(l.data());
   stew::termout.push(stew::str::view("\033[0m"));
 }
 
 void on_title4(line l) {
   stew::termout.push(stew::str::view("\033[1;34m"));
-  stew::termout.push(escape_title_prefix(line));
+  stew::termout.push(l.data());
   stew::termout.push(stew::str::view("\033[0m"));
 }
 
@@ -125,13 +117,12 @@ int main(int argc, char** argv) {
   if (argc == 3) {
     stew::file<char, stew::mode::r> slides(stew::str::view(argv[1]));
     stew::file<char, stew::mode::r> theme(stew::str::view(argv[1]));
-
-    line l;
-
-    while (getline(l, slides)) {
-      stew::string_view<char> lview(l._data);
-
-      switch (l._type) {
+    stew::fixed_string<char> buff(1024);
+    
+    while (getline(buff, slides)) {
+      line l(buff);
+    //  stew::console<char>::println(l.data());
+      switch (l.type()) {
         case line_type::ns:
           on_new_slide(l);
           break;
@@ -154,6 +145,8 @@ int main(int argc, char** argv) {
         default:
           break;
       }
+
+      buff.clear();
     }
   }
 
