@@ -34,7 +34,7 @@ class line {
 
  public:
   ~line() = default;
-  
+
   line(stew::fixed_string<char> l) : _type(translate_prefix_to_line_type(l)) {
     if (_type != line_type::unknown) {
       stew::string_view<char> tmp(l);
@@ -42,10 +42,10 @@ class line {
       _data.push(tmp);
     }
   }
-  
+
   line(line_type type, stew::fixed_string<char> data)
       : _type(type), _data(stew::transfer(data)) {}
-  
+
   line(const line&) = default;
   line(line&&) = default;
   line& operator=(const line&) = default;
@@ -56,6 +56,30 @@ class line {
   stew::string_view<char> data() const {
     return stew::string_view<char>(_data);
   }
+};
+
+// un style est une définition de style pour un type de ligne donnée.
+// eg : t1=:31,1
+struct style {
+  line_type _type;
+  stew::string<char> _stl;
+};
+
+style parse_style(stew::string_view<char> l) {
+  line tmp(l);
+
+  style s;
+  stew::string_view<char> tmp2(tmp.data());
+  tmp2 = stew::str::subv(tmp2, 1);
+  s._type = tmp.type();
+
+  s._stl = tmp2;
+
+  return s;
+}
+
+struct theme {
+  stew::vector<style> _styles;
 };
 
 bool getline(stew::fixed_string<char>& buff,
@@ -115,13 +139,25 @@ void on_title4(line l) {
 
 int main(int argc, char** argv) {
   if (argc == 3) {
-    stew::file<char, stew::mode::r> slides(stew::str::view(argv[1]));
-    stew::file<char, stew::mode::r> theme(stew::str::view(argv[1]));
     stew::fixed_string<char> buff(1024);
     
+    stew::file<char, stew::mode::r> conf_theme(stew::str::view(argv[2]));
+    theme th;
+    
+    while (getline(buff, conf_theme)) {
+      th._styles.push(parse_style(buff));
+      buff.clear();
+    }
+
+    for (const style s : th._styles){
+      stew::console<char>::println(s._stl);
+    }
+
+    stew::file<char, stew::mode::r> slides(stew::str::view(argv[1]));
+
     while (getline(buff, slides)) {
       line l(buff);
-    //  stew::console<char>::println(l.data());
+
       switch (l.type()) {
         case line_type::ns:
           on_new_slide(l);
