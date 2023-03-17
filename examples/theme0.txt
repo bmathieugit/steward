@@ -1,0 +1,6 @@
+default:b-black,f-blue
+p:f-white,bold
+t1:f-red,bold
+t2:f-red,bold
+t3:f-red,bold
+t4:f-red,bold
