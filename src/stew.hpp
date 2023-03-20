@@ -2221,201 +2221,6 @@ constexpr auto get(const array<T, N> &&a) -> decltype(auto) {
 }
 
 template <typename T, size_t N>
-class static_stack {
- private:
-  array<T, N> _data;
-  size_t _idx = N;
-
- public:
-  constexpr ~static_stack() = default;
-  constexpr static_stack() = default;
-
-  template <input_range R>
-  constexpr static_stack(R &&r) {
-    push(relay<R>(r));
-  }
-
-  constexpr static_stack(const static_stack &) = default;
-  constexpr static_stack(static_stack &&) = default;
-  constexpr static_stack &operator=(const static_stack &) = default;
-  constexpr static_stack &operator=(static_stack &&) = default;
-
-  template <input_range R>
-  constexpr static_stack &operator=(R &&r) {
-    return (*this = static_stack(relay<R>(r)));
-  }
-
- public:
-  constexpr auto size() const { return N - _idx; }
-
-  constexpr auto empty() const { return _idx == N; }
-
-  constexpr auto full() const { return _idx == 0; }
-
- public:
-  constexpr auto begin() { return stew::begin(_data) + _idx; }
-
-  constexpr auto end() { return stew::end(_data); }
-
-  constexpr const auto begin() const { return stew::begin(_data) + _idx; }
-
-  constexpr const auto end() const { return stew::end(_data); }
-
- public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
-    if (!full()) {
-      _data[--_idx] = relay<U>(u);
-    }
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), pushing<T>(*this));
-  }
-
-  constexpr maybe<T> pop() {
-    if (0 <= _idx && _idx < N) {
-      return maybe<T>(transfer(_data[_idx++]));
-    } else {
-      return maybe<T>();
-    }
-  }
-};
-
-template <typename T>
-class fixed_stack {
- private:
-  size_t _max{0};
-  size_t _idx{_max};
-  owning<T[]> _data;
-
- public:
-  constexpr ~fixed_stack() = default;
-  constexpr fixed_stack() = default;
-
-  constexpr fixed_stack(size_t max) : _max(max), _idx(max), _data(new T[max]) {}
-
-  template <input_range R>
-  constexpr fixed_stack(R &&r)
-    requires distanciable_iterator<decltype(stew::begin(r))>
-      : fixed_stack(stew::end(r) - stew::begin(r)) {
-    push(relay<R>(r));
-  }
-
-  constexpr fixed_stack(const fixed_stack &) = default;
-  constexpr fixed_stack(fixed_stack &&) = default;
-  constexpr fixed_stack &operator=(const fixed_stack &) = default;
-  constexpr fixed_stack &operator=(fixed_stack &&) = default;
-
-  template <input_range R>
-  constexpr fixed_stack &operator=(R &&r) {
-    return (*this = fixed_stack(relay<R>(r)));
-  }
-
- public:
-  constexpr auto size() const { return _max - _idx; }
-
-  constexpr auto empty() const { return _idx == _max; }
-
-  constexpr auto full() const { return _idx == 0; }
-
- public:
-  constexpr auto begin() { return _data.get() + _idx; }
-
-  constexpr auto end() { return _data.get() + _max; }
-
-  constexpr const auto begin() const { return _data.get() + _idx; }
-
-  constexpr const auto end() const { return _data.get() + _max; }
-
- public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
-    if (!full()) {
-      _data[--_idx] = relay<U>(u);
-    }
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), pushing<T>(*this));
-  }
-
-  constexpr maybe<T> pop() {
-    if (0 <= _idx && _idx < _max) {
-      return maybe<T>(transfer(_data[_idx++]));
-    } else {
-      return maybe<T>();
-    }
-  }
-};
-
-template <typename T>
-class stack {
- private:
-  fixed_stack<T> _data;
-
- public:
-  constexpr ~stack() = default;
-  constexpr stack() = default;
-  constexpr stack(size_t max) : _data(max) {}
-  template <input_range R>
-  constexpr stack(R &&r)
-    requires distanciable_iterator<decltype(stew::begin(r))>
-      : stack(stew::end(r) - stew::begin(r)) {
-    push(relay<R>(r));
-  }
-
-  constexpr stack(const stack &) = default;
-  constexpr stack(stack &&) = default;
-
-  constexpr stack &operator=(const stack &) = default;
-  constexpr stack &operator=(stack &&) = default;
-
-  template <input_range R>
-  constexpr stack &operator=(R &&r) {
-    return (*this = stack(relay<R>(r)));
-  }
-
- public:
-  constexpr auto size() const { return _data.size(); }
-
-  constexpr auto empty() const { return _data.empty(); }
-
-  constexpr auto full() const { return _data.full(); }
-
- public:
-  constexpr auto begin() { return _data.begin(); }
-
-  constexpr auto end() { return _data.end(); }
-
-  constexpr const auto begin() const { return _data.begin(); }
-
-  constexpr const auto end() const { return _data.end(); }
-
- public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
-    if (_data.full()) {
-      fixed_stack<T> tmp(_data.size());
-      tmp.push(_data);
-      _data = fixed_stack<T>(tmp.size() * 2 + 10);
-      _data.push(transfer(tmp));
-    }
-
-    _data.push(relay<U>(u));
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), pushing<T>(*this));
-  }
-
-  constexpr auto pop() { return _data.pop(); }
-};
-
-template <typename T, size_t N>
 class static_vector {
  private:
   array<T, N> _data;
@@ -2605,7 +2410,7 @@ class vector {
   }
 
   constexpr vector(const vector &) = default;
-constexpr vector(vector &) = default;
+  constexpr vector(vector &) = default;
   constexpr vector &operator=(const vector &) = default;
   constexpr vector &operator=(vector &&) = default;
 
@@ -2660,6 +2465,121 @@ constexpr vector(vector &) = default;
   constexpr auto pop() { return _data.pop(); }
 
   constexpr auto clear() { return _data.clear(); }
+};
+
+template <typename T, size_t N>
+class static_stack : public static_vector<T, N> {
+ public:
+  constexpr ~static_stack() = default;
+  constexpr static_stack() = default;
+  constexpr static_stack(size_t max) : static_vector<T, N>(max) {}
+
+  template <input_range R>
+  constexpr static_stack(R &&r)
+      : static_vector<T, N>(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
+    push(relay<R>(r));
+  }
+
+  constexpr static_stack(const static_stack &) = default;
+  constexpr static_stack(static_stack &) = default;
+  constexpr static_stack &operator=(const static_stack &) = default;
+  constexpr static_stack &operator=(static_stack &&) = default;
+
+  template <input_range R>
+  constexpr static_stack &operator=(R &&r) {
+    return (*this = static_stack(relay<R>(r)));
+  }
+
+ public:
+  constexpr auto begin() {
+    return reverse_iterator(static_vector<T, N>::end());
+  }
+
+  constexpr auto end() { return reverse_iterator(static_vector<T, N>::begin()); }
+  constexpr auto begin() const {
+    return reverse_iterator(static_vector<T, N>::end());
+  }
+
+  constexpr auto end() const {
+    return reverse_iterator(static_vector<T, N>::begin());
+  }
+};
+
+template <typename T>
+class fixed_stack:public fixed_vector<T> {
+ public:
+  constexpr ~fixed_stack() = default;
+  constexpr fixed_stack() = default;
+  constexpr fixed_stack(size_t max) : fixed_vector<T>(max) {}
+
+  template <input_range R>
+  constexpr fixed_stack(R &&r)
+      : fixed_vector<T>(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
+    push(relay<R>(r));
+  }
+
+  constexpr fixed_stack(const fixed_stack &) = default;
+  constexpr fixed_stack(fixed_stack &) = default;
+  constexpr fixed_stack &operator=(const fixed_stack &) = default;
+  constexpr fixed_stack &operator=(fixed_stack &&) = default;
+
+  template <input_range R>
+  constexpr fixed_stack &operator=(R &&r) {
+    return (*this = fixed_stack(relay<R>(r)));
+  }
+
+ public:
+  constexpr auto begin() {
+    return reverse_iterator(fixed_vector<T>::end());
+  }
+
+  constexpr auto end() { return reverse_iterator(fixed_vector<T>::begin()); }
+  constexpr auto begin() const {
+    return reverse_iterator(fixed_vector<T>::end());
+  }
+
+  constexpr auto end() const {
+    return reverse_iterator(fixed_vector<T>::begin());
+  } 
+};
+
+template <typename T>
+class stack:public vector<T> {
+
+ public:
+  constexpr ~stack() = default;
+  constexpr stack() = default;
+  constexpr stack(size_t max) : vector<T>(max) {}
+  template <input_range R>
+  constexpr stack(R &&r)
+    requires distanciable_iterator<decltype(stew::begin(r))>
+      : stack(stew::end(r) - stew::begin(r)) {
+    push(relay<R>(r));
+  }
+
+  constexpr stack(const stack &) = default;
+  constexpr stack(stack &&) = default;
+
+  constexpr stack &operator=(const stack &) = default;
+  constexpr stack &operator=(stack &&) = default;
+
+  template <input_range R>
+  constexpr stack &operator=(R &&r) {
+    return (*this = stack(relay<R>(r)));
+  }
+ public:
+  constexpr auto begin() {
+    return reverse_iterator(vector<T>::end());
+  }
+
+  constexpr auto end() { return reverse_iterator(vector<T>::begin()); }
+  constexpr auto begin() const {
+    return reverse_iterator(vector<T>::end());
+  }
+
+  constexpr auto end() const {
+    return reverse_iterator(vector<T>::begin());
+  } 
 };
 
 template <typename T>
