@@ -2495,7 +2495,9 @@ class static_stack : public static_vector<T, N> {
     return reverse_iterator(static_vector<T, N>::end());
   }
 
-  constexpr auto end() { return reverse_iterator(static_vector<T, N>::begin()); }
+  constexpr auto end() {
+    return reverse_iterator(static_vector<T, N>::begin());
+  }
   constexpr auto begin() const {
     return reverse_iterator(static_vector<T, N>::end());
   }
@@ -2506,7 +2508,7 @@ class static_stack : public static_vector<T, N> {
 };
 
 template <typename T>
-class fixed_stack:public fixed_vector<T> {
+class fixed_stack : public fixed_vector<T> {
  public:
   constexpr ~fixed_stack() = default;
   constexpr fixed_stack() = default;
@@ -2529,9 +2531,7 @@ class fixed_stack:public fixed_vector<T> {
   }
 
  public:
-  constexpr auto begin() {
-    return reverse_iterator(fixed_vector<T>::end());
-  }
+  constexpr auto begin() { return reverse_iterator(fixed_vector<T>::end()); }
 
   constexpr auto end() { return reverse_iterator(fixed_vector<T>::begin()); }
   constexpr auto begin() const {
@@ -2540,12 +2540,11 @@ class fixed_stack:public fixed_vector<T> {
 
   constexpr auto end() const {
     return reverse_iterator(fixed_vector<T>::begin());
-  } 
+  }
 };
 
 template <typename T>
-class stack:public vector<T> {
-
+class stack : public vector<T> {
  public:
   constexpr ~stack() = default;
   constexpr stack() = default;
@@ -2567,19 +2566,107 @@ class stack:public vector<T> {
   constexpr stack &operator=(R &&r) {
     return (*this = stack(relay<R>(r)));
   }
+
  public:
-  constexpr auto begin() {
-    return reverse_iterator(vector<T>::end());
-  }
+  constexpr auto begin() { return reverse_iterator(vector<T>::end()); }
 
   constexpr auto end() { return reverse_iterator(vector<T>::begin()); }
-  constexpr auto begin() const {
-    return reverse_iterator(vector<T>::end());
+  constexpr auto begin() const { return reverse_iterator(vector<T>::end()); }
+
+  constexpr auto end() const { return reverse_iterator(vector<T>::begin()); }
+};
+
+template <typename T>
+class set2 {
+ public:
+  struct iterator {
+    size_t _idx = 0;
+    vector<size_t> *_index = nullptr;
+    vector<T> *_data = nullptr;
+
+   public:
+    constexpr iterator(vector<T> *data = nullptr,
+                       vector<size_t> *index = nullptr)
+        : _data(data), _index(index) {}
+
+   public:
+    constexpr iterator &operator++() {
+      if (_data != nullptr && _index != nullptr) ++_idx;
+
+      return *this;
+    }
+
+    constexpr iterator operator++(int) {
+      auto copy = *this;
+      ++(*this);
+      return copy;
+    }
+
+    constexpr bool operator==(const iterator &o) const {
+      return _data == o._data && _index == o._index && _idx == o._idx;
+    }
+
+    constexpr auto operator*() -> decltype(auto) {
+      assert(_data != nullptr && _index == nullptr);
+      return (_data[_index[_idx]]);
+    }
+  };
+
+ private:
+  vector<T> _data;
+  vector<size_t> _index;
+
+ public:
+  constexpr ~set2() = default;
+  constexpr set2() = default;
+  constexpr set2(size_t max) : _data(max), _index(max) {}
+  constexpr set2(const set2 &) = default;
+  constexpr set2(set2 &&) = default;
+  constexpr set2 &operator=(const set2 &) = default;
+  constexpr set2 &operator=(set2 &&) = default;
+
+ public:
+  constexpr size_t size() const { return _data.size(); }
+  constexpr bool empty() const { return _data.empty(); }
+  constexpr bool full() const { return _data.full(); }
+
+ public:
+  constexpr auto begin() { return iterator(0, &_data, &_index); }
+  constexpr auto end() { return iterator(_data.size(), &_data, &_index); }
+  constexpr auto begin() const { return _data.begin(); }
+  constexpr auto end() const { return _data.end(); }
+
+ public:
+  template <convertible_to<T> U>
+  constexpr void insert(iterator i, U &&u) {
+    _index.push(0);
+
+    for (size_t j = _index.size() - 1; j > i._idx; --j) {
+      _index[j] = _index[j - 1];
+    }
+
+    _index[i._idx] = _data.size();
+    _data.push(relay<U>(u));
   }
 
-  constexpr auto end() const {
-    return reverse_iterator(vector<T>::begin());
-  } 
+ public:
+  template <convertible_to<T> U>
+  constexpr void push(U &&u) {
+    auto fnd = find(*this, [&u](const T &i) { return !(i < u); });
+
+    if (fnd == end() || *fnd != u) {
+      insert(fnd, relay<U>(u));
+    }
+  }
+
+  template <input_range R>
+  constexpr void push(R &&r) {
+    for (auto &&i : relay<R>(r)) {
+      push(relay<decltype(i)>(i));
+    }
+  }
+
+  // maybe<T> pop() {}
 };
 
 template <typename T>
