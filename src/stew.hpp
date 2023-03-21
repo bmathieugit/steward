@@ -2458,7 +2458,9 @@ class vector {
   }
 
   template <input_range R>
-  constexpr void push(R &&r) {
+  constexpr void push(R &&r)
+    requires not_convertible_to<R, T>
+  {
     copy(relay<R>(r), pushing<T>(*this));
   }
 
@@ -2577,17 +2579,17 @@ class stack : public vector<T> {
 };
 
 template <typename T>
-class set2 {
+class set {
  public:
-  struct iterator {
+   struct iterator {
     size_t _idx = 0;
     vector<size_t> *_index = nullptr;
     vector<T> *_data = nullptr;
 
    public:
-    constexpr iterator(vector<T> *data = nullptr,
+    constexpr iterator(size_t idx, vector<T> *data = nullptr,
                        vector<size_t> *index = nullptr)
-        : _data(data), _index(index) {}
+        : _idx(idx), _data(data), _index(index) {}
 
    public:
     constexpr iterator &operator++() {
@@ -2608,7 +2610,40 @@ class set2 {
 
     constexpr auto operator*() -> decltype(auto) {
       assert(_data != nullptr && _index == nullptr);
-      return (_data[_index[_idx]]);
+      return ((*_data)[(*_index)[_idx]]);
+    }
+  };
+
+ struct citerator {
+    size_t _idx = 0;
+    const vector<size_t> *_index = nullptr;
+    const vector<T> *_data = nullptr;
+
+   public:
+    constexpr citerator(size_t idx, const vector<T> *data = nullptr,
+                       const vector<size_t> *index = nullptr)
+        : _idx(idx), _data(data), _index(index) {}
+
+   public:
+    constexpr citerator &operator++() {
+      if (_data != nullptr && _index != nullptr) ++_idx;
+
+      return *this;
+    }
+
+    constexpr citerator operator++(int) {
+      auto copy = *this;
+      ++(*this);
+      return copy;
+    }
+
+    constexpr bool operator==(const citerator &o) const {
+      return _data == o._data && _index == o._index && _idx == o._idx;
+    }
+
+    constexpr auto operator*() -> decltype(auto) {
+      assert(_data != nullptr && _index == nullptr);
+      return ((*_data)[(*_index)[_idx]]);
     }
   };
 
@@ -2617,13 +2652,13 @@ class set2 {
   vector<size_t> _index;
 
  public:
-  constexpr ~set2() = default;
-  constexpr set2() = default;
-  constexpr set2(size_t max) : _data(max), _index(max) {}
-  constexpr set2(const set2 &) = default;
-  constexpr set2(set2 &&) = default;
-  constexpr set2 &operator=(const set2 &) = default;
-  constexpr set2 &operator=(set2 &&) = default;
+  constexpr ~set() = default;
+  constexpr set() = default;
+  constexpr set(size_t max) : _data(max), _index(max) {}
+  constexpr set(const set &) = default;
+  constexpr set(set &&) = default;
+  constexpr set &operator=(const set &) = default;
+  constexpr set &operator=(set &&) = default;
 
  public:
   constexpr size_t size() const { return _data.size(); }
@@ -2631,10 +2666,11 @@ class set2 {
   constexpr bool full() const { return _data.full(); }
 
  public:
-  constexpr auto begin() { return iterator(0, &_data, &_index); }
+   constexpr auto begin() { return iterator(0, &_data, &_index); }
   constexpr auto end() { return iterator(_data.size(), &_data, &_index); }
-  constexpr auto begin() const { return _data.begin(); }
-  constexpr auto end() const { return _data.end(); }
+
+ constexpr auto begin()const { return citerator(0, &_data, &_index); }
+  constexpr auto end() const { return citerator(_data.size(), &_data, &_index); }
 
  public:
   template <convertible_to<T> U>
@@ -2669,281 +2705,6 @@ class set2 {
   // maybe<T> pop() {}
 };
 
-template <typename T>
-class list {
-  // FIXME: voir si l'on peut utiliser non_owning sur les pointeur node*.
-
- public:
-  struct node {
-    T _t;
-    node *_next = nullptr;
-    node *_prev = nullptr;
-  };
-
- private:
-  template <bool CONST>
-  class iterator {
-   private:
-    friend list;
-    using pointer = if_<CONST, const node *, node *>;
-    using reference = if_<CONST, const T &, T &>;
-
-   private:
-    pointer _cur;
-
-   public:
-    constexpr iterator(pointer cur = nullptr) : _cur(cur) {}
-
-   public:
-    constexpr iterator &operator++() {
-      if (_cur != nullptr) _cur = _cur->_next;
-
-      return *this;
-    }
-
-    constexpr iterator operator++(int) {
-      auto copy = *this;
-      ++(*this);
-      return copy;
-    }
-
-    constexpr bool operator==(const iterator &o) const {
-      return _cur == o._cur;
-    }
-
-    constexpr reference operator*() {
-      assert(_cur != nullptr);
-      return _cur->_t;
-    }
-
-    constexpr reference operator*() const
-      requires CONST
-    {
-      assert(_cur != nullptr);
-      return _cur->_t;
-    }
-  };
-
- public:
-  size_t _size = 0;
-  node *_first = nullptr;
-  node *_last = nullptr;
-  node *_bin = nullptr;
-
- public:
-  constexpr ~list() {
-    while (_first != nullptr) {
-      auto next = _first->_next;
-      delete _first;
-      _first = next;
-    }
-
-    while (_bin != nullptr) {
-      auto next = _bin->_next;
-      delete _bin;
-      _bin = next;
-    }
-
-    _last = nullptr;
-    _size = 0;
-  }
-
-  constexpr list() = default;
-
-  template <input_range R>
-  constexpr list(R &&r)
-    requires distanciable_iterator<decltype(stew::begin(r))>
-  {
-    push(relay<R>(r));
-  }
-
-  constexpr list(list &&o)
-      : _size(transfer(o._size)),
-        _first(transfer(o._first)),
-        _last(transfer(o._last)) {}
-
-  constexpr list &operator=(list o) {
-    _size = transfer(o._size);
-    _first = transfer(o._first);
-    _last = transfer(o._last);
-    return *this;
-  }
-
-  template <input_range R>
-  constexpr list &operator=(R &&r) {
-    return (*this = list(relay<R>(r)));
-  }
-
- public:
-  constexpr size_t size() const { return _size; }
-
-  constexpr bool empty() const { return _size == 0; }
-
- public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
-    node *n = recycle(relay<U>(u), nullptr, _last);
-
-    if (empty()) {
-      _first = n;
-    }
-
-    _last = n;
-
-    ++_size;
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r)
-    requires not_convertible_to<R, T>
-  {
-    copy(relay<R>(r), pushing<T>(*this));
-  }
-
-  template <convertible_to<T> U>
-  constexpr void insert(U &&u, iterator<false> loc) {
-    node *next = loc._cur;
-    node *prev = next == nullptr ? _last : next->_prev;
-    node *n = recycle(relay<U>(u), next, prev);
-
-    bool empt = empty();
-
-    if (empt || n->_prev == nullptr) {
-      _first = n;
-    }
-
-    if (empt || n->_next == nullptr) {
-      _last = n;
-    }
-
-    ++_size;
-  }
-
-  constexpr void remove(iterator<false> loc) {
-    if (_first == loc._cur && _first != nullptr) {
-      _first = _first->_next;
-    }
-
-    if (_last == loc._cur && _last != nullptr) {
-      _last = _last->_prev;
-    }
-
-    --_size;
-
-    trash(loc._cur);
-  }
-
-  constexpr maybe<T> pop() {
-    auto last = _last;
-
-    if (_last != nullptr) {
-      _last = _last->_prev;
-    }
-
-    --_size;
-
-    return trash(last);
-  }
-
- private:
-  template <convertible_to<T> U>
-  constexpr node *recycle(U &&u, node *next, node *prev) {
-    node *n;
-
-    if (_bin == nullptr) {
-      n = new node();
-    } else {
-      n = _bin;
-      _bin = _bin->_next;
-    }
-
-    if (prev != nullptr) {
-      prev->_next = n;
-    }
-
-    if (next != nullptr) {
-      next->_prev = n;
-    }
-
-    n->_next = next;
-    n->_prev = prev;
-    n->_t = relay<U>(u);
-
-    return n;
-  }
-
-  constexpr maybe<T> trash(node *n) {
-    node *prev = nullptr;
-    node *next = nullptr;
-
-    if (n != nullptr) {
-      prev = n->_prev;
-      next = n->_next;
-
-      n->_next = _bin;
-      n->_prev = nullptr;
-
-      _bin = n;
-
-      if (prev != nullptr) {
-        prev->_next = next;
-      }
-
-      if (next != nullptr) {
-        next->_prev = prev;
-      }
-    }
-
-    return n == nullptr ? maybe<T>() : maybe<T>(transfer(n->_t));
-  }
-
- public:
-  constexpr auto begin() { return iterator<false>(_first); }
-
-  constexpr auto end() { return iterator<false>(); }
-
-  constexpr auto begin() const { return iterator<true>(_first); }
-
-  constexpr auto end() const { return iterator<true>(); }
-};
-
-template <less_comparable T>
-class set : public list<T> {
- public:
-  constexpr ~set() = default;
-  constexpr set() = default;
-
-  template <input_range R>
-  constexpr set(R &&r) : list<T>::list(relay<R>(r)) {}
-
-  constexpr set(const set &) = default;
-  constexpr set(set &&) = default;
-  constexpr set &operator=(const set &) = default;
-  constexpr set &operator=(set &&) = default;
-
-  template <input_range R>
-  constexpr set &operator=(R &&r) {
-    list<T>::operator=(relay<R>(r));
-    return *this;
-  }
-
- private:
-  using list<T>::insert;
-  // lusing list<T>::remove;
-
- public:
-  constexpr void push(const T &u) {
-    auto fnd = find(*this, [&u](const T &i) { return !(i < u); });
-
-    if (fnd == end() || *fnd != u) list<T>::insert(u, fnd);
-  }
-
- public:
-  constexpr auto begin() { return list<T>::begin(); }
-  constexpr auto end() { return list<T>::end(); }
-  constexpr auto begin() const { return list<T>::begin(); }
-  constexpr auto end() const { return list<T>::end(); }
-};
 
 //----------------------------
 //
@@ -4739,7 +4500,7 @@ class observer2 {
   }
 };
 }  // namespace stew
-
+/*
 namespace stew {
 namespace bdd {
 // le but de ce namespace est de fournir une base de donnée embarquée qui aura
@@ -4838,5 +4599,5 @@ auto write_file(file<T, m> &f, const T &t, set<free_location> &free_locations) {
 }
 }  // namespace bdd
 }  // namespace stew
-
+*/
 #endif
