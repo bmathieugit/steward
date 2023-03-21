@@ -2292,6 +2292,10 @@ class static_vector {
       return maybe<T>();
     }
   }
+
+  constexpr void clear() {
+    _size = 0;
+  }
 };
 
 template <typename T>
@@ -2578,10 +2582,12 @@ class stack : public vector<T> {
   constexpr auto end() const { return reverse_iterator(vector<T>::begin()); }
 };
 
+// TODO : implementation fixed_set
+
 template <typename T>
 class set {
  public:
-   struct iterator {
+  struct iterator {
     size_t _idx = 0;
     vector<size_t> *_index = nullptr;
     vector<T> *_data = nullptr;
@@ -2614,14 +2620,14 @@ class set {
     }
   };
 
- struct citerator {
+  struct citerator {
     size_t _idx = 0;
     const vector<size_t> *_index = nullptr;
     const vector<T> *_data = nullptr;
 
    public:
     constexpr citerator(size_t idx, const vector<T> *data = nullptr,
-                       const vector<size_t> *index = nullptr)
+                        const vector<size_t> *index = nullptr)
         : _idx(idx), _data(data), _index(index) {}
 
    public:
@@ -2666,11 +2672,13 @@ class set {
   constexpr bool full() const { return _data.full(); }
 
  public:
-   constexpr auto begin() { return iterator(0, &_data, &_index); }
+  constexpr auto begin() { return iterator(0, &_data, &_index); }
   constexpr auto end() { return iterator(_data.size(), &_data, &_index); }
 
- constexpr auto begin()const { return citerator(0, &_data, &_index); }
-  constexpr auto end() const { return citerator(_data.size(), &_data, &_index); }
+  constexpr auto begin() const { return citerator(0, &_data, &_index); }
+  constexpr auto end() const {
+    return citerator(_data.size(), &_data, &_index);
+  }
 
  public:
   template <convertible_to<T> U>
@@ -2701,10 +2709,9 @@ class set {
       push(relay<decltype(i)>(i));
     }
   }
-
+  // TODO: implement pop method. 
   // maybe<T> pop() {}
 };
-
 
 //----------------------------
 //
