@@ -22,43 +22,46 @@ constexpr auto ns = str::view("===");
 
 }  // namespace prefix
 
-enum class line_type { t1, t2, t3, t4, p, ns, unknown };
-
-line_type translate_prefix_to_line_type(string_view<char> pref) {
-  if (starts_with(pref, prefix::ns)) {
-    return line_type::ns;
-  } else if (starts_with(pref, prefix::p)) {
-    return line_type::p;
-  } else if (starts_with(pref, prefix::t1)) {
-    return line_type::t1;
-  } else if (starts_with(pref, prefix::t2)) {
-    return line_type::t2;
-  } else if (starts_with(pref, prefix::t3)) {
-    return line_type::t3;
-  } else if (starts_with(pref, prefix::t4)) {
-    return line_type::t4;
-  } else {
-    return line_type::unknown;
-  }
-}
+enum class line_type {};
 
 namespace slide {
 class line {
+ public:
+  enum class type { t1, t2, t3, t4, p, ns, unknown };
+
  private:
-  line_type _type = line_type::unknown;
+  type translate_prefix_to_line_type(string_view<char> pref) {
+    if (starts_with(pref, prefix::ns)) {
+      return type::ns;
+    } else if (starts_with(pref, prefix::p)) {
+      return type::p;
+    } else if (starts_with(pref, prefix::t1)) {
+      return type::t1;
+    } else if (starts_with(pref, prefix::t2)) {
+      return type::t2;
+    } else if (starts_with(pref, prefix::t3)) {
+      return type::t3;
+    } else if (starts_with(pref, prefix::t4)) {
+      return type::t4;
+    } else {
+      return type::unknown;
+    }
+  }
+
+ private:
+  type _type = type::unknown;
   static_string<char, 1024> _data;
 
  public:
   ~line() = default;
 
   line(string_view<char> data) : _type(translate_prefix_to_line_type(data)) {
-    if (_type != line_type::unknown) {
+    if (_type != type::unknown) {
       _data.push(str::subv(data, 3));
     }
   }
 
-  line(line_type type, string_view<char> data)
-      : _type(type), _data(data) {}
+  line(type tp, string_view<char> data) : _type(tp), _data(data) {}
 
   line(const line&) = default;
   line(line&&) = default;
@@ -66,7 +69,7 @@ class line {
   line& operator=(line&&) = default;
 
  public:
-  line_type type() const { return _type; }
+  type tp() const { return _type; }
   string_view<char> data() const { return string_view<char>(_data); }
 };
 
@@ -74,10 +77,25 @@ struct style;
 
 }  // namespace slide
 
+namespace terminal {
+void clear() { termout.push(ansi::clear); }
+
+void init() { termout.push(ansi::init); }
+
+namespace bg {
+void red() { termout.push(ansi::bg_red); }
+}  // namespace bg
+
+namespace fg {
+void bold() { termout.push(ansi::bold); }
+
+void red() { termout.push(ansi::fg_red); }
+}  // namespace fg
+}  // namespace terminal
 // un style est une définition de style pour un type de ligne donnée.
 // eg : t1=:31,1
 
-template<size_t N>
+template <size_t N>
 bool getline(static_string<char, N>& buff, file<char, mode::r>& f) {
   if (!buff.empty()) {
     return false;
@@ -109,8 +127,8 @@ void on_new_slide(slide::line l) {
 void on_paragraph(slide::line l) { termout.push(l.data()); }
 
 void on_title1(slide::line l) {
-  termout.push(ansi::fg_red);
-  termout.push(ansi::bold);
+  terminal::fg::red();
+  terminal::fg::bold();
   termout.push(l.data());
   termout.push(str::view("\033[0m"));
 }
@@ -141,26 +159,26 @@ int main(int argc, char** argv) {
     while (getline(buff, slides)) {
       slide::line l(buff);
 
-      switch (l.type()) {
-        case line_type::ns:
+      switch (l.tp()) {
+        case slide::line::type::ns:
           on_new_slide(l);
           break;
-        case line_type::p:
+        case slide::line::type::p:
           on_paragraph(l);
           break;
-        case line_type::t1:
+        case slide::line::type::t1:
           on_title1(l);
           break;
-        case line_type::t2:
+        case slide::line::type::t2:
           on_title2(l);
           break;
-        case line_type::t3:
+        case slide::line::type::t3:
           on_title3(l);
           break;
-        case line_type::t4:
+        case slide::line::type::t4:
           on_title4(l);
           break;
-        case line_type::unknown:
+        case slide::line::type::unknown:
         default:
           break;
       }
