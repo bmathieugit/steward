@@ -1772,6 +1772,25 @@ constexpr size_t count(const R &r, T &&t) {
   return c;
 }
 
+template <input_range R0, input_range R1>
+constexpr size_t count(const R0 &r0, const R1 &r1) {
+  size_t c = 0;
+
+  auto v0 = view(r0);
+  auto v1 = view(r1);
+
+  while (!v0.empty()) {
+    if (starts_with(v0, v1)) {
+      v0 = view(v0.begin() + v1.size(), v0.end());
+      ++c;
+    } else {
+      v0 = view(v0.begin() + 1, v0.end());
+    }
+  }
+
+  return c;
+}
+
 template <input_range R, predicate<range_const_reference<R>> P>
 constexpr size_t count(const R &r, P &&pred) {
   size_t c = 0;
@@ -2908,7 +2927,7 @@ constexpr void format_one_to(O &o, const T &t) {
 }
 
 template <character C>
-constinit const C format_joker = '\0';
+constinit const C format_joker = '$';
 
 namespace impl {
 template <ostream O, character C, typename H>

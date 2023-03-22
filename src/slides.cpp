@@ -3,16 +3,17 @@
 using namespace stew;
 
 namespace ansi {
+
 constexpr auto clear = str::view("\033[2J");
-
 constexpr auto init = str::view("\033[H");
-
+constexpr auto reset = str::view("\033[0m");
 constexpr auto bold = str::view("\033[1m");
 constexpr auto bg_red = str::view("\033[41m");
 constexpr auto fg_red = str::view("\033[31m");
 }  // namespace ansi
 
 namespace prefix {
+
 constexpr auto t1 = str::view("t1=");
 constexpr auto t2 = str::view("t2=");
 constexpr auto t3 = str::view("t3=");
@@ -22,168 +23,122 @@ constexpr auto ns = str::view("===");
 
 }  // namespace prefix
 
-enum class line_type {};
-
 namespace slide {
 class line {
- public:
-  enum class type { t1, t2, t3, t4, p, ns, unknown };
-
  private:
-  type translate_prefix_to_line_type(string_view<char> pref) {
-    if (starts_with(pref, prefix::ns)) {
-      return type::ns;
-    } else if (starts_with(pref, prefix::p)) {
-      return type::p;
-    } else if (starts_with(pref, prefix::t1)) {
-      return type::t1;
-    } else if (starts_with(pref, prefix::t2)) {
-      return type::t2;
-    } else if (starts_with(pref, prefix::t3)) {
-      return type::t3;
-    } else if (starts_with(pref, prefix::t4)) {
-      return type::t4;
-    } else {
-      return type::unknown;
-    }
-  }
-
- private:
-  type _type = type::unknown;
-  static_string<char, 1024> _data;
+  string_view<char> _content;
 
  public:
   ~line() = default;
-
-  line(string_view<char> data) : _type(translate_prefix_to_line_type(data)) {
-    if (_type != type::unknown) {
-      _data.push(str::subv(data, 3));
-    }
-  }
-
-  line(type tp, string_view<char> data) : _type(tp), _data(data) {}
-
+  line(string_view<char> content) : _content(content) {}
   line(const line&) = default;
   line(line&&) = default;
   line& operator=(const line&) = default;
   line& operator=(line&&) = default;
 
  public:
-  type tp() const { return _type; }
-  string_view<char> data() const { return string_view<char>(_data); }
+  string_view<char> content() const { return _content; }
 };
 
-struct style;
+class slide {
+ private:
+  string_view<char> _content;
+  string_view<char> _tail;
 
-}  // namespace slide
+ public:
+  ~slide() = default;
+  slide(string_view<char> content) : _content(content), _tail(_content) {}
+  slide(const slide&) = default;
+  slide(slide&&) = default;
+  slide& operator=(const slide&) = default;
+  slide& operator=(slide&&) = default;
 
-namespace stdfral {
-void clear() { io::stdfw.push(ansi::clear); }
+ public:
+  auto content() const { return _content; }
+  maybe<line> next() { 
+    maybe<line> l; 
+    
+    if (!_tail.empty()){
+      auto fnd = find(_tail, '\n');
+      auto tmp = string_view<char>(_tail.begin(), fnd);
 
-void init() { io::stdfw.push(ansi::init); }
+      
+    }
+ 
+    return l;}
+};
 
-namespace bg {
-void red() { io::stdfw.push(ansi::bg_red); }
-}  // namespace bg
+class slides {
+ private:
+  fixed_string<char> _content;
+  string_view<char> _tail;
+  fixed_string<char> _config;
+  size_t _size = 0;
+  size_t _curr = 0;
 
-namespace fg {
-void bold() { io::stdfw.push(ansi::bold); }
+ public:
+  ~slides() = default;
 
-void red() { io::stdfw.push(ansi::fg_red); }
-}  // namespace fg
-}  // namespace stdfral
-// un style est une définition de style pour un type de ligne donnée.
-// eg : t1=:31,1
+  explicit slides(fixed_string<char>&& content, fixed_string<char>&& config)
+      : _content(transfer(content)),
+        _tail(_content),
+        _config(transfer(config)),
+        _size(stew::count(_content, prefix::ns) - 1) {}
 
-template <size_t N>
-bool getline(static_string<char, N>& buff, file<char, mode::r>& f) {
-  if (!buff.empty()) {
-    return false;
-  } else {
-    maybe<char> tmp;
-    auto reader = f.reader();
+  slides(const slides&) = default;
+  slides(slides&&) = default;
+  slides& operator=(const slides&) = default;
+  slides& operator=(slides&&) = default;
 
-    while ((tmp = reader.pop()).has()) {
-      buff.push(*tmp);
-      if (*tmp == '\n') break;
+ public:
+  size_t size() const { return _size; }
+  size_t curr() const { return _curr; }
+
+  tuple<size_t, size_t> page() const {
+    return tuple<size_t, size_t>(_curr, _size);
+  }
+
+ public:
+  maybe<slide> next() {
+    maybe<slide> res;
+
+    if (!_tail.empty() && starts_with(_tail, prefix::ns)) {
+      _tail = string_view<char>(_tail.begin() + prefix::ns.size(), _tail.end());
+
+      auto fnd = stew::find(_tail, prefix::ns);
+      auto tmp = string_view<char>(_tail.begin(), fnd);
+
+      if (!(tmp.empty() || stew::all_of(tmp, [](char c) {
+              return c == ' ' || c == '\n' || c == '\t';
+            }))) {
+        res = slide(string_view<char>(_tail.begin(), fnd));
+        _tail = string_view<char>(fnd, _tail.end());
+        ++_curr;
+      }
     }
 
-    if (!tmp.has()) return false;
-
-    return true;
+    return res;
   }
-}
-
-void clear_term() { io::stdfw.push(ansi::clear); }
-
-void origin_cursor() { io::stdfw.push(ansi::init); }
-
-void on_new_slide(slide::line l) {
-  io::stdfr.pop();
-  clear_term();
-  origin_cursor();
-}
-
-void on_paragraph(slide::line l) { io::stdfw.push(l.data()); }
-
-void on_title1(slide::line l) {
-  stdfral::fg::red();
-  stdfral::fg::bold();
-  io::stdfw.push(l.data());
-  io::stdfw.push(str::view("\033[0m"));
-}
-
-void on_title2(slide::line l) {
-  io::stdfw.push(str::view("\033[1;32m"));
-  io::stdfw.push(l.data());
-  io::stdfw.push(str::view("\033[0m"));
-}
-
-void on_title3(slide::line l) {
-  io::stdfw.push(str::view("\033[1;33m"));
-  io::stdfw.push(l.data());
-  io::stdfw.push(str::view("\033[0m"));
-}
-
-void on_title4(slide::line l) {
-  io::stdfw.push(str::view("\033[1;34m"));
-  io::stdfw.push(l.data());
-  io::stdfw.push(str::view("\033[0m"));
-}
+};
+}  // namespace slide
 
 int main(int argc, char** argv) {
   if (argc == 2) {
     static_string<char, 1024> buff;
-    file<char, mode::r> slides(str::view(argv[1]));
+    file<char, mode::r> fslides(str::view(argv[1]));
 
-    while (getline(buff, slides)) {
-      slide::line l(buff);
+    if (fslides.opened()) {
+      slide::slides sls(io::readall(fslides), str::fixed(""));
+      maybe<slide::slide> sl;
+      maybe<slide::line> l;
 
-      switch (l.tp()) {
-        case slide::line::type::ns:
-          on_new_slide(l);
-          break;
-        case slide::line::type::p:
-          on_paragraph(l);
-          break;
-        case slide::line::type::t1:
-          on_title1(l);
-          break;
-        case slide::line::type::t2:
-          on_title2(l);
-          break;
-        case slide::line::type::t3:
-          on_title3(l);
-          break;
-        case slide::line::type::t4:
-          on_title4(l);
-          break;
-        case slide::line::type::unknown:
-        default:
-          break;
+      while ((sl = sls.next()).has()) {
+        io::printfln(str::view("slide $/$"), sls.curr(), sls.size());
+
+        while ((l = (*sl).next()).has()) {
+          io::printfln(str::view(" -- content : \n$"), (*l).content());
+        }
       }
-
-      buff.clear();
     }
   }
 
