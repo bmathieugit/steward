@@ -5,15 +5,25 @@
 using namespace stew;
 
 int main(int argc, char** argv) {
-  set<int> ints;
-  ints.push(2);
-  ints.push(4);
-  ints.push(3);
-  ints.push(2);
-
-  for (int i : ints)
   {
-    console<char>::printfln(str::view("\0"), i);
+    file<int, mode::w> fw(str::view("ftest.t"));
+
+    if (fw.opened()) {
+      fw.writer().push(1);
+      fw.writer().push(2);
+      fw.writer().push(3);
+    }
   }
+
+  {
+    file<int, mode::r> fr(str::view("ftest.t"));
+
+    if (fr.opened()) {
+      auto content = io::readall(fr);
+      io::printfln(str::view("\0"), io::len(fr));
+      io::printfln(str::view("\0"), view(content));
+    }
+  }
+
   return 0;
 }

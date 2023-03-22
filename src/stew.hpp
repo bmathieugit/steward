@@ -2293,9 +2293,7 @@ class static_vector {
     }
   }
 
-  constexpr void clear() {
-    _size = 0;
-  }
+  constexpr void clear() { _size = 0; }
 };
 
 template <typename T>
@@ -2309,7 +2307,7 @@ class fixed_vector {
   constexpr ~fixed_vector() = default;
   constexpr fixed_vector() = default;
 
-  constexpr fixed_vector(size_t max)
+  constexpr explicit fixed_vector(size_t max)
       : _size{0}, _max{max}, _data{new T[_max + 1]{}} {}
 
   constexpr fixed_vector(const fixed_vector &o) : fixed_vector(o._max) {
@@ -2405,7 +2403,7 @@ class vector {
  public:
   constexpr ~vector() = default;
   constexpr vector() = default;
-  constexpr vector(size_t max) : _data(max) {}
+  constexpr explicit vector(size_t max) : _data(max) {}
 
   template <input_range R>
   constexpr vector(R &&r)
@@ -2478,7 +2476,7 @@ class static_stack : public static_vector<T, N> {
  public:
   constexpr ~static_stack() = default;
   constexpr static_stack() = default;
-  constexpr static_stack(size_t max) : static_vector<T, N>(max) {}
+  constexpr explicit static_stack(size_t max) : static_vector<T, N>(max) {}
 
   template <input_range R>
   constexpr static_stack(R &&r)
@@ -2518,7 +2516,7 @@ class fixed_stack : public fixed_vector<T> {
  public:
   constexpr ~fixed_stack() = default;
   constexpr fixed_stack() = default;
-  constexpr fixed_stack(size_t max) : fixed_vector<T>(max) {}
+  constexpr explicit fixed_stack(size_t max) : fixed_vector<T>(max) {}
 
   template <input_range R>
   constexpr fixed_stack(R &&r)
@@ -2554,7 +2552,7 @@ class stack : public vector<T> {
  public:
   constexpr ~stack() = default;
   constexpr stack() = default;
-  constexpr stack(size_t max) : vector<T>(max) {}
+  constexpr explicit stack(size_t max) : vector<T>(max) {}
   template <input_range R>
   constexpr stack(R &&r)
     requires distanciable_iterator<decltype(stew::begin(r))>
@@ -2709,7 +2707,7 @@ class set {
       push(relay<decltype(i)>(i));
     }
   }
-  // TODO: implement pop method. 
+  // TODO: implement pop method.
   // maybe<T> pop() {}
 };
 
@@ -2839,20 +2837,6 @@ constexpr string_view<C> subv(string_view<C> s, size_t from, size_t n) {
 }
 
 }  // namespace str
-
-template <character C>
-constexpr bool operator<(const string_view_like<C> auto &s0,
-                         const string_view_like<C> auto &s1) {
-  return str::cmp(s0.begin(), s1.begin()) < 0;
-}
-
-inline string<char> operator"" _s(const char *s, size_t n) {
-  return string<char>(string_view<char>(s, s + n));
-}
-
-inline string<wchar_t> operator"" _s(const wchar_t *s, size_t n) {
-  return string<wchar_t>(string_view<wchar_t>(s, s + n));
-}
 
 template <character C>
 struct after_pair {
@@ -3251,8 +3235,6 @@ class extractor<bool> {
 //
 //---------------------
 
-constexpr array<const char *, 6> modechr = {"r", "w", "r+", "w+", "a", "a+"};
-
 enum class mode : size_t { r = 0, w = 1, rp = 2, wp = 3, a = 4, ap = 5 };
 
 template <mode m>
@@ -3424,16 +3406,9 @@ class file_writer {
 
   template <input_range R>
   void push(R &&r) {
-    if constexpr (string_view_like<R, char>) {
-      if (_file.get() != nullptr) {
-        string_view<char> tmp(relay<R>(r));
-        fwrite(tmp.begin(), sizeof(char), tmp.size(), _file.get());
-      }
-    } else if constexpr (string_view_like<R, wchar_t>) {
-      if (_file.get() != nullptr) {
-        string_view<wchar_t> tmp(relay<R>(r));
-        fwrite(tmp.begin(), sizeof(wchar_t), tmp.size(), _file.get());
-      }
+    if constexpr (pointer_eq<decltype(r.begin())>) {
+      auto v = view(r);
+      fwrite(v.begin(), sizeof(decltype(*r.begin())), v.size(), _file.get());
     } else {
       for (auto &&i : relay<R>(r)) {
         push(relay<decltype(i)>(i));
@@ -3442,14 +3417,17 @@ class file_writer {
   }
 };
 
+enum class from : int { start = SEEK_SET, end = SEEK_END, cur = SEEK_CUR };
+
 template <typename T, mode m>
 class file {
  private:
   FILE *_fp = nullptr;
+  static constexpr array<const char *, 6> modechr = {"r",  "w", "r+",
+                                                     "w+", "a", "a+"};
 
  public:
   ~file() { close(); }
-
   file() = default;
 
   template <character C>
@@ -3465,13 +3443,13 @@ class file {
   bool opened() { return _fp != nullptr; }
 
  public:
-  void seekg(long offset, seek fr) {
+  void set(from frm, long offset) {
     if (_fp != nullptr) {
-      fseek(_fp, offset, (int)fr);
+      fseek(_fp, offset, (int)frm);
     }
   }
 
-  long tellg() { return _fp != nullptr ? ftell(_fp) : 0; }
+  size_t pos() { return _fp != nullptr ? ftell(_fp) : 0; }
 
   file_reader<T> reader()
     requires(readable_mode<m>)
@@ -3497,72 +3475,53 @@ class file {
   }
 };
 
-template <character C>
-struct files {
-  template <typename... T>
-  static void printf(file_writer<C> &o, string_view<C> fmt, const T &...t) {
-    format_to(o, fmt, t...);
-  }
+namespace io {
 
-  template <typename... T>
-  static void printfln(file_writer<C> &o, string_view<C> fmt, const T &...t) {
-    format_to(o, fmt, t...);
-    o.push('\n');
-  }
+static auto stdfin = file<char, mode::r>(stdin);
+static auto stdfout = file<char, mode::w>(stdout);
+static auto stdfr = stdfin.reader();
+static auto stdfw = stdfout.writer();
 
-  static void print(file_writer<C> &o, string_view<C> s) { o.push(s); }
+template <typename T, mode m>
+inline size_t len(file<T, m> &f) {
+  size_t cur = f.pos();
+  f.set(from::end, 0L);
+  size_t l = f.pos();
+  f.set(from::start, cur);
+  return l / sizeof(T);
+}
 
-  static void println(file_writer<C> &o, string_view<C> s) {
-    o.push(s);
-    o.push('\n');
-  }
+template <typename T, mode m>
+inline fixed_vector<T> readall(file<T, m> &f) {
+  size_t n = len(f);
+  fixed_vector<T> content(n);
+  f.reader().pop(content, n);
+  return content;
+}
 
-  template <typename... T>
-  static void readf(file_reader<C> &i, string_view<C> fmt,
-                    extract_response<T...> &response) {
-    maybe<C> mb;
-    string<C> s;
+template <character C, typename... T>
+inline void printf(string_view<C> fmt, const T &...t) {
+  format_to(stdfw, fmt, t...);
+}
 
-    while ((mb = i.pop()).has() && *mb != '\n') {
-      s.push(*mb);
-    }
-
-    extract_to(s, fmt, response);
-  }
-};
-
-//------------------------
-//
-// Console
-//
-//------------------------
-
-auto fin = file<char, mode::r>(stdin);
-auto fout = file<char, mode::w>(stdout);
-auto termin = fin.reader();
-auto termout = fout.writer();
+template <character C, typename... T>
+inline void printfln(string_view<C> fmt, const T &...t) {
+  format_to(stdfw, fmt, t...);
+  stdfw.push('\n');
+}
 
 template <character C>
-struct console {
-  template <typename... T>
-  static void printf(string_view<C> fmt, const T &...t) {
-    files<C>::printf(termout, fmt, t...);
-  }
+inline void print(string_view<C> s) {
+  stdfw.push(s);
+}
 
-  template <typename... T>
-  static void printfln(string_view<C> fmt, const T &...t) {
-    files<C>::printfln(termout, fmt, t...);
-  }
+template <character C>
+inline void println(string_view<C> s) {
+  stdfw.push(s);
+  stdfw.push('\n');
+}
 
-  static void print(string_view<C> s) { files<C>::print(termout, s); }
-
-  static void println(string_view<C> s) { files<C>::println(termout, s); }
-
-  template <typename... T>
-  static void readf(string_view<C> fmt, extract_response<T...> &response) {
-    files<C>::readf(termin, fmt, response);
-  }
-};
+}  // namespace io
 
 //------------------------
 //

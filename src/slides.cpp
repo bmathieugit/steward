@@ -77,21 +77,21 @@ struct style;
 
 }  // namespace slide
 
-namespace terminal {
-void clear() { termout.push(ansi::clear); }
+namespace stdfral {
+void clear() { io::stdfw.push(ansi::clear); }
 
-void init() { termout.push(ansi::init); }
+void init() { io::stdfw.push(ansi::init); }
 
 namespace bg {
-void red() { termout.push(ansi::bg_red); }
+void red() { io::stdfw.push(ansi::bg_red); }
 }  // namespace bg
 
 namespace fg {
-void bold() { termout.push(ansi::bold); }
+void bold() { io::stdfw.push(ansi::bold); }
 
-void red() { termout.push(ansi::fg_red); }
+void red() { io::stdfw.push(ansi::fg_red); }
 }  // namespace fg
-}  // namespace terminal
+}  // namespace stdfral
 // un style est une définition de style pour un type de ligne donnée.
 // eg : t1=:31,1
 
@@ -114,41 +114,41 @@ bool getline(static_string<char, N>& buff, file<char, mode::r>& f) {
   }
 }
 
-void clear_term() { termout.push(ansi::clear); }
+void clear_term() { io::stdfw.push(ansi::clear); }
 
-void origin_cursor() { termout.push(ansi::init); }
+void origin_cursor() { io::stdfw.push(ansi::init); }
 
 void on_new_slide(slide::line l) {
-  termin.pop();
+  io::stdfr.pop();
   clear_term();
   origin_cursor();
 }
 
-void on_paragraph(slide::line l) { termout.push(l.data()); }
+void on_paragraph(slide::line l) { io::stdfw.push(l.data()); }
 
 void on_title1(slide::line l) {
-  terminal::fg::red();
-  terminal::fg::bold();
-  termout.push(l.data());
-  termout.push(str::view("\033[0m"));
+  stdfral::fg::red();
+  stdfral::fg::bold();
+  io::stdfw.push(l.data());
+  io::stdfw.push(str::view("\033[0m"));
 }
 
 void on_title2(slide::line l) {
-  termout.push(str::view("\033[1;32m"));
-  termout.push(l.data());
-  termout.push(str::view("\033[0m"));
+  io::stdfw.push(str::view("\033[1;32m"));
+  io::stdfw.push(l.data());
+  io::stdfw.push(str::view("\033[0m"));
 }
 
 void on_title3(slide::line l) {
-  termout.push(str::view("\033[1;33m"));
-  termout.push(l.data());
-  termout.push(str::view("\033[0m"));
+  io::stdfw.push(str::view("\033[1;33m"));
+  io::stdfw.push(l.data());
+  io::stdfw.push(str::view("\033[0m"));
 }
 
 void on_title4(slide::line l) {
-  termout.push(str::view("\033[1;34m"));
-  termout.push(l.data());
-  termout.push(str::view("\033[0m"));
+  io::stdfw.push(str::view("\033[1;34m"));
+  io::stdfw.push(l.data());
+  io::stdfw.push(str::view("\033[0m"));
 }
 
 int main(int argc, char** argv) {
