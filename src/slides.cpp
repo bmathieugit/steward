@@ -23,121 +23,98 @@ constexpr auto ns = str::view("===");
 
 }  // namespace prefix
 
-namespace slide {
-class line {
- private:
-  string_view<char> _content;
-
- public:
-  ~line() = default;
-  line(string_view<char> content) : _content(content) {}
-  line(const line&) = default;
-  line(line&&) = default;
-  line& operator=(const line&) = default;
-  line& operator=(line&&) = default;
-
- public:
-  string_view<char> content() const { return _content; }
+namespace slide2 {
+struct line {
+  fixed_string<char> style;
+  fixed_string<char> content;
 };
 
-class slide {
- private:
-  string_view<char> _content;
-  string_view<char> _tail;
+struct style {
+  fixed_string<char> prefix;
+  fixed_string<char> applied;
+};
 
- public:
-  ~slide() = default;
-  slide(string_view<char> content) : _content(content), _tail(_content) {}
-  slide(const slide&) = default;
-  slide(slide&&) = default;
-  slide& operator=(const slide&) = default;
-  slide& operator=(slide&&) = default;
+struct styles {
+  vector<style> stls;
+};
 
- public:
-  auto content() const { return _content; }
-  maybe<line> next() { 
-    maybe<line> l; 
-    
-    if (!_tail.empty()){
-      auto fnd = find(_tail, '\n');
-      auto tmp = string_view<char>(_tail.begin(), fnd);
+maybe<line> getline(string_view<char> sls) {
+  maybe<line> m;
+  auto fnd = stew::find(sls, '\n');
 
-      
+  if (fnd != sls.end()) {
+    string_view<char> lfnd(sls.begin(), fnd);
+
+    if (lfnd.size() >= 3) {
+      fixed_string<char> style(3);
+      fixed_string<char> content(lfnd.size());
+
+      style.push(string_view<char>(lfnd.begin(), lfnd.begin() + 3));
+      content.push(string_view<char>(lfnd.begin() + 3, lfnd.end()));
+
+      line l = {.style = transfer(style), .content = transfer(content)};
+
+      m = transfer(l);
     }
- 
-    return l;}
-};
-
-class slides {
- private:
-  fixed_string<char> _content;
-  string_view<char> _tail;
-  fixed_string<char> _config;
-  size_t _size = 0;
-  size_t _curr = 0;
-
- public:
-  ~slides() = default;
-
-  explicit slides(fixed_string<char>&& content, fixed_string<char>&& config)
-      : _content(transfer(content)),
-        _tail(_content),
-        _config(transfer(config)),
-        _size(stew::count(_content, prefix::ns) - 1) {}
-
-  slides(const slides&) = default;
-  slides(slides&&) = default;
-  slides& operator=(const slides&) = default;
-  slides& operator=(slides&&) = default;
-
- public:
-  size_t size() const { return _size; }
-  size_t curr() const { return _curr; }
-
-  tuple<size_t, size_t> page() const {
-    return tuple<size_t, size_t>(_curr, _size);
   }
 
- public:
-  maybe<slide> next() {
-    maybe<slide> res;
+  return m;
+}
 
-    if (!_tail.empty() && starts_with(_tail, prefix::ns)) {
-      _tail = string_view<char>(_tail.begin() + prefix::ns.size(), _tail.end());
+string_view<char> eraseline(string_view<char> sls, const line& l) {
+  if (sls.size() >= l.content.size() + 3)
+    return str::subv(sls, l.content.size() + 4);
+  else
+    return string_view<char>();
+}
 
-      auto fnd = stew::find(_tail, prefix::ns);
-      auto tmp = string_view<char>(_tail.begin(), fnd);
+fixed_string<char> applystyle(const line& l, const styles& sts) {
+  auto fnd =
+      find(sts.stls, [&l](const style& s) { return s.prefix == l.style; });
 
-      if (!(tmp.empty() || stew::all_of(tmp, [](char c) {
-              return c == ' ' || c == '\n' || c == '\t';
-            }))) {
-        res = slide(string_view<char>(_tail.begin(), fnd));
-        _tail = string_view<char>(fnd, _tail.end());
-        ++_curr;
-      }
-    }
-
-    return res;
+  if (fnd != sts.stls.end()) {
+    fixed_string<char> applied((*fnd).applied.size() + l.content.size() + 10);
+    applied.push((*fnd).applied);
+    applied.push(l.content);
+    applied.push(str::view("\033[0m"));
+    return applied;
+  } else {
+    fixed_string<char> applied(l.content);
+    return applied;
   }
-};
-}  // namespace slide
+}
+
+}  // namespace slide2
 
 int main(int argc, char** argv) {
   if (argc == 2) {
-    static_string<char, 1024> buff;
     file<char, mode::r> fslides(str::view(argv[1]));
 
     if (fslides.opened()) {
-      slide::slides sls(io::readall(fslides), str::fixed(""));
-      maybe<slide::slide> sl;
-      maybe<slide::line> l;
+      slide2::styles stls;
 
-      while ((sl = sls.next()).has()) {
-        io::printfln(str::view("slide $/$"), sls.curr(), sls.size());
+      stls.stls.push(
+          slide2::style{str::fixed("t1="), str::fixed("\033[1;31m")});
+      stls.stls.push(
+          slide2::style{str::fixed("t2="), str::fixed("\033[1;32m")});
+      stls.stls.push(
+          slide2::style{str::fixed("t3="), str::fixed("\033[1;33m")});
+      stls.stls.push(
+          slide2::style{str::fixed("t4="), str::fixed("\033[1;34m")});
+      stls.stls.push(
+          slide2::style{str::fixed("p=="), str::fixed("\033[1;35m")});
 
-        while ((l = (*sl).next()).has()) {
-          io::printfln(str::view(" -- content : \n$"), (*l).content());
-        }
+      auto all = io::readall(fslides);
+      auto vall = string_view<char>(all);
+
+      maybe<slide2::line> l;
+
+      while ((l = slide2::getline(vall)).has()) {
+        io::println(view<const char*>(slide2::applystyle(l, stls)));
+        
+        if ((*l).style == str::view("==="))
+            stew::io::stdfr.pop();
+        vall = slide2::eraseline(vall, l);
       }
     }
   }

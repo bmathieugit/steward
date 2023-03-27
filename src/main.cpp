@@ -7,7 +7,8 @@ using namespace stew;
 int main(int argc, char** argv) {
   {
     file<int, mode::w> fw(str::view("ftest.t"));
-
+    file<int, mode::rp> fw2(str::view("ftest2.t"));
+    
     if (fw.opened()) {
       fw.writer().push(1);
       fw.writer().push(2);

@@ -2382,17 +2382,22 @@ class fixed_vector {
   constexpr auto size() const { return _size; }
 
  public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
+  constexpr void push(const T& t) {
+  if (!full()) {
+    _data[_size] = t;
+    _size += 1;
+  }
+  }
+
+  constexpr void push(T&& t) {
     if (!full()) {
-      _data[_size] = relay<U>(u);
+      _data[_size] = transfer(t);
       _size += 1;
     }
   }
 
   template <input_range R>
   constexpr void push(R &&r)
-    requires not_convertible_to<R, T>
   {
     copy(relay<R>(r), pushing<T>(*this));
   }
@@ -2467,15 +2472,25 @@ class vector {
   constexpr auto full() const { return _data.full(); }
 
  public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
+  constexpr void push(const T &t) {
     if (_data.full()) {
       fixed_vector<T> tmp = transfer(_data);
       _data = fixed_vector<T>(tmp.size() * 2 + 10);
       _data.push(transfer(tmp));
     }
 
-    _data.push(relay<U>(u));
+    _data.push(t);
+  }
+
+
+  constexpr void push(T &&t) {
+    if (_data.full()) {
+      fixed_vector<T> tmp = transfer(_data);
+      _data = fixed_vector<T>(tmp.size() * 2 + 10);
+      _data.push(transfer(tmp));
+    }
+
+    _data.push(transfer(t));
   }
 
   template <input_range R>
@@ -3425,13 +3440,8 @@ class file_writer {
 
   template <input_range R>
   void push(R &&r) {
-    if constexpr (pointer_eq<decltype(r.begin())>) {
-      auto v = view(r);
-      fwrite(v.begin(), sizeof(decltype(*r.begin())), v.size(), _file.get());
-    } else {
-      for (auto &&i : relay<R>(r)) {
-        push(relay<decltype(i)>(i));
-      }
+    for (auto &&i : relay<R>(r)) {
+      push(relay<decltype(i)>(i));
     }
   }
 };
