@@ -35,7 +35,7 @@ struct style {
 };
 
 struct styles {
-  vector<style> stls;
+  static_vector<style, 10> stls;
 };
 
 maybe<line> getline(string_view<char> sls) {
@@ -76,7 +76,7 @@ fixed_string<char> applystyle(const line& l, const styles& sts) {
     fixed_string<char> applied((*fnd).applied.size() + l.content.size() + 10);
     applied.push((*fnd).applied);
     applied.push(l.content);
-    applied.push(str::view("\033[0m"));
+    applied.push(ansi::reset);
     return applied;
   } else {
     fixed_string<char> applied(l.content);
@@ -92,17 +92,18 @@ int main(int argc, char** argv) {
 
     if (fslides.opened()) {
       slide2::styles stls;
-
+      stls.stls.push(slide2::style{prefix::ns
+          , str::cat(ansi::clear, ansi::init)});
       stls.stls.push(
-          slide2::style{str::fixed("t1="), str::fixed("\033[1;31m")});
+          slide2::style{prefix::t1, ansi::bg_red});
       stls.stls.push(
-          slide2::style{str::fixed("t2="), str::fixed("\033[1;32m")});
+          slide2::style{prefix::t2, ansi::bg_red});
       stls.stls.push(
-          slide2::style{str::fixed("t3="), str::fixed("\033[1;33m")});
+          slide2::style{prefix::t3, ansi::fg_red});
       stls.stls.push(
-          slide2::style{str::fixed("t4="), str::fixed("\033[1;34m")});
+          slide2::style{prefix::t4, ansi::fg_red});
       stls.stls.push(
-          slide2::style{str::fixed("p=="), str::fixed("\033[1;35m")});
+          slide2::style{prefix::p, ansi::bold});
 
       auto all = io::readall(fslides);
       auto vall = string_view<char>(all);

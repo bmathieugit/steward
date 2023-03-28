@@ -2382,14 +2382,14 @@ class fixed_vector {
   constexpr auto size() const { return _size; }
 
  public:
-  constexpr void push(const T& t) {
-  if (!full()) {
-    _data[_size] = t;
-    _size += 1;
-  }
+  constexpr void push(const T &t) {
+    if (!full()) {
+      _data[_size] = t;
+      _size += 1;
+    }
   }
 
-  constexpr void push(T&& t) {
+  constexpr void push(T &&t) {
     if (!full()) {
       _data[_size] = transfer(t);
       _size += 1;
@@ -2397,8 +2397,7 @@ class fixed_vector {
   }
 
   template <input_range R>
-  constexpr void push(R &&r)
-  {
+  constexpr void push(R &&r) {
     copy(relay<R>(r), pushing<T>(*this));
   }
 
@@ -2481,7 +2480,6 @@ class vector {
 
     _data.push(t);
   }
-
 
   constexpr void push(T &&t) {
     if (_data.full()) {
@@ -2818,6 +2816,14 @@ constexpr fixed_string<C> cat(const C *s0, const C *s1) {
   fixed_string<C> s(v0.size() + v1.size());
   copy(v0, pushing(s));
   copy(v1, pushing(s));
+  return s;
+}
+
+template <character C>
+constexpr fixed_string<C> cat(string_view<C> s0, string_view<C> s1) {
+  fixed_string<C> s(s0.size() + s1.size());
+  copy(s0, pushing<C>(s));
+  copy(s1, pushing<C>(s));
   return s;
 }
 
