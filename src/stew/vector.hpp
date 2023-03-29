@@ -19,15 +19,15 @@ class static_vector {
   constexpr ~static_vector() = default;
   constexpr static_vector() = default;
 
+  // move
+  constexpr static_vector(static_vector &&) = default;
+  constexpr static_vector &operator=(static_vector &&) = default;
+
+  // copy
   template <input_range R>
   constexpr static_vector(R &&r) {
-    push(relay<R>(r));
+    copy(relay<R>(r), pushing<T>(*this));
   }
-
-  constexpr static_vector(const static_vector &) = default;
-  constexpr static_vector(static_vector &&) = default;
-  constexpr static_vector &operator=(const static_vector &) = default;
-  constexpr static_vector &operator=(static_vector &&) = default;
 
   template <input_range R>
   constexpr static_vector &operator=(R &&r) {
@@ -36,18 +36,14 @@ class static_vector {
 
  public:
   constexpr auto size() const { return _size; }
-
   constexpr auto empty() const { return _size == 0; }
-
   constexpr auto full() const { return _size == N; }
 
  public:
   constexpr auto begin() { return _data.begin(); }
-
   constexpr auto end() { return _data.begin() + _size; }
 
   constexpr const auto begin() const { return _data.begin(); }
-
   constexpr const auto end() const { return _data.begin() + _size; }
 
   constexpr T &operator[](size_t i) {
@@ -61,18 +57,19 @@ class static_vector {
   }
 
  public:
-  template <convertible_to<T> U>
-  constexpr void push(U &&u) {
+  constexpr void push(const T &t) {
     if (!full()) {
-      _data[_size] = relay<U>(u);
+      _data[_size] = t;
       ++_size;
     }
   }
 
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), pushing<T>(*this));
-  }
+  constexpr void push(T &&t) {
+    if (!full()) {
+      _data[_size] = transfer(t);
+      ++_size;
+    }
+  } 
 
   constexpr maybe<T> pop() {
     if (_size != 0) {
@@ -97,7 +94,7 @@ class fixed_vector {
   constexpr fixed_vector() = default;
 
   constexpr explicit fixed_vector(size_t max)
-      : _size{0}, _max{max}, _data{new T[_max + 1]{}} {}
+      : _size{0}, _max{max}, _data{new T[_max + 1]} {}
 
   constexpr fixed_vector(const fixed_vector &o) : fixed_vector(o._max) {
     push(o);
@@ -166,11 +163,6 @@ class fixed_vector {
     }
   }
 
-  template <input_range R>
-  constexpr void push(R &&r) {
-    copy(relay<R>(r), pushing<T>(*this));
-  }
-
   constexpr maybe<T> pop() {
     if (_size != 0) {
       return maybe<T>(transfer(_data[_size--]));
@@ -179,13 +171,7 @@ class fixed_vector {
     }
   }
 
-  constexpr void clear() {
-    _size = 0;
-
-    if (_max > 0) {
-      _data[0] = T();
-    }
-  }
+  constexpr void clear() { _size = 0; }
 };
 
 template <typename T>
@@ -259,13 +245,6 @@ class vector {
     }
 
     _data.push(transfer(t));
-  }
-
-  template <input_range R>
-  constexpr void push(R &&r)
-    requires not_convertible_to<R, T>
-  {
-    copy(relay<R>(r), pushing<T>(*this));
   }
 
   constexpr auto pop() { return _data.pop(); }
