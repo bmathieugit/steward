@@ -3,12 +3,12 @@
 
 #include <stew/algorithm.hpp>
 #include <stew/array.hpp>
-#include <stew/iterator.hpp>
 #include <stew/maybe.hpp>
 #include <stew/meta.hpp>
 #include <stew/smarts.hpp>
 
 namespace stew {
+
 template <typename T, size_t N>
 class static_vector {
  private:
@@ -24,15 +24,8 @@ class static_vector {
   constexpr static_vector &operator=(static_vector &&) = default;
 
   // copy
-  template <input_range R>
-  constexpr static_vector(R &&r) {
-    copy(relay<R>(r), pushing<T>(*this));
-  }
-
-  template <input_range R>
-  constexpr static_vector &operator=(R &&r) {
-    return (*this = static_vector(relay<R>(r)));
-  }
+  constexpr static_vector(const static_vector &) = default;
+  constexpr static_vector &operator=(const static_vector &) = default;
 
  public:
   constexpr auto size() const { return _size; }
@@ -40,19 +33,21 @@ class static_vector {
   constexpr auto full() const { return _size == N; }
 
  public:
-  constexpr auto begin() { return _data.begin(); }
-  constexpr auto end() { return _data.begin() + _size; }
+  constexpr auto iter() {
+    return array_iterator<T>(_data._data, _data._data + _size);
+  }
 
-  constexpr const auto begin() const { return _data.begin(); }
-  constexpr const auto end() const { return _data.begin() + _size; }
+  constexpr auto iter() const {
+    return array_citerator<T>(_data._data, _data._data + _size);
+  }
 
   constexpr T &operator[](size_t i) {
-    assert(i < N);
+    assert(i < _size);
     return _data[i];
   }
 
   constexpr const T &operator[](size_t i) const {
-    assert(i < N);
+    assert(i < _size);
     return _data[i];
   }
 
@@ -69,7 +64,7 @@ class static_vector {
       _data[_size] = transfer(t);
       ++_size;
     }
-  } 
+  }
 
   constexpr maybe<T> pop() {
     if (_size != 0) {
@@ -83,55 +78,35 @@ class static_vector {
 };
 
 template <typename T>
-class fixed_vector {
+class vector {
  private:
-  size_t _size{0};
-  size_t _max{0};
+  size_t _size = 0;
+  size_t _max = 0;
   owning<T[]> _data;
 
  public:
-  constexpr ~fixed_vector() = default;
-  constexpr fixed_vector() = default;
+  constexpr ~vector() = default;
+  constexpr vector() = default;
 
-  constexpr explicit fixed_vector(size_t max)
+  constexpr explicit vector(size_t max)
       : _size{0}, _max{max}, _data{new T[_max + 1]} {}
 
-  constexpr fixed_vector(const fixed_vector &o) : fixed_vector(o._max) {
-    push(o);
-  }
+  // move
+  constexpr vector(vector &&o) = default;
+  constexpr vector &operator=(vector &&o) = default;
 
-  constexpr fixed_vector(fixed_vector &&o)
-      : _size{transfer(o._size)},
-        _max{transfer(o._max)},
-        _data{transfer(o._data)} {}
-
-  template <input_range R>
-  constexpr fixed_vector(R &&r)
-    requires distanciable_iterator<decltype(stew::begin(r))>
-      : fixed_vector(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
-    push(relay<R>(r));
-  }
-
-  constexpr fixed_vector &operator=(fixed_vector o) {
-    _size = transfer(o._size);
-    _max = transfer(o._max);
-    _data = transfer(o._data);
-    return *this;
-  }
-
-  template <input_range R>
-  constexpr fixed_vector &operator=(R &&r) {
-    return (*this = fixed_vector(relay<R>(r)));
-  }
+  // copy
+  constexpr vector(const vector &o) = default;
+  constexpr vector &operator=(const vector &) = default;
 
  public:
-  constexpr auto begin() { return _data.get(); }
+  constexpr auto iter() {
+    return array_iterator<T>(_data.get(), _data.get() + _size);
+  }
 
-  constexpr auto end() { return begin() + _size; }
-
-  constexpr const auto begin() const { return _data.get(); }
-
-  constexpr const auto end() const { return begin() + _size; }
+  constexpr auto iter() const {
+    return array_citerator<T>(_data.get(), _data.get() + _size);
+  }
 
   constexpr T &operator[](size_t i) {
     assert(i < _size);
@@ -175,39 +150,27 @@ class fixed_vector {
 };
 
 template <typename T>
-class vector {
+class ext_vector {
  private:
-  fixed_vector<T> _data;
+  vector<T> _data;
 
  public:
-  constexpr ~vector() = default;
-  constexpr vector() = default;
-  constexpr explicit vector(size_t max) : _data(max) {}
+  constexpr ~ext_vector() = default;
+  constexpr ext_vector() = default;
+  constexpr explicit ext_vector(size_t max) : _data(max) {}
 
-  template <input_range R>
-  constexpr vector(R &&r)
-      : vector(stew::end(relay<R>(r)) - stew::begin(relay<R>(r))) {
-    push(relay<R>(r));
-  }
+  // move
+  constexpr ext_vector(ext_vector &&) = default;
+  constexpr ext_vector &operator=(ext_vector &&) = default;
 
-  constexpr vector(const vector &) = default;
-  constexpr vector(vector &) = default;
-  constexpr vector &operator=(const vector &) = default;
-  constexpr vector &operator=(vector &&) = default;
+  // copy
+  constexpr ext_vector(const ext_vector &) = default;
 
-  template <input_range R>
-  constexpr vector &operator=(R &&r) {
-    return (*this = vector(relay<R>(r)));
-  }
+  constexpr ext_vector &operator=(const ext_vector &) = default;
 
  public:
-  constexpr auto begin() { return stew::begin(_data); }
-
-  constexpr auto end() { return stew::end(_data); }
-
-  constexpr const auto begin() const { return stew::begin(_data); }
-
-  constexpr const auto end() const { return stew::end(_data); }
+  constexpr auto iter() { return _data.iter(); }
+  constexpr auto iter() const { return _data.iter(); }
 
   constexpr T &operator[](size_t i) {
     assert(i < size());
@@ -221,17 +184,15 @@ class vector {
 
  public:
   constexpr auto size() const { return _data.size(); }
-
   constexpr auto empty() const { return _data.empty(); }
-
   constexpr auto full() const { return _data.full(); }
 
  public:
   constexpr void push(const T &t) {
     if (_data.full()) {
-      fixed_vector<T> tmp = transfer(_data);
-      _data = fixed_vector<T>(tmp.size() * 2 + 10);
-      _data.push(transfer(tmp));
+      vector<T> tmp = transfer(_data);
+      _data = vector<T>(tmp.size() * 2 + 10);
+      transfer(tmp, _data);
     }
 
     _data.push(t);
@@ -239,9 +200,9 @@ class vector {
 
   constexpr void push(T &&t) {
     if (_data.full()) {
-      fixed_vector<T> tmp = transfer(_data);
-      _data = fixed_vector<T>(tmp.size() * 2 + 10);
-      _data.push(transfer(tmp));
+      vector<T> tmp = transfer(_data);
+      _data = vector<T>(tmp.size() * 2 + 10);
+      transfer(tmp, _data);
     }
 
     _data.push(transfer(t));

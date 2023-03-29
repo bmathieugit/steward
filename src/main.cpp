@@ -1,31 +1,25 @@
 #define NDEBUG
 
-#include <stew/string.hpp>
-#include <stew/iofile.hpp>
+#include <stdio.h>
+
+#include <stew/vector.hpp>
 
 using namespace stew;
 
+void for_each(auto&& iterable, auto&& func) {
+  auto i = iterable.iter();
+  while (i.has_next()) {
+    func(i.next());
+  }
+}
+
 int main(int argc, char** argv) {
-  {
-    file<int, mode::w> fw(str::view("ftest.t"));
-    file<int, mode::rp> fw2(str::view("ftest2.t"));
-    
-    if (fw.opened()) {
-      fw.writer().push(1);
-      fw.writer().push(2);
-      fw.writer().push(3);
-    }
-  }
+  stew::ext_vector<int> v(10);
 
-  {
-    file<int, mode::r> fr(str::view("ftest.t"));
+  v.push(0);
+  v.push(1);
 
-    if (fr.opened()) {
-      auto content = io::readall(fr);
-      io::printfln(str::view("\0"), io::len(fr));
-      io::printfln(str::view("\0"), view(content));
-    }
-  }
+  for_each(v, [](const int& i) { printf("%d\n", i); });
 
   return 0;
 }

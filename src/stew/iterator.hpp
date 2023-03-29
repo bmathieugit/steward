@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <stew/meta.hpp>
 #include <stew/utils.hpp>
-#include <stew/algorithm.hpp>
 
 namespace stew {
 template <typename G>

@@ -1,10 +1,42 @@
 #ifndef __steward_array_hpp__
 #define __steward_array_hpp__
 
-#include <stew/meta.hpp>
 #include <assert.h>
 
+#include <stew/meta.hpp>
+
 namespace stew {
+
+template <typename T>
+class array_iterator {
+ private:
+  T *_current = nullptr;
+  T *_end = nullptr;
+
+ public:
+  array_iterator(T *current, T *end) : _current(current), _end(end) {}
+
+ public:
+  constexpr bool has_next() const { return _current != _end; }
+
+  constexpr T &next() { return (*_current++); }
+};
+
+template <typename T>
+class array_citerator {
+ private:
+  const T *_current = nullptr;
+  const T *_end = nullptr;
+
+ public:
+  array_citerator(const T *current, const T *end)
+      : _current(current), _end(end) {}
+
+ public:
+  constexpr bool has_next() const { return _current != _end; }
+
+  constexpr T &next() { return (*_current++); }
+};
 
 template <class T, size_t N>
 struct array {
@@ -13,13 +45,9 @@ struct array {
  public:
   constexpr auto size() const { return N; }
 
-  constexpr auto begin() { return _data; }
+  constexpr auto iter() { return array_iterator<T>(_data, _data + N); }
 
-  constexpr auto end() { return _data + N; }
-
-  constexpr const auto begin() const { return _data; }
-
-  constexpr const auto end() const { return _data + N; }
+  constexpr auto iter() const { return array_iterator<T>(_data, _data + N); }
 
   constexpr T &operator[](size_t i) {
     assert(i < N);
@@ -56,7 +84,6 @@ constexpr auto get(const array<T, N> &&a) -> decltype(auto) {
   return a[I];
 }
 
+}  // namespace stew
 
-}
-
-#endif 
+#endif
