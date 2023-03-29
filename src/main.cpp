@@ -1,6 +1,7 @@
 #define NDEBUG
 
-#include <stew.hpp>
+#include <stew/string.hpp>
+#include <stew/iofile.hpp>
 
 using namespace stew;
 
