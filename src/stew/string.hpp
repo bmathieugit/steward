@@ -2,6 +2,7 @@
 #define __steward_string_hpp__
 
 #include <stew/meta.hpp>
+#include <stew/meta/iterable.hpp>
 #include <stew/vector.hpp>
 #include <stew/view.hpp>
 
@@ -26,16 +27,21 @@ namespace str {
 template <character C>
 constexpr size_t len(const C *s) {
   const C *cur = s;
-  
+
   if (cur != nullptr)
     while (*cur != '\0') ++cur;
-  
+
   return cur - s;
 }
 
 template <character C>
 constexpr string_view<C> view(const C *s) {
   return string_view<C>(s, s + len(s));
+}
+
+template <character C, size_t N>
+constexpr static_string<C, N - 1> stic(const C (&s)[N]) {
+  return static_string<C, N - 1>(string_view<C>(s, s + N));
 }
 
 template <character C>
@@ -48,122 +54,46 @@ constexpr ext_string<C> ext(const C *s) {
   return ext_string<C>(view(s));
 }
 
-
-/*
-template <character C>
-constexpr fixed_string<C> cat(const C *s0, const C *s1) {
-  string_view<C> v0 = view(s0);
-  string_view<C> v1 = view(s1);
-  fixed_string<C> s(v0.size() + v1.size());
-  copy(v0, pushing(s));
-  copy(v1, pushing(s));
+template <iterable S0, iterable S1>
+constexpr auto cat(const S0 &s0, const S1 &s1) {
+  string<rm_cvref<decltype(s0.iter().next())>> s(s0.size() + s1.size());
+  copy(s0, s);
+  copy(s1, s);
   return s;
 }
 
-template <character C>
-constexpr fixed_string<C> cat(string_view<C> s0, string_view<C> s1) {
-  fixed_string<C> s(s0.size() + s1.size());
-  copy(s0, pushing<C>(s));
-  copy(s1, pushing<C>(s));
-  return s;
-}
+template <iterable S0, iterable S1>
+constexpr int cmp(const S0 &s0, const S1 &s1)
+  requires requires {
+             s0.size();
+             s1.size();
+           }
+{
+  if (s0.size() > s1.size()) {
+    return 1;
+  } else if (s0.size() < s1.size()) {
+    return -1;
+  } else {
+    auto i0 = s0.iter();
+    auto i1 = s1.iter();
 
-template <character C>
-constexpr auto cat(const string_view_like<C> auto &s0, const C *s1)
-    -> decltype(auto) {
-  string_view<C> v1(s1, s1 + len(s1));
-  rm_cvref<decltype(s0)> s(s0.size() + v1.size());
-  copy(s0, pushing(s));
-  copy(v1, pushing(s));
-  return s;
-}
+    rm_cvref<decltype(i0.next())> c0 = 0;
+    rm_cvref<decltype(i1.next())> c1 = 0;
 
-template <character C>
-constexpr auto cat(const string_view_like<C> auto &s0,
-                   const string_view_like<C> auto &s1) -> decltype(auto) {
-  rm_cvref<decltype(s0)> s(s0.size() + s1.size());
-  copy(s0, pushing(s));
-  copy(s1, pushing(s));
-  return s;
-}
+    while (i0.has_next() && i1.has_next()) {
+      c0 = i0.next();
+      c1 = i1.next();
 
-template <character C>
-constexpr int cmp(const C *s0, const C *s1) {
-  if (s0 != nullptr && s1 != nullptr)
-    while (*s0 != '\0' && *s1 != '\0' && *s0 == *s1) {
-      ++s0;
-      ++s1;
+      if (c0 != c1) {
+        break;
+      }
     }
 
-  C c0 = s0 == nullptr ? 0 : *s0;
-  C c1 = s1 == nullptr ? 0 : *s1;
-
-  return c0 - c1;
+    return c0 - c1;
+  }
 }
 
-template <character C>
-constexpr int cmp(const string_view_like<C> auto &s0,
-                  const string_view_like<C> auto &s1) {
-  return cmp(s0.begin(), s1.begin());
-}
-
-template <character C>
-constexpr string_view<C> subv(string_view<C> s, size_t from) {
-  return string_view<C>(begin(s) + from, end(s));
-}
-
-template <character C>
-constexpr string_view<C> subv(string_view<C> s, size_t from, size_t n) {
-  return string_view<C>(begin(s) + from, begin(s) + from + n);
-}
-*/
 }  // namespace str
-
-template <character C>
-struct after_pair {
-  bool _found;
-  string_view<C> _aft;
-};
-
-template <character C>
-constexpr after_pair<C> after(string_view<C> input, string_view<C> sep) {
-  auto pos = find(input, sep);
-
-  return after_pair<C>{pos != end(input), {pos + sep.size(), end(input)}};
-}
-
-template <character C>
-struct around_pair {
-  bool _found;
-  string_view<C> _bef;
-  string_view<C> _aft;
-};
-
-template <character C>
-constexpr around_pair<C> around(string_view<C> input, string_view<C> sep) {
-  auto pos = find(input, sep);
-
-  if (pos != end(input)) {
-    return around_pair<C>{
-        true, {begin(input), pos}, {pos + sep.size(), end(input)}};
-  } else {
-    return around_pair<C>{
-        false, {begin(input), begin(input)}, {begin(input), end(input)}};
-  }
-}
-
-template <character C>
-constexpr around_pair<C> around(string_view<C> input, C sep) {
-  auto pos = find(input, sep);
-
-  if (pos != end(input)) {
-    return around_pair<C>{true, {begin(input), pos}, {pos + 1, end(input)}};
-  } else {
-    return around_pair<C>{
-        false, {begin(input), begin(input)}, {begin(input), end(input)}};
-  }
-}
-
 }  // namespace stew
 
 #endif

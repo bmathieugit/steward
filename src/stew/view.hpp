@@ -3,6 +3,8 @@
 
 #include <stew/iterator.hpp>
 #include <stew/meta.hpp>
+#include <stew/meta/iterator.hpp>
+#include <stew/meta/iterable.hpp>
 
 namespace stew {
 
@@ -25,7 +27,8 @@ class view {
   constexpr view& operator=(const view&) = default;
 
  public:
-  constexpr auto iter() { return _iter; };
+  constexpr auto iter() { return _iter; }
+  constexpr auto iter() const { return _iter; }
 };
 
 template <sizeable_iterator I>

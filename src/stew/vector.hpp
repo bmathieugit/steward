@@ -3,10 +3,10 @@
 
 #include <stew/algorithm.hpp>
 #include <stew/array.hpp>
-#include <stew/container.hpp>
 #include <stew/iterator.hpp>
 #include <stew/maybe.hpp>
 #include <stew/meta.hpp>
+#include <stew/meta/container.hpp>
 #include <stew/smarts.hpp>
 
 namespace stew {
@@ -28,6 +28,13 @@ class static_vector {
   // copy
   constexpr static_vector(const static_vector &) = default;
   constexpr static_vector &operator=(const static_vector &) = default;
+
+  // container
+  template <typename C>
+  constexpr static_vector(C &&c)
+    requires(size_container<C> && iterable<C>){
+    copy(c, *this);
+  }
 
  public:
   constexpr auto size() const { return _size; }
@@ -101,18 +108,17 @@ class vector {
 
   // container
   template <typename C>
-  constexpr vector( C &&c)
+  constexpr vector(C &&c)
     requires(size_container<C> && iterable<C>)
       : vector(c.size()) {
     copy(c, *this);
   }
 
-
  public:
   constexpr auto iter() { return pointer_iterator<T>(_data.get(), _size); }
 
   constexpr auto iter() const {
-    return pointer_citerator<const T>(_data.get(), _size);
+    return pointer_iterator<const T>(_data.get(), _size);
   }
 
   constexpr T &operator[](size_t i) {
@@ -173,6 +179,14 @@ class ext_vector {
   // copy
   constexpr ext_vector(const ext_vector &) = default;
   constexpr ext_vector &operator=(const ext_vector &) = default;
+
+  // container
+  template <typename C>
+  constexpr ext_vector(C &&c)
+    requires(size_container<C> && iterable<C>)
+      : ext_vector(c.size()) {
+    copy(c, *this);
+  }
 
  public:
   constexpr auto iter() { return _data.iter(); }

@@ -5,17 +5,9 @@
 
 #include <stew/meta.hpp>
 #include <stew/utils.hpp>
+#include <stew/meta/iterator.hpp>
 
 namespace stew {
-
-template <typename I>
-concept iterator = requires(I i) {
-                     i.has_next();
-                     i.next();
-                   };
-
-template <typename I>
-concept sizeable_iterator = iterator<I> && requires(I i) { i.size(); };
 
 template <typename T>
 class pointer_iterator {

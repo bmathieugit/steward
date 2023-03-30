@@ -3,8 +3,8 @@
 
 #include <assert.h>
 
-#include <stew/meta.hpp>
 #include <stew/iterator.hpp>
+#include <stew/meta.hpp>
 
 namespace stew {
 
@@ -14,9 +14,7 @@ struct array {
 
  public:
   constexpr auto size() const { return N; }
-
   constexpr auto iter() { return pointer_iterator<T>(_data, N); }
-
   constexpr auto iter() const { return pointer_iterator<const T>(_data, N); }
 
   constexpr T &operator[](size_t i) {
@@ -26,6 +24,26 @@ struct array {
 
   constexpr const T &operator[](size_t i) const {
     assert(i < N);
+    return _data[i];
+  }
+};
+
+template <class T>
+struct array<T, 0> {
+  T *_data = nullptr;
+
+ public:
+  constexpr auto size() const { return 0; }
+  constexpr auto iter() { return pointer_iterator<T>(_data, 0); }
+  constexpr auto iter() const { return pointer_iterator<const T>(_data, 0); }
+
+  constexpr T &operator[](size_t i) {
+    assert(i < 0);
+    return _data[i];
+  }
+
+  constexpr const T &operator[](size_t i) const {
+    assert(i < 0);
     return _data[i];
   }
 };

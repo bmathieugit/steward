@@ -1,9 +1,10 @@
 #ifndef __steward_algorithm_hpp__
 #define __steward_algorithm_hpp__
 
+#include <stew/meta/iterable.hpp>
+#include <stew/meta/container.hpp>
 #include <stew/meta.hpp>
 #include <stew/utils.hpp>
-#include <stew/container.hpp>
 
 namespace stew {
 
@@ -16,16 +17,6 @@ constexpr bool equals(const I0 &i0, const I1 &i1) {
     ;
 
   return !ii0.has_next() && !ii1.has_next();
-}
-
-template <iterable I0, iterable I1>
-constexpr bool operator==(const I0 &i0, const I1 &i1) {
-  return equals(i0, i1);
-}
-
-template <iterable I0, iterable I1>
-constexpr bool operator!=(const I0 &i0, const I1 &i1) {
-  return !equals(i0, i1);
 }
 
 template <iterable I0, iterable I1>
@@ -59,8 +50,11 @@ constexpr size_t count(const I &i, const T &t) {
   return c;
 }
 
-template <iterable I, predicate<decltype(I().iter().next())> P>
-constexpr size_t count(const I &i, P &&pred) {
+template <iterable I, typename P>
+
+constexpr size_t count(const I &i, P &&pred)
+  requires predicate<decltype(i.iter().next())>
+{
   size_t c = 0;
   auto ii = i.iter();
 
@@ -86,8 +80,10 @@ constexpr bool contains(const I &i, const T &t) {
   return false;
 }
 
-template <iterable I, predicate<decltype(I().iter().next())> P>
-constexpr bool all_of(const I &i, P &&pred) {
+template <iterable I, typename P>
+constexpr bool all_of(const I &i, P &&pred)
+  requires predicate<decltype(i.iter().next())>
+{
   auto ii = i.iter();
 
   while (ii.has_next()) {
@@ -99,8 +95,10 @@ constexpr bool all_of(const I &i, P &&pred) {
   return true;
 }
 
-template <iterable I, predicate<decltype(I().iter().next())> P>
-constexpr bool any_of(const I &i, P &&pred) {
+template <iterable I, typename P>
+constexpr bool any_of(const I &i, P &&pred)
+  requires predicate<decltype(i.iter().next())>
+{
   auto ii = i.iter();
 
   while (ii.has_next()) {
@@ -112,8 +110,10 @@ constexpr bool any_of(const I &i, P &&pred) {
   return false;
 }
 
-template <iterable I, predicate<decltype(I().iter().next())> P>
-constexpr bool none_of(const I &i, P &&pred) {
+template <iterable I, typename P>
+constexpr bool none_of(const I &i, P &&pred)
+  requires predicate<decltype(i.iter().next())>
+{
   auto ii = i.iter();
 
   while (ii.has_next()) {
@@ -126,8 +126,9 @@ constexpr bool none_of(const I &i, P &&pred) {
 }
 
 template <iterable I, typename C>
-constexpr void copy(const I &i, C &c) 
-requires push_container<C, decltype(*i.iter().next())>{
+constexpr void copy(const I &i, C &c)
+  requires push_container<C, decltype(i.iter().next())>
+{
   auto ii = i.iter();
 
   while (ii.has_next()) {
@@ -136,11 +137,11 @@ requires push_container<C, decltype(*i.iter().next())>{
 }
 
 template <pop_container C0, typename C1>
-constexpr void transfer(C0 &&c0, C1 &c1) 
+constexpr void transfer(C0 &&c0, C1 &c1)
   requires push_container<C1, decltype(*c0.pop())>
 {
   decltype(c0.pop()) m;
-  
+
   while ((m = c0.pop()).has()) {
     c1.push(transfer(*m));
   }

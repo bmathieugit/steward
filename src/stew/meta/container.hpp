@@ -1,9 +1,9 @@
 #ifndef __steward_container_hpp__
 #define __steward_container_hpp__
 
+#include <stew/meta/iterable.hpp>
+
 namespace stew {
-template <typename I>
-concept iterable = requires(I i) { i.iter(); };
 
 template <typename C, typename T>
 concept push_container = requires(C c, T t) { c.push(t); };
