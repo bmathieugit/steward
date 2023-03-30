@@ -3,19 +3,20 @@
 
 #include <stew/meta.hpp>
 #include <stew/vector.hpp>
+#include <stew/view.hpp>
 
 namespace stew {
 template <character C>
-using string_view = view<const C *>;
+using string_view = pointer_view<const C>;
 
 template <character C, size_t N>
 using static_string = static_vector<C, N>;
 
 template <character C>
-using fixed_string = fixed_vector<C>;
+using string = vector<C>;
 
 template <character C>
-using string = vector<C>;
+using ext_string = ext_vector<C>;
 
 template <typename T, typename C>
 concept string_view_like = like<T, string_view<C>>;
@@ -25,14 +26,11 @@ namespace str {
 template <character C>
 constexpr size_t len(const C *s) {
   const C *cur = s;
+  
   if (cur != nullptr)
     while (*cur != '\0') ++cur;
+  
   return cur - s;
-}
-
-template <character C>
-constexpr size_t len(const string_view_like<C> auto &s) {
-  return s.size();
 }
 
 template <character C>
@@ -41,30 +39,17 @@ constexpr string_view<C> view(const C *s) {
 }
 
 template <character C>
-constexpr string_view<C> view(const string_view_like<C> auto &s) {
-  return string_view<C>(s.begin(), s.end());
-}
-
-template <character C>
-constexpr fixed_string<C> fixed(const C *s) {
-  return fixed_string<C>(string_view<C>(s, s + len(s)));
-}
-
-template <character C>
-constexpr fixed_string<C> fixed(const string_view_like<C> auto &s) {
-  return fixed_string<C>(s);
-}
-
-template <character C>
 constexpr string<C> str(const C *s) {
-  return string<C>(string_view<C>(s, s + len(s)));
+  return string<C>(view<C>(s));
 }
 
 template <character C>
-constexpr string<C> str(const string_view_like<C> auto &s) {
-  return string<C>(s);
+constexpr ext_string<C> ext(const C *s) {
+  return ext_string<C>(view(s));
 }
 
+
+/*
 template <character C>
 constexpr fixed_string<C> cat(const C *s0, const C *s1) {
   string_view<C> v0 = view(s0);
@@ -131,7 +116,7 @@ template <character C>
 constexpr string_view<C> subv(string_view<C> s, size_t from, size_t n) {
   return string_view<C>(begin(s) + from, begin(s) + from + n);
 }
-
+*/
 }  // namespace str
 
 template <character C>

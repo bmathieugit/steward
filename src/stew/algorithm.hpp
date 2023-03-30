@@ -3,20 +3,9 @@
 
 #include <stew/meta.hpp>
 #include <stew/utils.hpp>
+#include <stew/container.hpp>
 
 namespace stew {
-
-template <typename I>
-concept iterable = requires(I i) { i.iter(); };
-
-template <typename C>
-concept pop_container = requires(C c) { c.pop(); };
-
-template <typename C, typename T>
-concept push_container = requires(C c, T t) { c.push(t); };
-
-template <typename C, typename T>
-concept container = pop_container<C> && push_container<C, T>;
 
 template <iterable I0, iterable I1>
 constexpr bool equals(const I0 &i0, const I1 &i1) {
@@ -136,8 +125,9 @@ constexpr bool none_of(const I &i, P &&pred) {
   return true;
 }
 
-template <iterable I, container<decltype(I().iter().next())> C>
-constexpr void copy(const I &i, C &c) {
+template <iterable I, typename C>
+constexpr void copy(const I &i, C &c) 
+requires push_container<C, decltype(*i.iter().next())>{
   auto ii = i.iter();
 
   while (ii.has_next()) {

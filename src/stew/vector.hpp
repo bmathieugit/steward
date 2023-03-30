@@ -3,6 +3,8 @@
 
 #include <stew/algorithm.hpp>
 #include <stew/array.hpp>
+#include <stew/container.hpp>
+#include <stew/iterator.hpp>
 #include <stew/maybe.hpp>
 #include <stew/meta.hpp>
 #include <stew/smarts.hpp>
@@ -33,12 +35,10 @@ class static_vector {
   constexpr auto full() const { return _size == N; }
 
  public:
-  constexpr auto iter() {
-    return array_iterator<T>(_data._data, _data._data + _size);
-  }
+  constexpr auto iter() { return pointer_iterator<T>(_data._data, _size); }
 
   constexpr auto iter() const {
-    return array_citerator<T>(_data._data, _data._data + _size);
+    return pointer_iterator<const T>(_data._data, _size);
   }
 
   constexpr T &operator[](size_t i) {
@@ -99,13 +99,20 @@ class vector {
   constexpr vector(const vector &o) = default;
   constexpr vector &operator=(const vector &) = default;
 
- public:
-  constexpr auto iter() {
-    return array_iterator<T>(_data.get(), _data.get() + _size);
+  // container
+  template <typename C>
+  constexpr vector( C &&c)
+    requires(size_container<C> && iterable<C>)
+      : vector(c.size()) {
+    copy(c, *this);
   }
 
+
+ public:
+  constexpr auto iter() { return pointer_iterator<T>(_data.get(), _size); }
+
   constexpr auto iter() const {
-    return array_citerator<T>(_data.get(), _data.get() + _size);
+    return pointer_citerator<const T>(_data.get(), _size);
   }
 
   constexpr T &operator[](size_t i) {
@@ -165,7 +172,6 @@ class ext_vector {
 
   // copy
   constexpr ext_vector(const ext_vector &) = default;
-
   constexpr ext_vector &operator=(const ext_vector &) = default;
 
  public:

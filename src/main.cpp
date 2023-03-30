@@ -2,7 +2,8 @@
 
 #include <stdio.h>
 
-#include <stew/vector.hpp>
+#include <stew/meta.hpp>
+#include <stew/string.hpp>
 
 using namespace stew;
 
@@ -13,13 +14,11 @@ void for_each(auto&& iterable, auto&& func) {
   }
 }
 
+
 int main(int argc, char** argv) {
-  stew::ext_vector<int> v(10);
-
-  v.push(0);
-  v.push(1);
-
-  for_each(v, [](const int& i) { printf("%d\n", i); });
+  auto v = str::view("coucou");
+ auto s = str::str("coucou");
+  for_each(v, [](const int& i) { printf("%c\n", i); });
 
   return 0;
 }
