@@ -1,14 +1,16 @@
 #ifndef __steward_format_hpp__
 #define __steward_format_hpp__
 
-#include <stew/algorithm.hpp>
-#include <stew/iterator.hpp>
-#include <stew/stack.hpp>
+#include <stew/meta.hpp>
+#include <stew/meta/container.hpp>
+#include <stew/meta/iterable.hpp>
+#include <stew/meta/iterator.hpp>
 #include <stew/string.hpp>
+#include <stew/view.hpp>
 
 namespace stew {
 
-template  <typename O>
+template <typename O>
 concept ostream = push_container<O, char> || push_container<O, wchar_t>;
 
 template <typename T>
@@ -20,36 +22,33 @@ concept formattable =
 
 template <ostream O, formattable<O> T>
 constexpr void format_one_to(O &o, const T &t) {
-  formatter<T>::to(o, t);
+  formatter<rm_cvref<T>>::to(o, t);
 }
 
 template <character C>
 constinit const C joker = '$';
 
 namespace impl {
-template <character C, ostream O, typename H>
-constexpr void format_to_one_by_one(O &o, string_view<C> &fmt, const H &h) {
-  auto b = fmt.begin();
-  auto e = fmt.end();
+template <ostream O, typename H>
+constexpr void format_to_one_by_one(O &o, iterator auto &ifmt, const H &h) {
+  while (ifmt.has_next()) {
+    auto c = ifmt.next();
 
-  while (b != e) {
-    if (*b == joker<C>) {
-      ++b;
+    if (c == '$') {
       break;
     } else {
-      format_one_to(o, *b);
-      ++b;
+      format_one_to(o, c);
     }
   }
 
   format_one_to(o, h);
-  fmt = string_view<C>(b, e);
 }
 
 template <character C, ostream O, typename... T>
 constexpr void format_to(O &o, string_view<C> fmt, const T &...t) {
-  (format_to_one_by_one(o, fmt, t), ...);
-  format_one_to(o, fmt);
+  auto ifmt = fmt.iter();
+  (format_to_one_by_one(o, ifmt, t), ...);
+  while (ifmt.has_next()) format_one_to(o, ifmt.next());
 }
 }  // namespace impl
 
@@ -72,44 +71,12 @@ class formatter<C> {
   }
 };
 
-template <typename I>
-class formatter<view<I>> {
- public:
-  template <ostream O>
-  constexpr static void to(O &o, const view<I> &v) {
-    for (const auto &i : v) {
-      format_one_to(o, i);
-    }
-  }
-};
-
-template <character C, size_t N>
-class formatter<const C (&)[N]> : public formatter<string_view<C>> {};
-
-template <character C, size_t N>
-class formatter<C (&)[N]> : public formatter<string_view<C>> {};
-
-template <character C, size_t N>
-class formatter<const C[N]> : public formatter<string_view<C>> {};
-
-template <character C, size_t N>
-class formatter<C[N]> : public formatter<string_view<C>> {};
-
-template <character C, size_t N>
-class formatter<static_string<C, N>> : public formatter<string_view<C>> {};
-
-template <character C>
-class formatter<fixed_string<C>> : public formatter<string_view<C>> {};
-
-template <character C>
-class formatter<string<C>> : public formatter<string_view<C>> {};
-
 template <signed_integral I>
 class formatter<I> {
  public:
   template <ostream O>
   constexpr static void to(O &o, I i) {
-    static_stack<char, 20> tbuff;
+    static_vector<char, 20> tbuff;
 
     if (i == 0) {
       tbuff.push('0');
@@ -127,7 +94,7 @@ class formatter<I> {
       }
     }
 
-    format_one_to(o, view(tbuff));
+    format_one_to(o, view(tbuff.riter()));
   }
 };
 
@@ -136,7 +103,7 @@ class formatter<I> {
  public:
   template <ostream O>
   constexpr static void to(O &o, I i) {
-    static_stack<char, 20> tbuff;
+    static_vector<char, 20> tbuff;
 
     if (i == 0) {
       tbuff.push('0');
@@ -147,7 +114,7 @@ class formatter<I> {
       }
     }
 
-    format_one_to(o, view(tbuff));
+    format_one_to(o, view(tbuff.riter()));
   }
 };
 
@@ -170,7 +137,9 @@ class formatter<bool> {
  public:
   template <character C, ostream O>
   constexpr static void to(O &o, bool b) {
-    format_one_to(o, b ? str::view("true") : str::view("false"));
+    constexpr auto _true = str::view("true");
+    constexpr auto _false = str::view("false");
+    format_one_to(o, b ? _true : _false);
   }
 };
 
@@ -183,6 +152,17 @@ class formatter<P> {
   }
 };
 
+template <iterable I>
+class formatter<I> {
+ public:
+  template <ostream O>
+  constexpr static void to(O &o, const I &i) {
+    iterator auto ii = i.iter();
+    while (ii.has_next()) {
+      o.push(ii.next());
+    }
+  }
+};
 }  // namespace stew
 
 #endif
