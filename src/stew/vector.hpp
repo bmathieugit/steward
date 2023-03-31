@@ -32,7 +32,8 @@ class static_vector {
   // container
   template <typename C>
   constexpr static_vector(C &&c)
-    requires(size_container<C> && iterable<C>){
+    requires(size_container<C> && iterable<C>)
+  {
     copy(c, *this);
   }
 
@@ -48,6 +49,16 @@ class static_vector {
     return pointer_iterator<const T>(_data._data, _size);
   }
 
+  constexpr auto riter() {
+    return reverse_pointer_iterator<T>(_data._data + _size - 1,
+                                       _data._data - 1);
+  }
+
+  constexpr auto riter() const {
+    return reverse_pointer_iterator<const T>(_data._data + _size - 1,
+                                       _data._data - 1);
+  }
+  
   constexpr T &operator[](size_t i) {
     assert(i < _size);
     return _data[i];

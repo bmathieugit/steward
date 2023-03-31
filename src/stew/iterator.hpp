@@ -4,8 +4,8 @@
 #include <assert.h>
 
 #include <stew/meta.hpp>
-#include <stew/utils.hpp>
 #include <stew/meta/iterator.hpp>
+#include <stew/utils.hpp>
 
 namespace stew {
 
@@ -24,7 +24,25 @@ class pointer_iterator {
  public:
   constexpr bool has_next() const { return _current != _end; }
   constexpr T& next() { return *(_current++); }
-  constexpr size_t size() const{ return _end - _current; }
+  constexpr size_t size() const { return _end - _current; }
+};
+
+template <typename T>
+class reverse_pointer_iterator {
+ private:
+  T* _current = nullptr;
+  T* _end = nullptr;
+
+ public:
+  constexpr reverse_pointer_iterator(T* current, T* end)
+      : _current(current), _end(end) {}
+  constexpr reverse_pointer_iterator(T* current, size_t n)
+      : _current(current), _end(current - n) {}
+
+ public:
+  constexpr bool has_next() const { return _current != _end; }
+  constexpr T& next() { return *(_current--); }
+  constexpr size_t size() const { return _current - _end; }
 };
 
 // generator/upto/downto

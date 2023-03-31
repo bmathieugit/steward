@@ -9,9 +9,12 @@ using namespace stew;
 
 
 int main(int argc, char** argv) {
-  constexpr auto s0 = str::stic("aaab");
-  constexpr auto s1 = str::stic("aaa");
-  constexpr auto s = str::stic("");
-  printf("%d\n", str::cmp(s, s1));
+  constexpr auto s0 = str::stic("abcdef");
+  auto i = s0.riter();
+
+  while (i.has_next()) {
+    printf("%c\n", i.next());
+  }
+
   return 0;
 }
