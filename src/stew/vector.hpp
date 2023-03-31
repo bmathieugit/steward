@@ -56,9 +56,9 @@ class static_vector {
 
   constexpr auto riter() const {
     return reverse_pointer_iterator<const T>(_data._data + _size - 1,
-                                       _data._data - 1);
+                                             _data._data - 1);
   }
-  
+
   constexpr T &operator[](size_t i) {
     assert(i < _size);
     return _data[i];
@@ -132,6 +132,16 @@ class vector {
     return pointer_iterator<const T>(_data.get(), _size);
   }
 
+  constexpr auto riter() {
+    return reverse_pointer_iterator<T>(_data.get() + _size - 1,
+                                       _data.get() - 1);
+  }
+
+  constexpr auto riter() const {
+    return reverse_pointer_iterator<const T>(_data.get() + _size - 1,
+                                             _data.get() - 1);
+  }
+
   constexpr T &operator[](size_t i) {
     assert(i < _size);
     return _data[i];
@@ -202,6 +212,8 @@ class ext_vector {
  public:
   constexpr auto iter() { return _data.iter(); }
   constexpr auto iter() const { return _data.iter(); }
+  constexpr auto riter() { return _data.riter(); }
+  constexpr auto riter() const { return _data.riter(); }
 
   constexpr T &operator[](size_t i) {
     assert(i < size());
