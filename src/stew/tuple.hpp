@@ -3,6 +3,7 @@
 
 #include <stew/meta.hpp>
 #include <stew/refs.hpp>
+#include <stew/utils.hpp>
 
 namespace stew {
 template <typename... T>
