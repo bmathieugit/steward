@@ -1,24 +1,15 @@
 #define NDEBUG
 
-#include <stdio.h>
-#include <stew/string.hpp>
-#include <stew/format.hpp>
+#include <stew/iofile.hpp>
 
 using namespace stew;
-
 
 int main(int argc, char** argv) {
   constexpr auto s0 = str::stic("abcdef");
   
-  string<char> s1(100);
+  io::printfln(str::view("ma string est comme suit : '$'"), s0);
 
-  format_to(s1, str::view("my string $ hhii $ !"), s0, s0);
-
-  auto i = s1.iter();
-
-  while (i.has_next()) {
-    printf("%c", i.next());
-  }
-
+  io::printfln(str::view("stdin est de longueur : '$'"), io::len(io::stdr)); 
+  io::printfln(str::view("stdin est de longueur : '$'"), io::len(io::stdr)); 
   return 0;
 }
