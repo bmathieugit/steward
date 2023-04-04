@@ -72,15 +72,13 @@ class static_vector {
  public:
   constexpr void push(const T &t) {
     if (!full()) {
-      _data[_size] = t;
-      ++_size;
+      _data[_size++] = t;
     }
   }
 
   constexpr void push(T &&t) {
     if (!full()) {
-      _data[_size] = transfer(t);
-      ++_size;
+      _data[_size++] = transfer(t);
     }
   }
 

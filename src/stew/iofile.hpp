@@ -42,7 +42,6 @@ class file {
 
  public:
   ~file() { close(); }
-  template <character C>
   file(const char *path) : _fd(fopen(path, modechr[size_t(m)])) {}
   file(FILE *fd) : _fd(fd) {}
   file(const file &) = delete;
@@ -89,9 +88,9 @@ class file {
       if (fread(&buff, sizeof(T), 1, _fd) == 1) {
         res = transfer(buff);
       }
-
-      return res;
     }
+
+    return res;
   }
 };
 
