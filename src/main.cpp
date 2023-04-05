@@ -9,7 +9,5 @@ int main(int argc, char** argv) {
   
   io::printfln(str::view("ma string est comme suit : '$'"), s0);
 
-  io::printfln(str::view("stdin est de longueur : '$'"), io::len(io::stdr)); 
-  io::printfln(str::view("stdin est de longueur : '$'"), io::len(io::stdr)); 
   return 0;
 }

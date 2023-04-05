@@ -13,16 +13,39 @@
 namespace stew {
 
 enum class from : int { start = SEEK_SET, end = SEEK_END, cur = SEEK_CUR };
-enum class mode : size_t { r = 0, w = 1, rp = 2, wp = 3, a = 4, ap = 5 };
+enum class mode : size_t {
+  r = 0,
+  w = 1,
+  rp = 2,
+  wp = 3,
+  a = 4,
+  ap = 5,
+  std_in = 6,
+  std_out = 7
+};
+
 constexpr array<const char *, 6> modechr = {"r", "w", "r+", "w+", "a", "a+"};
 
 template <mode m>
-constexpr bool readable_mode =
-    m == mode::r || m == mode::rp || m == mode::wp || m == mode::ap;
+constexpr bool stdin_mode = m == mode::std_in;
 
 template <mode m>
-constexpr bool writable_mode = m == mode::w || m == mode::a || m == mode::rp ||
-                               m == mode::wp || m == mode::ap;
+constexpr bool stdout_mode = m == mode::std_out;
+
+template <mode m>
+constexpr bool pathable_mode = !stdout_mode<m> && !stdin_mode<m>;
+
+template <mode m>
+constexpr bool readable_mode = m == mode::r || m == mode::rp || m == mode::wp ||
+                               m == mode::ap || m == mode::std_in;
+
+template <mode m>
+constexpr bool writable_mode =
+    m == mode::w || m == mode::a || m == mode::rp || m == mode::wp ||
+    m == mode::ap || m == mode::std_out;
+
+template <mode m>
+constexpr bool settable_mode = pathable_mode<m>;
 
 enum class seek : int { set = SEEK_SET, cur = SEEK_CUR, end = SEEK_END };
 
@@ -42,7 +65,9 @@ class file {
 
  public:
   ~file() { close(); }
-  file(const char *path) : _fd(fopen(path, modechr[size_t(m)])) {}
+  file(const char *path)
+    requires pathable_mode<m>
+      : _fd(fopen(path, modechr[size_t(m)])) {}
   file(FILE *fd) : _fd(fd) {}
   file(const file &) = delete;
   file(file &&) = default;
@@ -52,13 +77,19 @@ class file {
  public:
   bool opened() const { return _fd != nullptr; }
 
-  void set(from fr, long offset) {
+  void set(from fr, long offset)
+    requires settable_mode<m>
+  {
     if (_fd != nullptr) {
       fseek(_fd, offset, int(fr));
     }
   }
 
-  size_t pos() { return _fd != nullptr ? ftell(_fd) : 0; }
+  size_t pos()
+    requires settable_mode<m>
+  {
+    return _fd != nullptr ? ftell(_fd) : 0;
+  }
 
  public:
   void push(T &&t)
@@ -96,8 +127,8 @@ class file {
 
 namespace io {
 
-static auto stdr = file<char, mode::r>(stdin);
-static auto stdw = file<char, mode::w>(stdout);
+static auto stdr = file<char, mode::std_in>(stdin);
+static auto stdw = file<char, mode::std_out>(stdout);
 
 template <typename T, mode m>
 inline size_t len(file<T, m> &f) {

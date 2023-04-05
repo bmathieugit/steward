@@ -14,7 +14,7 @@ all: clean compile run
 clean:
 	rm -rf building
 
-building/main.o: src/main.cpp src/stew.hpp
+building/main.o: src/main.cpp 
 	mkdir -p building
 	${CC} -o building/main.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
 
@@ -22,7 +22,7 @@ building/steward.app: building/main.o
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS} ${EXTRA} ${EXPER}
 
-building/slides.o: src/slides.cpp src/stew.hpp
+building/slides.o: src/slides.cpp
 	mkdir -p building
 	${CC} -o building/slides.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
 
@@ -30,7 +30,7 @@ building/slides.app: building/slides.o
 	mkdir -p building
 	${CC} -o building/slides.app $^ ${FLAGS} ${EXTRA} ${EXPER}
 
-building/string-test.o: src/test/string-test.cpp src/stew.hpp
+building/string-test.o: src/test/string-test.cpp
 	mkdir -p building
 	${CC} -o building/string-test.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
 
