@@ -152,15 +152,23 @@ class formatter<P> {
   }
 };
 
+template <iterator I>
+class formatter<I> {
+ public:
+  template <ostream O>
+  constexpr static void to(O &o, I i) {
+    while (i.has_next()) {
+      o.push(i.next());
+    }
+  }
+};
+
 template <iterable I>
 class formatter<I> {
  public:
   template <ostream O>
   constexpr static void to(O &o, const I &i) {
-    iterator auto ii = i.iter();
-    while (ii.has_next()) {
-      o.push(ii.next());
-    }
+    formatter<decltype(i.iter())>::to(o, i.iter());
   }
 };
 }  // namespace stew

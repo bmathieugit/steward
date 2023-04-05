@@ -16,32 +16,31 @@ clean:
 
 building/main.o: src/main.cpp 
 	mkdir -p building
-	${CC} -o building/main.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
+	${CC} -o building/main.o -c $< ${FLAGS} ${EXTRA}
 
 building/steward.app: building/main.o
 	mkdir -p building
-	${CC} -o building/steward.app $^ ${FLAGS} ${EXTRA} ${EXPER}
+	${CC} -o building/steward.app $^ ${FLAGS} ${EXTRA}}
 
 building/slides.o: src/slides.cpp
 	mkdir -p building
-	${CC} -o building/slides.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
+	${CC} -o building/slides.o -c $< ${FLAGS} ${EXTRA}
 
 building/slides.app: building/slides.o
 	mkdir -p building
-	${CC} -o building/slides.app $^ ${FLAGS} ${EXTRA} ${EXPER}
+	${CC} -o building/slides.app $^ ${FLAGS} ${EXTRA}
 
 building/string-test.o: src/test/string-test.cpp
 	mkdir -p building
-	${CC} -o building/string-test.o -c $< ${FLAGS} ${EXTRA} ${EXPER}
+	${CC} -o building/string-test.o -c $< ${FLAGS} ${EXTRA} 
 
 building/string-test.app: building/string-test.o
 	mkdir -p building
-	${CC} -o building/string-test.app $^ ${FLAGS} ${EXTRA} ${EXPER}
+	${CC} -o building/string-test.app $^ ${FLAGS} ${EXTRA}
 
-
-compile: building/steward.app building/slides.app
+compile: building/slides.app
 
 test: building/string-test.app
 
 run: compile
-	./building/steward.app -k github.com
+	./building/slides.app examples/slides0.txt

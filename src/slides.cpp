@@ -26,38 +26,18 @@ constexpr auto ns = str::view("===");
 
 }  // namespace prefix
 
-struct line {
-  string<char> style;
-  string<char> content;
-};
-
-struct style {
-  string<char> prefix;
-  string<char> applied;
-};
-
-struct styles {
-  static_vector<style, 10> stls;
-};
-
 int main(int argc, char** argv) {
   if (argc == 2) {
     file<char, mode::r> fslides(argv[1]);
 
     if (fslides.opened()) {
-      auto all = io::readall(fslides);
-      auto iall = all.iter();
-      static_string<char, 1024> l;
+      auto content = io::readall(fslides);
+      auto nb_lines = count(content.iter(), '\n');
+      auto ilines = split_iterator(content.iter(), '\n');
 
-      while (iall.has_next()) {
-        auto c = iall.next();
-        io::printf(str::view("$"), c);
-        /*if (c != '\n') {
-          l.push(iall.next());
-        } else {
-          io::printfln(str::view("line : $"), l);
-          l.clear();
-        }*/
+
+      while (ilines.has_next()) {
+        io::printfln(str::view("$"), ilines.next());
       }
     }
   }

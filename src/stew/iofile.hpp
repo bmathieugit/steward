@@ -153,6 +153,20 @@ inline vector<T> readall(file<T, m> &f)
   return content;
 }
 
+template <character C, mode m>
+inline ext_string<C> readline(file<C, m> &f)
+  requires readable_mode<m>
+{
+  ext_string<C> line;
+  maybe<C> c;
+
+  while ((c = f.pop()).has() && c != '\n') {
+    line.push(*c);
+  }
+
+  return line;
+}
+
 template <character C>
 inline void print(string_view<C> s) {
   stdw.push(s);

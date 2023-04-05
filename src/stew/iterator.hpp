@@ -2,6 +2,7 @@
 #define __steward_iterator_hpp__
 
 #include <assert.h>
+#include <stdio.h>
 
 #include <stew/meta.hpp>
 #include <stew/meta/iterator.hpp>
@@ -20,6 +21,8 @@ class pointer_iterator {
       : _current(current), _end(end) {}
   constexpr pointer_iterator(T* current, size_t n)
       : pointer_iterator(current, current + n) {}
+  template <size_t N>
+  constexpr pointer_iterator(T (&a)[N]) : _current(a), _end(a + N) {}
 
  public:
   constexpr bool has_next() const { return _current != _end; }
@@ -43,6 +46,51 @@ class reverse_pointer_iterator {
   constexpr bool has_next() const { return _current != _end; }
   constexpr T& next() { return *(_current--); }
   constexpr size_t size() const { return _current - _end; }
+};
+
+template <iterator I>
+class counter_iterator {
+ private:
+  I _iter;
+  size_t _count;
+
+ public:
+  constexpr counter_iterator(I iter, size_t count)
+      : _iter(transfer(iter)), _count(count) {}
+
+ public:
+  constexpr bool has_next() const { return _iter.has_next() && _count != 0; }
+  constexpr auto next() -> decltype(auto) {
+    --_count;
+    return _iter.next();
+  }
+  constexpr size_t size() const { return _count; }
+};
+
+template <iterator I, typename T>
+class split_iterator {
+ private:
+  I _iter;
+  T _delim;
+
+ public:
+  constexpr split_iterator(I iter, const T& delim)
+      : _iter(iter), _delim(delim) {}
+  constexpr split_iterator(I iter, T&& delim) : _iter(iter), _delim(delim) {}
+
+ public:
+  constexpr bool has_next() const { return _iter.has_next(); }
+
+  constexpr auto next() {
+    I start = _iter;
+    size_t n = size_t(-1);
+
+    while (_iter.has_next() && _iter.next() != _delim) {
+      ++n;
+    }
+
+    return counter_iterator(start, _iter.has_next() ? n + 1 : size_t(-1));
+  }
 };
 
 // generator/upto/downto
