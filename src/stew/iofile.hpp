@@ -169,12 +169,12 @@ inline ext_string<C> readline(file<C, m> &f)
 
 template <character C>
 inline void print(string_view<C> s) {
-  stdw.push(s);
+  copy(s.iter(), stdw);
 }
 
 template <character C>
 inline void println(string_view<C> s) {
-  stdw.push(s);
+  copy(s.iter(), stdw);
   stdw.push('\n');
 }
 template <character C, typename... T>

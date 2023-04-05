@@ -1,4 +1,5 @@
 #include <stew/iofile.hpp>
+#include <stew/iterator.hpp>
 #include <stew/maybe.hpp>
 #include <stew/string.hpp>
 #include <stew/view.hpp>
@@ -21,18 +22,12 @@ constexpr auto t1 = str::view("t1=");
 constexpr auto t2 = str::view("t2=");
 constexpr auto t3 = str::view("t3=");
 constexpr auto t4 = str::view("t4=");
-constexpr auto p = str::view("p=");
+constexpr auto p = str::view("p==");
 constexpr auto ns = str::view("===");
 
 }  // namespace prefix
 
 int main(int argc, char** argv) {
-  for_each(increment_iterator(0, 10),
-           [](int i) { io::printfln(str::view("- $"), i); });
-  for_each(decrement_iterator(10, 0),
-           [](int i) { io::printfln(str::view("- $"), i); });
-
-
   if (argc == 2) {
     file<char, mode::r> fslides(argv[1]);
 
@@ -42,7 +37,24 @@ int main(int argc, char** argv) {
       auto ilines = split_iterator(content.iter(), '\n');
 
       while (ilines.has_next()) {
-        io::printfln(str::view("$"), ilines.next());
+        auto iline = ilines.next();
+        auto prfx = counter_iterator(iline, 3);
+
+        if (equals(prfx, prefix::ns.iter())) {
+          io::stdr.pop();
+          io::print(ansi::clear);
+          io::print(ansi::init);
+        } else if (equals(prfx, prefix::t1.iter())) {
+          io::println(str::view("t1 !"));
+        } else if (equals(prfx, prefix::t2.iter())) {
+          io::println(str::view("t2 !"));
+        } else if (equals(prfx, prefix::t3.iter())) {
+          io::println(str::view("t3 !"));
+        } else if (equals(prfx, prefix::t4.iter())) {
+          io::println(str::view("t4 !"));
+        } else if (equals(prfx, prefix::p.iter())) {
+          io::println(str::view("p !"));
+        }
       }
     }
   }
