@@ -27,6 +27,12 @@ constexpr auto ns = str::view("===");
 }  // namespace prefix
 
 int main(int argc, char** argv) {
+  for_each(increment_iterator(0, 10),
+           [](int i) { io::printfln(str::view("- $"), i); });
+  for_each(decrement_iterator(10, 0),
+           [](int i) { io::printfln(str::view("- $"), i); });
+
+
   if (argc == 2) {
     file<char, mode::r> fslides(argv[1]);
 
@@ -34,7 +40,6 @@ int main(int argc, char** argv) {
       auto content = io::readall(fslides);
       auto nb_lines = count(content.iter(), '\n');
       auto ilines = split_iterator(content.iter(), '\n');
-
 
       while (ilines.has_next()) {
         io::printfln(str::view("$"), ilines.next());

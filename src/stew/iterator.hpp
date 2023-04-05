@@ -93,6 +93,36 @@ class split_iterator {
   }
 };
 
+template <integral I>
+class increment_iterator {
+ private:
+  I _min;
+  I _max;
+
+ public:
+  constexpr increment_iterator(I min, I max) : _min(min), _max(max) {}
+
+ public:
+  constexpr bool has_next() const { return _min != _max; }
+  constexpr I next() { return _min++; }
+  constexpr size_t size() const { return _max - _min; }
+};
+
+template <integral I>
+class decrement_iterator {
+ private:
+  I _max;
+  I _min;
+
+ public:
+  constexpr decrement_iterator(I max, I min) : _max(max), _min(min) {}
+
+ public:
+  constexpr bool has_next() const { return _max != _min; }
+  constexpr I next() { return _max--; }
+  constexpr size_t size() const { return _max - _min; }
+};
+
 // generator/upto/downto
 class generator_iterator {};
 
