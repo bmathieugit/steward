@@ -5,9 +5,13 @@
 using namespace stew;
 
 int main(int argc, char** argv) {
-  constexpr auto s0 = str::stic("abcdef");
-  
-  io::printfln(str::view("ma string est comme suit : '$'"), s0);
+  string<char> s(10);
+  string<char> ss(10);
+
+  push(s, 'a', 'b', 'c', 'd', 'f', 'g');
+  copy(s, ss);
+  io::printfln(str::view("ma string est comme suit : '$'"), s);
+  io::printfln(str::view("ma sstring est comme suit : '$'"), ss);
 
   return 0;
 }

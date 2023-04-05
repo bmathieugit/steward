@@ -143,8 +143,7 @@ template <typename T, mode m>
 inline vector<T> readall(file<T, m> &f)
   requires readable_mode<m>
 {
-  size_t n = len(f);
-  vector<T> content(n);
+  vector<T> content(len(f));
   maybe<T> c;
 
   while ((c = f.pop()).has()) {
