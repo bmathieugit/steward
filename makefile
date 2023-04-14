@@ -9,7 +9,7 @@ FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc
 EXTRA=-save-temps -fconcepts-diagnostics-depth=10 # -fno-exceptions
 #EXPER=-fanalyzer
 
-all: clean compile run
+all: clean building/stewsh.app
 
 clean:
 	rm -rf building
@@ -22,13 +22,14 @@ building/steward.app: building/main.o
 	mkdir -p building
 	${CC} -o building/steward.app $^ ${FLAGS} ${EXTRA}}
 
-building/slides.o: src/slides.cpp
+building/stewsh.o: src/stewsh.cpp
 	mkdir -p building
-	${CC} -o building/slides.o -c $< ${FLAGS} ${EXTRA}
+	${CC} -o building/stewsh.o -c $< ${FLAGS} ${EXTRA}
 
-building/slides.app: building/slides.o
+building/stewsh.app: building/stewsh.o
 	mkdir -p building
-	${CC} -o building/slides.app $^ ${FLAGS} ${EXTRA}
+	${CC} -o building/stewsh.app $^ ${FLAGS} ${EXTRA}
+
 
 building/string-test.o: src/test/string-test.cpp
 	mkdir -p building
@@ -38,9 +39,7 @@ building/string-test.app: building/string-test.o
 	mkdir -p building
 	${CC} -o building/string-test.app $^ ${FLAGS} ${EXTRA}
 
-compile: building/slides.app
-
 test: building/string-test.app
 
-run: compile
-	./building/slides.app examples/slides0.txt
+stewsh: building/stewsh.app
+

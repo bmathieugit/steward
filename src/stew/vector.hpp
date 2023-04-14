@@ -7,6 +7,7 @@
 #include <stew/maybe.hpp>
 #include <stew/meta.hpp>
 #include <stew/meta/container.hpp>
+#include <stew/meta/iterator.hpp>
 #include <stew/smarts.hpp>
 
 namespace stew {
@@ -29,12 +30,10 @@ class static_vector {
   constexpr static_vector(const static_vector &) = default;
   constexpr static_vector &operator=(const static_vector &) = default;
 
-  // container
-  template <typename C>
-  constexpr static_vector(C &&c)
-    requires(size_container<C> && iterable<C>)
-  {
-    copy(c, *this);
+  // iterator
+  template <iterator I>
+  constexpr static_vector(I &&i) {
+    copy(i, *this);
   }
 
  public:
@@ -115,12 +114,10 @@ class vector {
   constexpr vector(const vector &o) = default;
   constexpr vector &operator=(const vector &) = default;
 
-  // container
-  template <typename C>
-  constexpr vector(C &&c)
-    requires(size_container<C> && iterable<C>)
-      : vector(c.size()) {
-    copy(c, *this);
+  // iterator
+  template <sizeable_iterator I>
+  constexpr vector(I &&i) : vector(i.size()) {
+    copy(i, *this);
   }
 
  public:
@@ -199,12 +196,15 @@ class ext_vector {
   constexpr ext_vector(const ext_vector &) = default;
   constexpr ext_vector &operator=(const ext_vector &) = default;
 
-  // container
-  template <typename C>
-  constexpr ext_vector(C &&c)
-    requires(size_container<C> && iterable<C>)
-      : ext_vector(c.size()) {
-    copy(c, *this);
+  // iterator
+  template <sizeable_iterator I>
+  constexpr ext_vector(I &&i) : ext_vector(i.size()) {
+    copy(i, *this);
+  }
+
+  template <iterator I>
+  constexpr ext_vector(I &&i) {
+    copy(i, *this);
   }
 
  public:
@@ -233,7 +233,7 @@ class ext_vector {
     if (_data.full()) {
       vector<T> tmp = transfer(_data);
       _data = vector<T>(tmp.size() * 2 + 10);
-      transfer(tmp, _data);
+      transfer(tmp.iter(), _data);
     }
 
     _data.push(t);
@@ -243,7 +243,7 @@ class ext_vector {
     if (_data.full()) {
       vector<T> tmp = transfer(_data);
       _data = vector<T>(tmp.size() * 2 + 10);
-      transfer(tmp, _data);
+      transfer(tmp.iter(), _data);
     }
 
     _data.push(transfer(t));

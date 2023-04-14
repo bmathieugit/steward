@@ -22,6 +22,23 @@ constexpr void for_each_joined(I0 i0, I1 i1, F &&f) {
   }
 }
 
+template <iterator I, typename P>
+constexpr size_t find(I i, P &&pred) {
+  size_t idx = size_t(-1);
+  bool fnd = false;
+
+  while (i.has_next()) {
+    ++idx;
+
+    if (relay<P>(pred)(i.next())) {
+      fnd = true;
+      break;
+    }
+  }
+
+  return fnd ? idx : size_t(-1);
+}
+
 template <iterator I, typename T>
 constexpr size_t find(I i, const T &t) {
   size_t idx = size_t(-1);
@@ -53,11 +70,6 @@ constexpr bool starts_with(I0 i0, I1 i1) {
     ;
 
   return !i1.has_next();
-}
-
-template <iterator I, typename T>
-constexpr bool starts_with(I i, const T &t) {
-  return i.has_next() && i.next() == t;
 }
 
 template <iterator I, typename T>
@@ -135,6 +147,18 @@ constexpr bool none_of(I i, P &&pred)
 template <iterator I, typename T>
 constexpr bool contains(I i, const T &t) {
   return any_of(i, [&t](auto &&item) { return item == t; });
+}
+
+template <iterator I0, iterator I1>
+constexpr I0 skip(I0 i0, I1 i1) {
+  if (starts_with(i0, i1)) {
+    while (i0.has_next() && i1.has_next()) {
+      i0.next();
+      i1.next();
+    }
+  }
+
+  return i0;
 }
 
 template <iterator I, typename C>
