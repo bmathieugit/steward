@@ -3,7 +3,7 @@
 
 #include <core/array.hpp>
 #include <core/collection.hpp>
-#include <core/ostream.hpp>
+#include <core/stream.hpp>
 #include <core/string.hpp>
 #include <core/utils.hpp>
 

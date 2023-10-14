@@ -1,16 +1,14 @@
 #ifndef __n_string_ostream_hpp__
 #define __n_string_ostream_hpp__
 
-#include <core/collection.hpp>
-#include <core/cstring.hpp>
-#include <core/istream.hpp>
 #include <core/result.hpp>
-#include <core/string.hpp>
+#include <core/stream.hpp>
 #include <core/utils.hpp>
 
+template <typename S>
+concept char_istream = istream<S> and character<typename S::type>;
 
-
-template <char_iterator S, character C>
+template <char_istream S, character C>
 constexpr S& operator>>(S& s, maybe<C>& c) {
   if (s.has()) {
     c = s.get();
@@ -20,7 +18,7 @@ constexpr S& operator>>(S& s, maybe<C>& c) {
   return s;
 }
 
-template <char_iterator S, unsigned_integral I>
+template <char_istream S, unsigned_integral I>
 constexpr S& operator>>(S& s, maybe<I>& i) {
   if (s.has()) {
     auto c = s.get();
@@ -49,7 +47,7 @@ constexpr S& operator>>(S& s, maybe<I>& i) {
   return s;
 }
 
-template <char_iterator S, signed_integral I>
+template <char_istream S, signed_integral I>
 constexpr S& operator>>(S& s, maybe<I>& i) {
   maybe<bool> neg;
 
@@ -99,7 +97,7 @@ constexpr S& operator>>(S& s, maybe<I>& i) {
   return s;
 }
 
-template <char_iterator S>
+template <char_istream S>
 constexpr S& operator>>(S& s, maybe<bool>& b) {
   if (s.has()) {
     auto c = s.get();
@@ -121,10 +119,8 @@ struct expected_char {
   C _expected;
 };
 
-template <char_iterator S>
-constexpr S& operator>>(
-    S& s,
-    maybe<expected_char<typename S::type>>& exc) {
+template <char_istream S>
+constexpr S& operator>>(S& s, maybe<expected_char<typename S::type>>& exc) {
   if (s.has() and exc.has() and exc.get()._expected == s.get()) {
     exc.get()._expected = s.get();
     s.next();
@@ -137,7 +133,5 @@ constexpr S& operator>>(
 
   return s;
 }
-
-
 
 #endif
