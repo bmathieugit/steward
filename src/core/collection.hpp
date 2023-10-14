@@ -13,10 +13,7 @@ template <typename V>
 concept view = collection_context<V> and
                requires(V v, const V cv, typename V::position p) {
                  { cv.has(p) } -> same_as<bool>;
-                 {
-                   cv.at(p)
-                 } -> contains<const typename V::type&, typename V::type,
-                               const typename V::type>;
+                 { cv.at(p) } -> same_as_declined<typename V::type>;
                  { cv.empty() } -> same_as<bool>;
                  { cv.len() } -> same_as<size_t>;
                };
@@ -34,10 +31,7 @@ template <typename I>
 concept iterator = collection_context<I> and requires(I i, const I ci) {
   { ci.has() } -> same_as<bool>;
   { i.next() } -> same_as<void>;
-  {
-    i.get()
-  } -> contains<typename I::type&, const typename I::type&,
-                const typename I::type, typename I::type>;
+  { i.get() } -> same_as_declined<typename I::type>;
   { ci.pos() } -> same_as<typename I::position>;
 };
 

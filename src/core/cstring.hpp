@@ -29,7 +29,7 @@ class null_terminating_string_forward_iterator {
  public:
   constexpr bool has() const { return *_data != '\0'; }
   constexpr void next() { _data += 1; }
-  constexpr auto get() -> decltype(auto) { return *_data; }
+  constexpr auto get() -> decltype(auto) { return (*_data); }
   constexpr position pos() const { return _data - _start; }
 };
 
@@ -37,6 +37,5 @@ template <character C>
 constexpr auto iter(const C* s) {
   return null_terminating_string_forward_iterator(s);
 }
-
 
 #endif

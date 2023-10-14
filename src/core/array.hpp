@@ -1,11 +1,9 @@
 #ifndef __n_array_hpp__
 #define __n_array_hpp__
 
+#include <core/collection.hpp>
 #include <core/result.hpp>
 #include <core/utils.hpp>
-#include <core/collection.hpp>
-
-
 
 template <typename T, size_t N>
 class array {
@@ -111,6 +109,5 @@ template <typename T, size_t N>
 constexpr auto riter(const array<T, N>& v) {
   return index_backward_iterator(v);
 }
-
 
 #endif

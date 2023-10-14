@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 
+#include <core/io.hpp>
 #include <core/string.hpp>
 
 string chiffrementAres(const string& cle, char_iterator auto texte) {
@@ -19,6 +20,8 @@ string chiffrementAres(const string& cle, char_iterator auto texte) {
 }
 
 int main() {
+  stdr.at(size_t(-1));
+
   auto cle = iter("votre_cle");  // Remplacez "votre_cle" par la clé souhaitée
   auto texte = iter("Le texte que vous souhaitez chiffrer.");
 

@@ -15,22 +15,22 @@ void test_file_iterator_readable_mode() {
   auto it = iter(f);
 
   N_TEST_ASSERT_TRUE(it.has());
-  N_TEST_ASSERT_EQUALS(it.get(), 'H');
+  N_TEST_ASSERT_EQUALS(it.get().get(), 'H');
   it.next();
   N_TEST_ASSERT_TRUE(it.has());
-  N_TEST_ASSERT_EQUALS(it.get(), 'e');
+  N_TEST_ASSERT_EQUALS(it.get().get(), 'e');
   it.next();
   N_TEST_ASSERT_TRUE(it.has());
-  N_TEST_ASSERT_EQUALS(it.get(), 'l');
+  N_TEST_ASSERT_EQUALS(it.get().get(), 'l');
   it.next();
   N_TEST_ASSERT_TRUE(it.has());
-  N_TEST_ASSERT_EQUALS(it.get(), 'l');
+  N_TEST_ASSERT_EQUALS(it.get().get(), 'l');
   it.next();
   N_TEST_ASSERT_TRUE(it.has());
-  N_TEST_ASSERT_EQUALS(it.get(), 'o');
+  N_TEST_ASSERT_EQUALS(it.get().get(), 'o');
   it.next();
   N_TEST_ASSERT_TRUE(it.has());
-  N_TEST_ASSERT_EQUALS(it.get(), '\n');
+  N_TEST_ASSERT_EQUALS(it.get().get(), '\n');
 
   remove(filename);
 }
@@ -177,6 +177,7 @@ int main() {
   // N_TEST_REGISTER(test_file_stdout_mode);
 
   N_TEST_RUN_SUITE;
+
 
   return 0;
 }

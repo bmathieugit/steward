@@ -1,9 +1,8 @@
 #ifndef __n_utils_hpp__
 #define __n_utils_hpp__
 
-
-
 using size_t = unsigned long;
+using byte_t = unsigned char;
 
 template <bool test, typename T, typename U>
 struct __if_ {
@@ -65,7 +64,16 @@ template <typename T>
 using rm_cref = rm_const<rm_ref<T>>;
 
 template <typename T, typename U>
-concept basic_same_as = __same_as<rm_cref<T>, rm_cref<U>>;
+concept same_as_basic = __same_as<rm_cref<T>, rm_cref<U>>;
+
+template <typename T, typename U>
+concept same_as_declined = contains<T,
+                                    rm_cref<T>,
+                                    rm_cref<T>&,
+                                    rm_cref<T>&&,
+                                    const rm_cref<T>,
+                                    const rm_cref<T>&,
+                                    const rm_cref<T>&&>;
 
 template <typename T>
 constexpr rm_ref<T>&& move(T&& t) {
@@ -102,8 +110,6 @@ concept has_equals_operator = requires(const T& t, const U& u) { t == u; };
 
 template <typename T, typename U>
 concept has_diffs_operator = requires(const T& t, const U& u) { t != u; };
-
-
 
 template <typename T>
 void* operator new(size_t, T* ptr) {
