@@ -20,6 +20,11 @@ clean:
 building:
 	mkdir -p building
 
+
+main: src/main.cpp building
+	${CXX} -o  building/main.app src/main.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/main.app
+
 test-string: test/test-string.cpp building
 	${CXX} -o  building/test-string.app test/test-string.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-string.app
@@ -40,7 +45,7 @@ test-io: test/test-io.cpp building
 	${CXX} -o  building/test-io.app test/test-io.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-io.app
 
-test: test-vector test-string test-ostream test-istream  #test-io  
+test: test-vector test-string test-ostream test-istream test-io  
 
 stat:
 	wc -l building/*.s

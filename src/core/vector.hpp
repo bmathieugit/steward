@@ -4,11 +4,9 @@
 #include <core/collection.hpp>
 #include <core/utils.hpp>
 
-
-
 template <typename T>
 struct vector_allocator {
-    constexpr T* allocate(size_t n) const {
+  constexpr T* allocate(size_t n) const {
     return n == 0 ? nullptr : static_cast<T*>(::operator new(n * sizeof(T)));
   }
 
@@ -372,7 +370,5 @@ template <typename T>
 constexpr auto iter(const fixed_vector<T>& v) {
   return index_forward_iterator(v);
 }
-
-
 
 #endif
