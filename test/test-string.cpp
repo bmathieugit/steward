@@ -1,5 +1,5 @@
 #include <core/string.hpp>
-#include <core/tests.hpp>
+#include <tests.hpp>
 template <size_t N>
 bool operator==(const stringlike auto& s1, const char* s2) {
   auto is1 = iter(s1);

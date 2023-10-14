@@ -1,4 +1,4 @@
-#include <core/tests.hpp>
+#include <tests.hpp>
 #include <core/vector.hpp>
 
 

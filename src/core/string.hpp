@@ -6,8 +6,6 @@
 #include <core/utils.hpp>
 #include <core/vector.hpp>
 
-
-
 template <typename S>
 concept stringlike = collection<S> and character<typename S::type>;
 
@@ -31,6 +29,5 @@ using char_array = basic_char_array<char, N>;
 
 template <size_t N>
 using wchar_array = basic_char_array<wchar_t, N>;
-
 
 #endif

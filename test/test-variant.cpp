@@ -1,5 +1,5 @@
 #include <core/string.hpp>
-#include <core/tests.hpp>
+#include <tests.hpp>
 #include <core/variant.hpp>
 
 void test_variant_default_constructor() {

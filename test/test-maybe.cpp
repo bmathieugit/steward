@@ -1,5 +1,5 @@
 #include <core/maybe.hpp>
-#include <core/tests.hpp>
+#include <tests.hpp>
 
 void test_default_constructor() {
   maybe<int> m;

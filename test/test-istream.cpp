@@ -1,6 +1,6 @@
 #include <core/string-istream.hpp>
 #include <core/string.hpp>
-#include <core/tests.hpp>
+#include <tests.hpp>
 
 /*bool operator==(const string<char>& s, const char* s1) {
   return equal(s.iter(), pointer_iterator(s1, strlen(s1)));
