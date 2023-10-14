@@ -4,42 +4,44 @@
 # $? : liste des dépendances plus récentes que la cible
 # $* : nom d’un fichier sans son suffixe
 
-CC=g++
-FLAGS=-std=c++20 -O3 -Ideps/alt/src/ -Isrc
-EXTRA=-save-temps -fconcepts-diagnostics-depth=10 # -fno-exceptions
-#EXPER=-fanalyzer
+CXX=g++
+CXXFLAGS+= -Wall -Werror -pedantic
+CXXFLAGS+= -std=c++20 -O3 -save-temps
+CXXFLAGS+= -fconcepts-diagnostics-depth=5
+CXXINCS=-Isrc
 
-all: clean building/stewsh.app
+all: clean test
 
 clean:
 	rm -rf building
+	rm -rf dist
+	rm -f test*
 
-building/main.o: src/main.cpp 
+building:
 	mkdir -p building
-	${CC} -o building/main.o -c $< ${FLAGS} ${EXTRA}
 
-building/steward.app: building/main.o
-	mkdir -p building
-	${CC} -o building/steward.app $^ ${FLAGS} ${EXTRA}}
+test-string: src/test/test-string.cpp building
+	${CXX} -o  building/test-string.app src/test/test-string.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test-string.app
 
-building/stewsh.o: src/stewsh.cpp
-	mkdir -p building
-	${CC} -o building/stewsh.o -c $< ${FLAGS} ${EXTRA}
+test-vector: src/test/test-vector.cpp building
+	${CXX} -o  building/test-vector.app src/test/test-vector.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test-vector.app
 
-building/stewsh.app: building/stewsh.o
-	mkdir -p building
-	${CC} -o building/stewsh.app $^ ${FLAGS} ${EXTRA}
+test-ostream: src/test/test-ostream.cpp building
+	${CXX} -o  building/test-ostream.app src/test/test-ostream.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test-ostream.app
 
+test-istream: src/test/test-istream.cpp building
+	${CXX} -o  building/test-istream.app src/test/test-istream.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test-istream.app
 
-building/string-test.o: src/test/string-test.cpp
-	mkdir -p building
-	${CC} -o building/string-test.o -c $< ${FLAGS} ${EXTRA} 
+test-io: src/test/test-io.cpp building
+	${CXX} -o  building/test-io.app src/test/test-io.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test-io.app
 
-building/string-test.app: building/string-test.o
-	mkdir -p building
-	${CC} -o building/string-test.app $^ ${FLAGS} ${EXTRA}
+test: test-vector test-string test-ostream test-istream  #test-io  
 
-test: building/string-test.app
-
-stewsh: building/stewsh.app
+stat:
+	wc -l building/*.s
 
