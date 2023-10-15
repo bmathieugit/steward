@@ -5,13 +5,13 @@
 #include <core/vector.hpp>
 #include <tests.hpp>
 
-void test_file_iterator_readable_mode() {
+void test_file_input_stream() {
   const char* filename = "test_file.txt";
   FILE* _file = fopen(filename, "w");
   fputs("Hello\n", _file);
   fclose(_file);
 
-  file_istream<char> fs(filename);
+  file_input_stream<char> fs(filename);
   maybe<char> c;
   fs >> c;
   N_TEST_ASSERT_TRUE(c.has());
@@ -39,11 +39,7 @@ void test_file_iterator_readable_mode() {
 int main() {
   N_TEST_SUITE("IO file test suite")
 
-  N_TEST_REGISTER(test_file_iterator_readable_mode);
-  // N_TEST_REGISTER(test_file_oterator_writable_mode);
-  // N_TEST_REGISTER(test_file_pathable_mode);
-  // N_TEST_REGISTER(test_file_stdin_mode);
-  // N_TEST_REGISTER(test_file_stdout_mode);
+  N_TEST_REGISTER(test_file_input_stream);
 
   N_TEST_RUN_SUITE;
 

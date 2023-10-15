@@ -29,7 +29,6 @@
   suite.run_all();       \
   }
 
-
 using test_function = void (*)();
 enum class test_result { success, failure };
 
@@ -70,7 +69,8 @@ class test_vector {
 
  public:
   constexpr ~test_vector() {
-    if (_tests != nullptr) delete[] _tests;
+    if (_tests != nullptr)
+      delete[] _tests;
     _size = 0;
     _max = 0;
   }
@@ -161,6 +161,5 @@ class test_suite {
     ::printf("\n");
   }
 };
-
 
 #endif

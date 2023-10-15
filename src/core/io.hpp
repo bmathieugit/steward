@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 
-#include <core/result.hpp>
 #include <core/char-istream.hpp>
 #include <core/char-ostream.hpp>
+#include <core/result.hpp>
 #include <core/string.hpp>
 #include <core/vector.hpp>
 
@@ -35,7 +35,7 @@ constexpr size_t flength(file_descriptor f) {
 }
 
 template <typename T>
-class file_istream {
+class file_input_stream {
  public:
   using type = T;
 
@@ -43,33 +43,25 @@ class file_istream {
   file_descriptor _f;
   size_t _pos;
   size_t _len;
-  bool _read;
 
  public:
-  constexpr file_istream(file_descriptor f)
-      : _f(f), _pos(0), _len(flength<T>(_f)), _read(false) {}
+  constexpr file_input_stream(file_descriptor f)
+      : _f(f), _pos(0), _len(flength<T>(_f)) {}
 
-  constexpr file_istream(const char* name) : file_istream(fopen(name, "r")) {}
+  constexpr file_input_stream(const char* name)
+      : file_input_stream(fopen(name, "r")) {}
 
-  constexpr file_istream(char_iterator auto name)
-      : file_istream(fopen(name, "r")) {}
+  constexpr file_input_stream(char_iterator auto name)
+      : file_input_stream(fopen(name, "r")) {}
 
  public:
   constexpr bool has() const { return _len != _pos; }
 
-  constexpr T get() {
-    byte_t buf[sizeof(T)];
-
-    if (not _read and fread(&buf, 1, sizeof(T), _f) == 1) {
-      _read = true;
-    }
-
-    return *reinterpret_cast<T*>(buf);
-  }
-
-  constexpr void next() {
+  constexpr T next() {
     _pos += 1;
-    _read = false;
+    byte_t buf[sizeof(T)];
+    fread(&buf, 1, sizeof(T), _f);
+    return *reinterpret_cast<T*>(buf);
   }
 };
 
@@ -118,7 +110,7 @@ class file_append_ostream {
   }
 };
 
-// static auto stdr = file_reader<char>(stdin);
-// static auto stdw = file<char>(stdout);
+static auto fout = file_ostream<char>(stdout);
+static auto fin = file_input_stream<char>(stdin);
 
 #endif
