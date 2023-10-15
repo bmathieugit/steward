@@ -1,5 +1,5 @@
-#include <core/ostream.hpp>
-#include <core/string-ostream.hpp>
+#include <core/stream.hpp>
+#include <core/char-ostream.hpp>
 #include <tests.hpp>
 #include <core/utils.hpp>
 

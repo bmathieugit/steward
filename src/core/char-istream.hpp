@@ -1,5 +1,5 @@
-#ifndef __n_string_ostream_hpp__
-#define __n_string_ostream_hpp__
+#ifndef __n_string_istream_hpp__
+#define __n_string_istream_hpp__
 
 #include <core/result.hpp>
 #include <core/stream.hpp>

@@ -4,169 +4,119 @@
 #include <stdio.h>
 
 #include <core/result.hpp>
+#include <core/char-istream.hpp>
+#include <core/char-ostream.hpp>
 #include <core/string.hpp>
 #include <core/vector.hpp>
 
-template <typename T>
-class file_reader {
- public:
-  using type = maybe<T>;
-  using position = size_t;
+using file_descriptor = FILE*;
 
- private:
-  FILE* _fd = nullptr;
-  mutable size_t _len;
+static constexpr file_descriptor null_file = nullptr;
 
- public:
-  ~file_reader() {
-    if (_fd != nullptr) {
-      fclose(_fd);
-      _fd = nullptr;
-    }
-  }
-
-  file_reader(FILE* fd) : _fd(fd) {
-    if (_fd == nullptr) {
-      _len = 0;
-    }
-
-    else {
-      fseek(_fd, 0L, SEEK_END);
-      _len = ftell(_fd) / sizeof(T);
-      fseek(_fd, 0L, SEEK_SET);
-    }
-  }
-
-  file_reader(const char* path) : file_reader(fopen(path, "r")) {}
-  file_reader(const file_reader&) = delete;
-  file_reader(file_reader&&) = default;
-  file_reader& operator=(const file_reader&) = delete;
-  file_reader& operator=(file_reader&&) = default;
-
- public:
-  size_t len() const { return _len; }
-  bool empty() const { return _len == 0; }
-  bool has(position p) const { return p < _len; }
-
-  type at(position p) const {
-    type tmp;
-
-    if (p < _len) {
-      fseek(_fd, p * sizeof(T), SEEK_SET);
-    }
-
-    T t;
-
-    if (fread(&t, 1, sizeof(T), _fd) == 1) {
-      tmp = move(t);
-    }
-
-    return tmp;
-  }
-};
-
-template <typename T>
-class file_reader_iterator {
- public:
-  using type = typename file_reader<T>::type;
-  using position = typename file_reader<T>::position;
-
- private:
-  file_reader<T>& _file;
-  position _pos = 0;
-
- public:
-  constexpr file_reader_iterator(file_reader<T>& f) : _file(f) {}
-
- public:
-  constexpr bool has() const { return _file.has(_pos); }
-  constexpr auto get() { return _file.at(_pos); }
-  constexpr void next() { _pos += 1; }
-  constexpr position pos() const { return _pos; }
-};
-
-template <typename T>
-constexpr auto iter(file_reader<T>& fr) {
-  return file_reader_iterator<T>(fr);
+file_descriptor fopen(char_iterator auto name, const char* mode) {
+  string s;
+  s << name;
+  s << '\0';
+  return fopen(s.data(), mode);
 }
 
 template <typename T>
-class file_writer {
- public:
-  using type = maybe<T>;
-  using position = size_t;
+constexpr size_t flength(file_descriptor f) {
+  size_t len = 0;
 
- private:
-  FILE* _fd = nullptr;
-  mutable size_t _len;
-
- public:
-  ~file_writer() {
-    if (_fd != nullptr) {
-      fclose(_fd);
-      _fd = nullptr;
-    }
+  if (f != null_file) {
+    auto pos = ftell(f);
+    fseek(f, 0L, SEEK_END);
+    len = ftell(f) / sizeof(T);
+    fseek(f, pos, SEEK_SET);
   }
 
-  file_writer(FILE* fd) : _fd(fd) {
-    if (_fd == nullptr) {
-      _len = 0;
-    }
-
-    else {
-      fseek(_fd, 0L, SEEK_END);
-      _len = ftell(_fd) / sizeof(T);
-      fseek(_fd, 0L, SEEK_SET);
-    }
-  }
-
-  file_writer(const char* path, bool append = false)
-      : file_writer(fopen(path, append ? "a" : "w")) {}
-  file_writer(const file_writer&) = delete;
-  file_writer(file_writer&&) = default;
-  file_writer& operator=(const file_writer&) = delete;
-  file_writer& operator=(file_writer&&) = default;
-
- public:
-  size_t len() const { return _len; }
-
-  bool empty() const { return _len == 0; }
-
-  bool add(const T& t) {
-    if (_fd != nullptr) {
-      return fwrite(&t, sizeof(T), 1, _fd) == 1;
-    }
-
-    else {
-      return false;
-    }
-  }
-};
-
-template <typename T>
-class file_writer_iterator {
- public:
-  using type = typename file_reader<T>::type;
-  using position = typename file_reader<T>::position;
-
- private:
-  file_reader<T>& _file;
-  position _pos = 0;
-
- public:
-  constexpr file_reader_iterator(file_reader<T>& f) : _file(f) {}
-
- public:
-  constexpr bool has() const { return _file.has(_pos); }
-  constexpr auto get() { return _file.at(_pos); }
-  constexpr void next() { _pos += 1; }
-  constexpr position pos() const { return _pos; }
-};
-
-template <typename T>
-constexpr auto oter(file_writer<T>& fw) {
-  return file_writer_oterator<T>(fw);
+  return len;
 }
+
+template <typename T>
+class file_istream {
+ public:
+  using type = T;
+
+ private:
+  file_descriptor _f;
+  size_t _pos;
+  size_t _len;
+  bool _read;
+
+ public:
+  constexpr file_istream(file_descriptor f)
+      : _f(f), _pos(0), _len(flength<T>(_f)), _read(false) {}
+
+  constexpr file_istream(const char* name) : file_istream(fopen(name, "r")) {}
+
+  constexpr file_istream(char_iterator auto name)
+      : file_istream(fopen(name, "r")) {}
+
+ public:
+  constexpr bool has() const { return _len != _pos; }
+
+  constexpr T get() {
+    byte_t buf[sizeof(T)];
+
+    if (not _read and fread(&buf, 1, sizeof(T), _f) == 1) {
+      _read = true;
+    }
+
+    return *reinterpret_cast<T*>(buf);
+  }
+
+  constexpr void next() {
+    _pos += 1;
+    _read = false;
+  }
+};
+
+template <typename T>
+class file_ostream {
+ public:
+  using type = T;
+
+ private:
+  file_descriptor _f;
+
+ public:
+  constexpr file_ostream(file_descriptor f) : _f(f) {}
+
+  constexpr file_ostream(const char* name) : file_ostream(fopen(name, "w")) {}
+
+  constexpr file_ostream(char_iterator auto name)
+      : file_ostream(fopen(name, "w")) {}
+
+ public:
+  constexpr bool add(const T& t) {
+    return _f != null_file and fwrite(&t, sizeof(T), 1, _f) == 1;
+  }
+};
+
+template <typename T>
+class file_append_ostream {
+ public:
+  using type = T;
+
+ private:
+  file_descriptor _f;
+
+ public:
+  constexpr file_append_ostream(file_descriptor f) : _f(f) {}
+
+  constexpr file_append_ostream(const char* name)
+      : file_append_ostream(fopen(name, "a")) {}
+
+  constexpr file_append_ostream(char_iterator auto name)
+      : file_append_ostream(fopen(name, "a")) {}
+
+ public:
+  constexpr bool add(const T& t) {
+    return _f != null_file and fwrite(&t, sizeof(T), 1, _f) == 1;
+  }
+};
 
 // static auto stdr = file_reader<char>(stdin);
 // static auto stdw = file<char>(stdout);

@@ -1,4 +1,4 @@
-#include <core/string-istream.hpp>
+#include <core/char-istream.hpp>
 #include <core/string.hpp>
 #include <tests.hpp>
 

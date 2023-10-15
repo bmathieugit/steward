@@ -123,19 +123,18 @@ class vector {
   }
 
  public:
+  constexpr auto data() { return _data; }
+  constexpr auto data() const { return _data; }
+
+ public:
   constexpr auto len() const { return _len; }
-
   constexpr auto empty() const { return _len == 0; }
-
   constexpr auto max() const { return _max; }
-
   constexpr auto full() const { return _len == _max; }
 
  public:
   constexpr bool has(position p) const { return p < _len; }
-
   constexpr T& at(position p) { return _data[p]; }
-
   constexpr const T& at(position p) const { return _data[p]; }
 
   constexpr void clear() {
