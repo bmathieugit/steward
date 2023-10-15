@@ -4,9 +4,7 @@
 #include <core/result.hpp>
 #include <core/stream.hpp>
 #include <core/utils.hpp>
-
-template <typename S>
-concept char_input_stream = input_stream<S> and character<typename S::type>;
+#include <core/concepts.hpp>
 
 template <char_input_stream S, character C>
 constexpr S& operator>>(S& s, maybe<C>& c) {

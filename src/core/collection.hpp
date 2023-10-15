@@ -2,37 +2,7 @@
 #define __n_collection_hpp__
 
 #include <core/utils.hpp>
-
-template <typename T>
-concept collection_context = requires {
-  typename T::type;
-  typename T::position;
-};
-
-template <typename C>
-concept collection =
-    collection_context<C> and
-    requires(C c, const C cc, typename C::type t, typename C::position p) {
-      { cc.has(p) } -> same_as<bool>;
-      { cc.at(p) } -> same_as_declined<typename C::type>;
-      { cc.empty() } -> same_as<bool>;
-      { cc.len() } -> same_as<size_t>;
-      { c.add(t) } -> same_as<bool>;
-      { c.modify(p, t) } -> same_as<bool>;
-      { c.remove(p) } -> same_as<bool>;
-      { c.clear() } -> same_as<void>;
-    };
-
-template <typename I>
-concept iterator = collection_context<I> and requires(I i, const I ci) {
-  { ci.has() } -> same_as<bool>;
-  { i.next() } -> same_as<void>;
-  { i.get() } -> same_as_declined<typename I::type>;
-  { ci.pos() } -> same_as<typename I::position>;
-};
-
-template <typename I>
-concept char_iterator = iterator<I> and character<typename I::type>;
+#include <core/concepts.hpp>
 
 template <typename C>
 class index_forward_iterator {

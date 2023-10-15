@@ -1,9 +1,8 @@
 #ifndef __n_result_hpp__
 #define __n_result_hpp__
 
+#include <core/concepts.hpp>
 #include <core/utils.hpp>
-
-
 
 template <typename... TN>
 constexpr auto sizest = sizest<TN...>;
@@ -45,7 +44,8 @@ class variant {
   constexpr void __copy__(const variant& v) {
     if (v._index == indexof<U0, T0, T...>) {
       _index = v._index;
-      new (reinterpret_cast<U0*>(_data)) U0(*reinterpret_cast<const U0*>(v._data));
+      new (reinterpret_cast<U0*>(_data))
+          U0(*reinterpret_cast<const U0*>(v._data));
     } else if constexpr (sizeof...(UN) > 0) {
       __copy__<UN...>(v);
     }
@@ -61,7 +61,8 @@ class variant {
   constexpr void __move__(variant&& v) {
     if (v._index == indexof<U0, T0, T...>) {
       _index = v._index;
-      new (reinterpret_cast<U0*>(_data)) U0(move(*reinterpret_cast<U0*>(v._data)));
+      new (reinterpret_cast<U0*>(_data))
+          U0(move(*reinterpret_cast<U0*>(v._data)));
     } else if constexpr (sizeof...(UN) > 0) {
       __move__<UN...>(move(v));
     }
@@ -320,6 +321,5 @@ class maybe {
     return move(*reinterpret_cast<const T*>(_data));
   }
 };
-
 
 #endif

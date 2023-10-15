@@ -1,15 +1,12 @@
 #ifndef __n_string_ostream_hpp__
 #define __n_string_ostream_hpp__
 
-#include <core/utils.hpp>
-#include <core/concepts.hpp>
 #include <core/array.hpp>
 #include <core/collection.hpp>
+#include <core/concepts.hpp>
 #include <core/stream.hpp>
 #include <core/string.hpp>
-
-template <typename S>
-concept char_output_stream = output_stream<S> and character<typename S::type>;
+#include <core/utils.hpp>
 
 template <char_output_stream S, character C>
 constexpr S& operator<<(S& o, C c) {
@@ -99,7 +96,5 @@ template <char_output_stream S>
 constexpr S& operator<<(S& o, bool b) {
   return o << (b ? "true" : "false");
 }
-
-
 
 #endif
