@@ -1,45 +1,53 @@
 #include <core/char-istream.hpp>
-#include <core/string.hpp>
+#include <core/cstring.hpp>
 #include <tests.hpp>
 
-/*bool operator==(const string<char>& s, const char* s1) {
-  return equal(s.iter(), pointer_iterator(s1, strlen(s1)));
-}*/
+void test_input_stream_unsigned_integer() {
+  auto is = iterator_input_stream(iter("12"));
+  maybe<size_t> i;
+  is >> i;
+  N_TEST_ASSERT_TRUE(i.has());
+  N_TEST_ASSERT_EQUALS(i.get(), 12);
+}
 
-void test_extract_specific_pattern3() {
-  auto ss = iter("cba12Y");
-
-  maybe<char> c, b, a;
-  ss >> c >> b >> a;
-
-  if (c.has() and b.has() and a.has()) {
-    printf("%c, %c, %c\n", c.get(), b.get(), a.get());
-  }
-
+void test_input_stream_signed_integer() {
+  auto is = iterator_input_stream(iter("12"));
   maybe<int> i;
-  ss >> i;
+  is >> i;
+  N_TEST_ASSERT_TRUE(i.has());
+  N_TEST_ASSERT_EQUALS(i.get(), 12);
+}
 
-  if (i.has()) {
-    printf("%d \n", i.get());
-  }
+void test_input_stream_signed_integer2() {
+  auto is = iterator_input_stream(iter("-12"));
+  maybe<int> i;
+  is >> i;
+  N_TEST_ASSERT_TRUE(i.has());
+  N_TEST_ASSERT_EQUALS(i.get(), -12);
+}
 
-  maybe<bool> bl = false;
-  ss >> bl;
+void test_input_stream_bool_true() {
+  auto is = iterator_input_stream(iter("0"));
+  maybe<bool> b;
+  is >> b;
+  N_TEST_ASSERT_TRUE(b.has());
+  N_TEST_ASSERT_EQUALS(b.get(), true);
+}
 
-  if (bl.has()) {
-    printf("%c\n", bl.get() ? 'Y' : 'N');
-  }
-
-  maybe<expected_char<char>> exc = expected_char<char>{'B'};
-  ss >> exc;
-
-  if (exc.has()) {
-    printf("il y bien B dans la chaine\n");
-  }
+void test_input_stream_bool_false() {
+  auto is = iterator_input_stream(iter("1"));
+  maybe<bool> b;
+  is >> b;
+  N_TEST_ASSERT_TRUE(b.has());
+  N_TEST_ASSERT_EQUALS(b.get(), false);
 }
 
 int main() {
   N_TEST_SUITE("istream Tests")
-  N_TEST_REGISTER(test_extract_specific_pattern3)
+  N_TEST_REGISTER(test_input_stream_unsigned_integer)
+  N_TEST_REGISTER(test_input_stream_signed_integer)
+  N_TEST_REGISTER(test_input_stream_signed_integer2)
+  N_TEST_REGISTER(test_input_stream_bool_true)
+  N_TEST_REGISTER(test_input_stream_bool_false)
   N_TEST_RUN_SUITE
 }

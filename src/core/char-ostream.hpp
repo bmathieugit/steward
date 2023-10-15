@@ -26,11 +26,6 @@ constexpr S& operator<<(S& o, I i) {
   return o;
 }
 
-template <char_ostream S, view V>
-constexpr S& operator<<(S& o, V v) {
-  return o << iter(v);
-}
-
 template <char_ostream S, collection C>
 constexpr S& operator<<(S& o, const C& c) {
   return o << iter(c);

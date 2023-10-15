@@ -9,18 +9,14 @@ concept collection_context = requires {
   typename T::position;
 };
 
-template <typename V>
-concept view = collection_context<V> and
-               requires(V v, const V cv, typename V::position p) {
-                 { cv.has(p) } -> same_as<bool>;
-                 { cv.at(p) } -> same_as_declined<typename V::type>;
-                 { cv.empty() } -> same_as<bool>;
-                 { cv.len() } -> same_as<size_t>;
-               };
-
 template <typename C>
 concept collection =
-    view<C> and requires(C c, typename C::type t, typename C::position p) {
+    collection_context<C> and
+    requires(C c, const C cc, typename C::type t, typename C::position p) {
+      { cc.has(p) } -> same_as<bool>;
+      { cc.at(p) } -> same_as_declined<typename C::type>;
+      { cc.empty() } -> same_as<bool>;
+      { cc.len() } -> same_as<size_t>;
       { c.add(t) } -> same_as<bool>;
       { c.modify(p, t) } -> same_as<bool>;
       { c.remove(p) } -> same_as<bool>;
