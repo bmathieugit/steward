@@ -10,13 +10,13 @@
 template <typename S>
 concept char_ostream = ostream<S> and character<typename S::type>;
 
-template <char_collection S, character C>
+template <char_ostream S, character C>
 constexpr S& operator<<(S& o, C c) {
   o.add(c);
   return o;
 }
 
-template <char_collection S, iterator I>
+template <char_ostream S, iterator I>
 constexpr S& operator<<(S& o, I i) {
   while (i.has()) {
     o << i.get();
@@ -26,17 +26,17 @@ constexpr S& operator<<(S& o, I i) {
   return o;
 }
 
-template <char_collection S, view V>
+template <char_ostream S, view V>
 constexpr S& operator<<(S& o, V v) {
   return o << iter(v);
 }
 
-template <char_collection S, collection C>
+template <char_ostream S, collection C>
 constexpr S& operator<<(S& o, const C& c) {
   return o << iter(c);
 }
 
-template <char_collection S, character C, size_t N>
+template <char_ostream S, character C, size_t N>
 constexpr S& operator<<(S& o, const C(s)[N]) {
   return o << iter(s);
 }
