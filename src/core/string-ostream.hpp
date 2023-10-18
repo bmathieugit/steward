@@ -41,12 +41,12 @@ constexpr S& operator<<(S& o, const C(s)[N]) {
   return o << iter(s);
 }
 
-template <char_collection S, character C>
+template <char_ostream S, character C>
 constexpr S& operator<<(S& o, const C* s) {
   return o << iter(s);
 }
 
-template <char_collection S, signed_integral I>
+template <char_ostream S, signed_integral I>
 constexpr S& operator<<(S& o, I i) {
   array<typename S::type, 20> tbuff;
 
@@ -76,7 +76,7 @@ constexpr S& operator<<(S& o, I i) {
   return o;
 }
 
-template <char_collection S, unsigned_integral I>
+template <char_ostream S, unsigned_integral I>
 constexpr S& operator<<(S& o, I i) {
   array<typename S::type, 20> tbuff;
 
@@ -99,7 +99,7 @@ constexpr S& operator<<(S& o, I i) {
   return o;
 }
 
-template <char_collection S>
+template <char_ostream S>
 constexpr S& operator<<(S& o, bool b) {
   return o << (b ? "true" : "false");
 }
