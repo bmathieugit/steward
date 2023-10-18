@@ -10,7 +10,7 @@
 
 
 template <typename S>
-concept char_collection = collection<S> and character<typename S::type>;
+concept char_collection = ostream<S> and character<typename S::type>;
 
 template <char_collection S, character C>
 constexpr S& operator<<(S& o, C c) {
