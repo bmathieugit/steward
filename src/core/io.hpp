@@ -65,7 +65,10 @@ class basic_file_input_stream {
   }
 };
 
-using text_file_input_strem
+template <character C>
+using text_file_input_stream = basic_file_inut_stream<C>;
+
+using binary_file_input_stream = basic_file_inut_stream<byte_t>;
 
 template <typename T>
 class file_ostream {
