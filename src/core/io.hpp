@@ -35,7 +35,7 @@ constexpr size_t flength(file_descriptor f) {
 }
 
 template <typename T>
-class file_input_stream {
+class basic_file_input_stream {
  public:
   using type = T;
 
@@ -45,14 +45,14 @@ class file_input_stream {
   size_t _len;
 
  public:
-  constexpr file_input_stream(file_descriptor f)
+  constexpr basic_file_input_stream(file_descriptor f)
       : _f(f), _pos(0), _len(flength<T>(_f)) {}
 
-  constexpr file_input_stream(const char* name)
-      : file_input_stream(fopen(name, "r")) {}
+  constexpr basic_file_input_stream(const char* name)
+      : basic_file_input_stream(fopen(name, "r")) {}
 
-  constexpr file_input_stream(char_iterator auto name)
-      : file_input_stream(fopen(name, "r")) {}
+  constexpr basic_file_input_stream(char_iterator auto name)
+      : basic_file_input_stream(fopen(name, "r")) {}
 
  public:
   constexpr bool has() const { return _len != _pos; }
