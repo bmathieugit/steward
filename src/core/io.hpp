@@ -65,6 +65,8 @@ class basic_file_input_stream {
   }
 };
 
+using text_file_input_strem
+
 template <typename T>
 class file_ostream {
  public:
