@@ -34,6 +34,10 @@ constexpr size_t flength(file_descriptor f) {
   return len;
 }
 
+class file {
+  file_descriptor _fs = null_file;
+};
+
 template <typename T>
 class basic_file_input_stream {
  public:
