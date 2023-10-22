@@ -34,6 +34,15 @@ constexpr size_t flength(file_descriptor f) {
   return len;
 }
 
+enum class mode {r, w, a, cin, cout, cerr};
+
+template <mode m>
+static constexpr auto smode = "";
+
+template <>
+static constexpr auto smode<mode::r> = "r";
+
+template <mode m>
 class file {
 private:
   file_descriptor _fs = null_file;
