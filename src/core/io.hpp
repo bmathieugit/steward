@@ -35,7 +35,13 @@ constexpr size_t flength(file_descriptor f) {
 }
 
 class file {
+private:
   file_descriptor _fs = null_file;
+public:
+  ~file() {fclose(_fd);_fd = nullptr;} 
+  file(const char* name):_fd(fopen(name)) {}
+  file(char_iterator auto name) :_fd(fopen(name)){} 
+  bool opened() {return _fd!=
 };
 
 template <typename T>
