@@ -50,7 +50,7 @@ public:
   ~file() {fclose(_fd);_fd = nullptr;} 
   file(const char* name):_fd(fopen(name)) {}
   file(char_iterator auto name) :_fd(fopen(name)){} 
-  bool opened() {return _fd!=
+  bool opened() {return _fd!=null_file ;} 
 };
 
 template <typename T>
