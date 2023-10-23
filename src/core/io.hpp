@@ -127,12 +127,6 @@ class basic_file_input_stream {
   }
 };
 
-template <character C, mode m>
-using text_file_input_stream = basic_file_input_stream<C, m>;
-
-template <mode m>
-using byte_file_input_stream = basic_file_input_stream<byte_t, m>;
-
 template <typename T, mode m>
 class basic_file_output_stream {
  public:
@@ -153,23 +147,50 @@ class basic_file_output_stream {
 };
 
 template <character C, mode m>
+using text_file = file<C, m>;
+
+template <character C>
+using read_text_file = text_file<C, mode::r>;
+
+template <character C>
+using write_text_file = text_file<C, mode::w>;
+
+template <character C>
+using append_text_file = text_file<C, mode::a>;
+
+template <character C>
+using cin_text_file = text_file<C, mode::cin>;
+
+template <character C>
+using cout_text_file = text_file<C, mode::cout>;
+
+template <character C>
+using cerr_text_file = text_file<C, mode::cerr>;
+
+template <character C, mode m>
+using text_file_input_stream = basic_file_input_stream<C, m>;
+
+template <mode m>
+using byte_file_input_stream = basic_file_input_stream<byte_t, m>;
+
+template <character C, mode m>
 using text_file_output_stream = basic_file_output_stream<C, m>;
 
 template <mode m>
 using byte_file_output_stream = basic_file_output_stream<byte_t, m>;
 
 template <character C>
-static auto ferr = file<C, mode::cerr>(stderr);
+static auto ferr = cerr_text_file<C>(stderr);
 static auto serr = text_file_output_stream(ferr<char>);
 static auto wserr = text_file_output_stream(ferr<wchar_t>);
 
 template <character C>
-static auto fout = file<C, mode::cout>(stdout);
+static auto fout = cout_text_file<C>(stdout);
 static auto sout = text_file_output_stream(fout<char>);
 static auto wsout = text_file_output_stream(fout<wchar_t>);
 
 template <character C>
-static auto fin = file<C, mode::cin>(stdin);
+static auto fin = cin_text_file<C>(stdin);
 static auto sin = text_file_input_stream(fin<char>);
 static auto wsin = text_file_input_stream(fin<wchar_t>);
 
