@@ -2,12 +2,7 @@
 #define __n_io_hpp__
 
 #include <stdio.h>
-
-#include <core/char-istream.hpp>
-#include <core/char-ostream.hpp>
-#include <core/result.hpp>
 #include <core/string.hpp>
-#include <core/vector.hpp>
 
 using file_descriptor = FILE*;
 
@@ -15,8 +10,8 @@ static constexpr file_descriptor null_file = nullptr;
 
 file_descriptor fopen(char_iterator auto name, const char* mode) {
   string s;
-  s << name;
-  s << '\0';
+  copy(name, s);
+  s.add('\0');
   return fopen(s.data(), mode);
 }
 

@@ -1,8 +1,7 @@
 
 #include <core/io.hpp>
-#include <core/result.hpp>
-#include <core/string.hpp>
-#include <core/vector.hpp>
+#include <core/char-istream.hpp>
+#include <core/char-ostream.hpp>
 #include <tests.hpp>
 
 void test_file_input_stream() {
