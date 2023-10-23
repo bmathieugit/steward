@@ -20,121 +20,157 @@ file_descriptor fopen(char_iterator auto name, const char* mode) {
   return fopen(s.data(), mode);
 }
 
-template <typename T>
-constexpr size_t flength(file_descriptor f) {
-  size_t len = 0;
-
-  if (f != null_file) {
-    auto pos = ftell(f);
-    fseek(f, 0L, SEEK_END);
-    len = ftell(f) / sizeof(T);
-    fseek(f, pos, SEEK_SET);
-  }
-
-  return len;
-}
-
-enum class mode {r, w, a, cin, cout, cerr};
+enum class mode { r, w, a, cin, cout, cerr };
 
 template <mode m>
 static constexpr auto smode = "";
 
 template <>
-static constexpr auto smode<mode::r> = "r";
+constexpr auto smode<mode::r> = "r";
+
+template <>
+constexpr auto smode<mode::w> = "w";
+
+template <>
+constexpr auto smode<mode::a> = "a";
+
+template <>
+constexpr auto smode<mode::cerr> = "";
+
+template <>
+constexpr auto smode<mode::cin> = "";
+
+template <>
+constexpr auto smode<mode::cout> = "";
 
 template <mode m>
+constexpr auto read_mode = m == mode::cin or m == mode::r;
+
+template <mode m>
+constexpr auto write_mode =
+    m == mode::cout or m == mode::cerr or m == mode::w or m == mode::a;
+
+template <mode m>
+constexpr auto not_console_mode =
+    m != mode::cerr and m != mode::cin and m != mode::cout;
+
+template <mode m>
+constexpr auto console_mode = not not_console_mode<m>;
+
+template <typename T, mode m>
 class file {
-private:
-  file_descriptor _fs = null_file;
-public:
-  ~file() {fclose(_fd);_fd = nullptr;} 
-  file(const char* name):_fd(fopen(name)) {}
-  file(char_iterator auto name) :_fd(fopen(name)){} 
-  bool opened() {return _fd!=null_file ;} 
+ private:
+  file_descriptor _fd = null_file;
+
+ public:
+  ~file() {
+    if constexpr (not_console_mode<m>) {
+      fclose(_fd);
+      _fd = nullptr;
+    }
+  }
+
+  file(file_descriptor fd)
+    requires console_mode<m>
+      : _fd(fd) {}
+
+  file(const char* name)
+    requires not_console_mode<m>
+      : _fd(fopen(name, smode<m>)) {}
+
+  file(char_iterator auto name)
+    requires not_console_mode<m>
+      : _fd(fopen(name, smode<m>)) {}
+
+  bool opened() { return _fd != null_file; }
+
+  file_descriptor fd() { return _fd; }
 };
 
-template <typename T>
+template <typename T, mode m>
+constexpr size_t flength(file<T, m>& f) {
+  size_t len = 0;
+
+  if (f.fd() != null_file) {
+    auto pos = ftell(f.fd());
+    fseek(f.fd(), 0L, SEEK_END);
+    len = ftell(f.fd()) / sizeof(T);
+    fseek(f.fd(), pos, SEEK_SET);
+  }
+
+  return len;
+}
+
+template <typename T, mode m>
 class basic_file_input_stream {
  public:
   using type = T;
 
  private:
-  file_descriptor _f;
+  file<T, m>& _f;
   size_t _pos;
   size_t _len;
 
  public:
-  constexpr basic_file_input_stream(file_descriptor f)
-      : _f(f), _pos(0), _len(flength<T>(_f)) {}
-
-  constexpr basic_file_input_stream(const char* name)
-      : basic_file_input_stream(fopen(name, "r")) {}
-
-  constexpr basic_file_input_stream(char_iterator auto name)
-      : basic_file_input_stream(fopen(name, "r")) {}
+  constexpr basic_file_input_stream(file<T, m>& f)
+    requires read_mode<m>
+      : _f(f), _pos(0), _len(flength(f)) {}
 
  public:
-  constexpr bool has() const { return _len != _pos; }
+  constexpr bool has() const { return _f.fd() != null_file and _len != _pos; }
 
   constexpr T next() {
     _pos += 1;
     byte_t buf[sizeof(T)];
-    fread(&buf, 1, sizeof(T), _f);
+    fread(&buf, 1, sizeof(T), _f.fd());
     return *reinterpret_cast<T*>(buf);
   }
 };
 
+template <character C, mode m>
+using text_file_input_stream = basic_file_input_stream<C, m>;
+
+template <mode m>
+using byte_file_input_stream = basic_file_input_stream<byte_t, m>;
+
+template <typename T, mode m>
+class basic_file_output_stream {
+ public:
+  using type = T;
+
+ private:
+  file<T, m>& _f;
+
+ public:
+  basic_file_output_stream(file<T, m>& f)
+    requires write_mode<m>
+      : _f(f) {}
+
+ public:
+  bool add(const T& t) {
+    return _f.fd() != null_file and fwrite(&t, sizeof(T), 1, _f.fd()) == 1;
+  }
+};
+
+template <character C, mode m>
+using text_file_output_stream = basic_file_output_stream<C, m>;
+
+template <mode m>
+using byte_file_output_stream = basic_file_output_stream<byte_t, m>;
+
 template <character C>
-using text_file_input_stream = basic_file_inut_stream<C>;
+static auto ferr = file<C, mode::cerr>(stderr);
+static auto serr = text_file_output_stream(ferr<char>);
+static auto wserr = text_file_output_stream(ferr<wchar_t>);
 
-using binary_file_input_stream = basic_file_inut_stream<byte_t>;
+template <character C>
+static auto fout = file<C, mode::cout>(stdout);
+static auto sout = text_file_output_stream(fout<char>);
+static auto wsout = text_file_output_stream(fout<wchar_t>);
 
-template <typename T>
-class file_ostream {
- public:
-  using type = T;
-
- private:
-  file_descriptor _f;
-
- public:
-  constexpr file_ostream(file_descriptor f) : _f(f) {}
-
-  constexpr file_ostream(const char* name) : file_ostream(fopen(name, "w")) {}
-
-  constexpr file_ostream(char_iterator auto name)
-      : file_ostream(fopen(name, "w")) {}
-
- public:
-  constexpr bool add(const T& t) {
-    return _f != null_file and fwrite(&t, sizeof(T), 1, _f) == 1;
-  }
-};
-
-template <typename T>
-class file_append_ostream {
- public:
-  using type = T;
-
- private:
-  file_descriptor _f;
-
- public:
-  constexpr file_append_ostream(file_descriptor f) : _f(f) {}
-
-  constexpr file_append_ostream(const char* name)
-      : file_append_ostream(fopen(name, "a")) {}
-
-  constexpr file_append_ostream(char_iterator auto name)
-      : file_append_ostream(fopen(name, "a")) {}
-
- public:
-  constexpr bool add(const T& t) {
-    return _f != null_file and fwrite(&t, sizeof(T), 1, _f) == 1;
-  }
-};
-
-static auto fout = file_ostream<char>(stdout);
-static auto fin = file_input_stream<char>(stdin);
+template <character C>
+static auto fin = file<C, mode::cin>(stdin);
+static auto sin = text_file_input_stream(fin<char>);
+static auto wsin = text_file_input_stream(fin<wchar_t>);
 
 #endif
