@@ -1,7 +1,7 @@
 
-#include <core/io.hpp>
 #include <core/char-istream.hpp>
 #include <core/char-ostream.hpp>
+#include <core/io.hpp>
 #include <tests.hpp>
 
 void test_file_input_stream() {
@@ -52,6 +52,24 @@ int main() {
   N_TEST_REGISTER(test_file_output_stream);
 
   N_TEST_RUN_SUITE;
+
+  {
+    file<char, mode::w> out("tmp");
+    text_file_output_stream f(out);
+    f << "line1\n"
+      << "line2\n"
+      << "line3\n"
+      << "line4";
+  }
+
+  {
+    file<char, mode::r> in("tmp");
+    text_file_input_stream f(in);
+    string s;
+    while (getline(s, f)) {
+      sout << s << "\n";
+    }
+  }
 
   return 0;
 }

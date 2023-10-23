@@ -189,4 +189,15 @@ static auto fin = cin_text_file<C>(stdin);
 static auto sin = text_file_input_stream(fin<char>);
 static auto wsin = text_file_input_stream(fin<wchar_t>);
 
+template <character C, mode m>
+bool getline(string& s, basic_file_input_stream<C, m>& out) {
+  C c;
+  s.clear();
+  while (out.has() and (c = out.next()) != '\n') {
+    s.add(c);
+  }
+
+  return not s.empty();
+}
+
 #endif
