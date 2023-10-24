@@ -10,7 +10,7 @@ void test_file_input_stream() {
   fputs("Hello\n", _file);
   fclose(_file);
 
-  file<char, mode::r> f(filename);
+  scoped_typed_file<char, mode::r> f(filename);
   text_file_input_stream fs(f);
   maybe<char> c;
   fs >> c;
@@ -37,10 +37,10 @@ void test_file_input_stream() {
 
 void test_file_output_stream() {
   const char* filename = "test_file.txt";
-  file<char, mode::w> f(filename);
+  scoped_typed_file<char, mode::w> f(filename);
   text_file_output_stream fo(f);
   fo << "coucou";
-  N_TEST_ASSERT_EQUALS(flength(f), 6);
+  N_TEST_ASSERT_EQUALS(f.len(), 6);
   remove(filename);
 }
 
@@ -53,23 +53,14 @@ int main() {
 
   N_TEST_RUN_SUITE;
 
-  {
-    file<char, mode::w> out("tmp");
-    text_file_output_stream f(out);
-    f << "line1\n"
-      << "line2\n"
-      << "line3\n"
-      << "line4";
-  }
 
-  {
-    file<char, mode::r> in("tmp");
-    text_file_input_stream f(in);
-    string s;
-    while (getline(s, f)) {
-      sout << s << "\n";
-    }
-  }
+  raw_file<mode::r> r;
+  raw_file<mode::w> w;
+  w.open("tmp.txt");
+  w.write(iter("coucou"));
+  w.close();
+  r.open("tmp.txt");
+  r.readn(sout);
 
   return 0;
 }
