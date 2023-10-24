@@ -91,7 +91,7 @@ class raw_file {
     return false;
   }
 
-  bool open(char_iterator auto fname)
+  bool open(char_input_stream auto fname)
     requires not_console_mode<m>
   {
     string s(100);
@@ -110,6 +110,51 @@ class raw_file {
     return _fd != null_file and fread(&t, sizeof(T), 1, _fd) == 1;
   }
 
+  bool readn(output_stream auto os, size_t n)
+    requires read_mode<m>
+  {
+    using T = typename decltype(os)::type;
+
+    bool isread = true;
+
+    while (isread and n != 0) {
+      T buff;
+      isread &= read(buff);
+
+      if (isread) {
+        n -= 1;
+
+        if (not os.add(move(buff))) {
+          break;
+        }
+      }
+    }
+
+    return isread;
+  }
+
+  bool readall(output_stream auto os)
+    requires read_mode<m>
+  {
+    using T = typename decltype(os)::type;
+
+    bool isread = true;
+
+    while (isread) {
+      T buff;
+      isread &= read(buff);
+      ::printf("%c", buff);
+
+      if (isread) {
+        if (not os.add(buff)) {
+          break;
+        }
+      }
+    }
+
+    return isread;
+  }
+
   template <typename T>
   bool write(const T& t)
     requires write_mode<m>
@@ -117,24 +162,7 @@ class raw_file {
     return _fd != null_file and fwrite(&t, sizeof(T), 1, _fd) == 1;
   }
 
-  bool readn(iterator auto i)
-    requires read_mode<m>
-  {
-    using T = typename decltype(i)::type;
-    bool res = true;
-
-    while (i.has() and res) {
-      res &= read<T>(i.get());
-
-      if (res) {
-        i.next();
-      }
-    }
-
-    return res;
-  }
-
-  // bool writen(iterator auto i)
+  // bool writen(input_stream auto i)
   //   requires write_mode<m>
   // {
   //   using T = typename decltype(i)::type;
@@ -150,37 +178,6 @@ class raw_file {
 
   //   return res;
   // }
-
-  bool readn(output_stream auto o)
-    requires read_mode<m>
-  {
-    using T = typename decltype(o)::type;
-    bool res = true;
-
-    while (res) {
-      T tmp;
-      res &= read<T>(tmp);
-
-      if (res) {
-        o.add(tmp);
-      }
-    }
-
-    return res;
-  }
-
-  bool writen(input_stream auto i)
-    requires write_mode<m>
-  {
-    using T = typename decltype(i)::type;
-    bool res = true;
-
-    while (i.has() and res) {
-      res &= write<T>(i.next());
-    }
-
-    return res;
-  }
 
   size_t len() {
     size_t len = 0;
@@ -222,7 +219,7 @@ class scoped_file : public raw_file<m> {
     raw_file<m>::open(name);
   }
 
-  scoped_file(char_iterator auto name)
+  scoped_file(char_input_stream auto name)
     requires not_console_mode<m>
   {
     raw_file<m>::open(name);
@@ -244,7 +241,7 @@ class typed_file : public raw_file<m> {
     raw_file<m>::open(name);
   }
 
-  typed_file(char_iterator auto name)
+  typed_file(char_input_stream auto name)
     requires not_console_mode<m>
   {
     raw_file<m>::open(name);
@@ -275,7 +272,7 @@ class scoped_typed_file : public typed_file<T, m> {
     requires not_console_mode<m>
       : typed_file<T, m>(name) {}
 
-  scoped_typed_file(char_iterator auto name)
+  scoped_typed_file(char_input_stream auto name)
     requires not_console_mode<m>
       : typed_file<T, m>(name) {}
 

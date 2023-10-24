@@ -53,14 +53,14 @@ int main() {
 
   N_TEST_RUN_SUITE;
 
-
   raw_file<mode::r> r;
   raw_file<mode::w> w;
   w.open("tmp.txt");
-  w.write(iter("coucou"));
+  w.write(istream("coucou"));
   w.close();
   r.open("tmp.txt");
-  r.readn(sout);
+  r.readall(sout);
+  r.close();
 
   return 0;
 }

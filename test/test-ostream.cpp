@@ -1,4 +1,3 @@
-#include <core/stream.hpp>
 #include <core/char-ostream.hpp>
 #include <tests.hpp>
 #include <core/utils.hpp>
@@ -7,8 +6,8 @@ using char_array_stream = char_array<100>;
 
 template <size_t N>
 bool operator==(const char_array<N>& s1, const char* s2) {
-  auto is1 = iter(s1);
-  auto is2 = iter(s2);
+  auto is1 = istream(s1);
+  auto is2 = istream(s2);
   return equals(is1, is2);
 }
 

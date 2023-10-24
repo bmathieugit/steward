@@ -4,21 +4,19 @@
 #include <core/array.hpp>
 #include <core/collection.hpp>
 #include <core/concepts.hpp>
-#include <core/stream.hpp>
 #include <core/string.hpp>
 #include <core/utils.hpp>
 
-template <char_output_stream S, character C>
-constexpr S& operator<<(S& o, C c) {
+template <char_output_stream O, character C>
+constexpr O& operator<<(O& o, C c) {
   o.add(c);
   return o;
 }
 
-template <char_output_stream S, iterator I>
-constexpr S& operator<<(S& o, I i) {
+template <char_output_stream O, char_input_stream I>
+constexpr O& operator<<(O& o, I i) {
   while (i.has()) {
-    o << i.get();
-    i.next();
+    o.add(i.next());
   }
 
   return o;
@@ -26,17 +24,17 @@ constexpr S& operator<<(S& o, I i) {
 
 template <char_output_stream S, collection C>
 constexpr S& operator<<(S& o, const C& c) {
-  return o << iter(c);
+  return o << istream(c);
 }
 
 template <char_output_stream S, character C, size_t N>
 constexpr S& operator<<(S& o, const C(s)[N]) {
-  return o << iter(s);
+  return o << istream(s);
 }
 
 template <char_output_stream S, character C>
 constexpr S& operator<<(S& o, const C* s) {
-  return o << iter(s);
+  return o << istream(s);
 }
 
 template <char_output_stream S, signed_integral I>
@@ -59,11 +57,10 @@ constexpr S& operator<<(S& o, I i) {
     }
   }
 
-  auto ibuff = riter(tbuff);
+  auto ibuff = ristream(tbuff);
 
   while (ibuff.has()) {
-    o.add(ibuff.get());
-    ibuff.next();
+    o.add(ibuff.next());
   }
 
   return o;
@@ -82,11 +79,10 @@ constexpr S& operator<<(S& o, I i) {
     }
   }
 
-  auto ibuff = riter(tbuff);
+  auto ibuff = ristream(tbuff);
 
   while (ibuff.has()) {
-    o.add(ibuff.get());
-    ibuff.next();
+    o.add(ibuff.next());
   }
 
   return o;

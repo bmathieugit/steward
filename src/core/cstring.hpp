@@ -13,7 +13,7 @@ constexpr size_t strlen(const C* s) {
 }
 
 template <character C>
-class null_terminating_string_forward_iterator {
+class null_terminating_string_forward_input_stream {
  public:
   using position = size_t;
   using type = C;
@@ -23,19 +23,18 @@ class null_terminating_string_forward_iterator {
   const char* _data;
 
  public:
-  constexpr null_terminating_string_forward_iterator(const C* data)
+  constexpr null_terminating_string_forward_input_stream(const C* data)
       : _start(data), _data(data) {}
 
  public:
   constexpr bool has() const { return *_data != '\0'; }
-  constexpr void next() { _data += 1; }
-  constexpr auto get() -> decltype(auto) { return (*_data); }
-  constexpr position pos() const { return _data - _start; }
+  constexpr auto next() -> decltype(auto) { return (*(_data++)); }
+  // constexpr position pos() const { return _data - _start; }
 };
 
 template <character C>
-constexpr auto iter(const C* s) {
-  return null_terminating_string_forward_iterator(s);
+constexpr auto istream(const C* s) {
+  return null_terminating_string_forward_input_stream(s);
 }
 
 #endif

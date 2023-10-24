@@ -57,13 +57,15 @@ class vector {
   constexpr vector(size_t max)
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
-  constexpr vector(const vector& v) : vector(v._max) { copy(iter(v), *this); }
+  constexpr vector(const vector& v) : vector(v._max) {
+    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+  }
 
-  template <iterator I>
+  template <input_stream I>
   constexpr vector(I i)
     requires same_as<rm_cref<typename I::type>, type>
   {
-    copy(i, *this);
+    copy(i, index_forward_output_stream(*this));
   }
 
   constexpr vector& operator=(const vector& v) {
@@ -78,7 +80,7 @@ class vector {
         _max = v._max;
       }
 
-      copy(iter(v), *this);
+      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
     }
 
     return *this;
@@ -203,13 +205,13 @@ class vector {
 };
 
 template <typename T>
-constexpr auto iter(vector<T>& v) {
-  return index_forward_iterator(v);
+constexpr auto istream(const vector<T>& v) {
+  return index_forward_input_stream(v);
 }
 
 template <typename T>
-constexpr auto iter(const vector<T>& v) {
-  return index_forward_iterator(v);
+constexpr auto ostream(vector<T>& v) {
+  return index_forward_output_stream(v);
 }
 
 template <typename T>
@@ -237,7 +239,7 @@ class fixed_vector {
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
   constexpr fixed_vector(const fixed_vector& v) : fixed_vector(v._max) {
-    copy(index_forward_iterator(v), *this);
+    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
   }
 
   constexpr fixed_vector& operator=(const fixed_vector& v) {
@@ -252,7 +254,7 @@ class fixed_vector {
         _max = v._max;
       }
 
-      copy(index_forward_iterator(v), *this);
+      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
     }
 
     return *this;
@@ -361,13 +363,13 @@ class fixed_vector {
 };
 
 template <typename T>
-constexpr auto iter(fixed_vector<T>& v) {
-  return index_forward_iterator(v);
+constexpr auto istream(const fixed_vector<T>& v) {
+  return index_forward_input_stream(v);
 }
 
 template <typename T>
-constexpr auto iter(const fixed_vector<T>& v) {
-  return index_forward_iterator(v);
+constexpr auto ostream(fixed_vector<T>& v) {
+  return index_forward_output_stream(v);
 }
 
 #endif

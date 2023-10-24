@@ -2,7 +2,6 @@
 #define __n_string_istream_hpp__
 
 #include <core/result.hpp>
-#include <core/stream.hpp>
 #include <core/utils.hpp>
 #include <core/concepts.hpp>
 

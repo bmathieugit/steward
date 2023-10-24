@@ -1,95 +1,74 @@
 #ifndef __n_collection_hpp__
 #define __n_collection_hpp__
 
-#include <core/utils.hpp>
 #include <core/concepts.hpp>
+#include <core/utils.hpp>
 
 template <typename C>
-class index_forward_iterator {
+class index_forward_input_stream {
  public:
   using type = typename C::type;
   using position = typename C::position;
 
  private:
-  position _pos;
   C& _col;
+  position _pos;
 
  public:
-  constexpr index_forward_iterator(C& v) : _pos(0), _col(v) {}
+  constexpr index_forward_input_stream(C& c) : _col(c), _pos(0) {}
 
  public:
   constexpr bool has() const { return _col.has(_pos); }
-  constexpr void next() { _pos += 1; }
-  constexpr auto get() -> decltype(auto) { return _col.at(_pos); }
-  constexpr position pos() const { return _pos; }
+  constexpr auto next() -> decltype(auto) { return _col.at(_pos++); }
 };
 
 template <typename C>
-class index_backward_iterator {
+class index_forward_output_stream {
  public:
   using type = typename C::type;
   using position = typename C::position;
 
  private:
-  position _pos;
   C& _col;
 
  public:
-  constexpr index_backward_iterator(C& v)
-      : _pos(v.len() == 0 ? 0 : v.len() - 1), _col(v) {}
+  constexpr index_forward_output_stream(C& c) : _col(c) {}
+
+ public:
+  constexpr bool add(const type& t) { return _col.add(t); }
+  constexpr bool add(type&& t) { return _col.add(move(t)); }
+};
+
+template <typename C>
+class index_backward_input_stream {
+ public:
+  using type = typename C::type;
+  using position = typename C::position;
+
+ private:
+  C& _col;
+  position _pos;
+
+ public:
+  constexpr index_backward_input_stream(C& c) : _col(c), _pos(_col.len() - 1) {}
 
  public:
   constexpr bool has() const { return _col.has(_pos); }
-  constexpr void next() { _pos -= 1; }
-  constexpr auto get() -> decltype(auto) { return _col.at(_pos); }
-  constexpr position pos() const { return _pos; }
+  constexpr auto next() -> decltype(auto) { return _col.at(_pos--); }
 };
 
-template <iterator I>
-class limit_iterator {
- public:
-  using type = typename I::type;
-  using position = typename I::position;
-
- private:
-  I _iter;
-  size_t _limit;
-  size_t _cur;
-
- public:
-  constexpr limit_iterator(I i, size_t l) : _iter(i), _limit(l), _cur(0) {}
-
- public:
-  constexpr bool has() const { return _cur != _limit and _iter.has(); }
-  constexpr void next() {
-    if (_cur != _limit) {
-      _iter.next();
-      _cur += 1;
-    }
-  }
-  constexpr auto get() -> decltype(auto) { return _iter.get(); }
-  constexpr position pos() const { return _iter.pos(); }
-
- public:
-  constexpr size_t limit() const { return _limit; }
-  constexpr size_t current() const { return _cur; }
-  constexpr size_t tail() const { return _limit - _cur; }
-};
-
-template <iterator I>
+template <input_stream I>
 constexpr auto find(I i, const typename I::type& t) -> typename I::position {
   while (i.has()) {
-    if (i.get() == t) {
+    if (i.next() == t) {
       break;
     }
-
-    i.next();
   }
 
   return i.pos();
 }
 
-template <iterator I>
+template <input_stream I>
 constexpr size_t count(I i) {
   size_t cnt = 0;
 
@@ -101,163 +80,96 @@ constexpr size_t count(I i) {
   return cnt;
 }
 
-template <iterator I>
+template <input_stream I>
 constexpr size_t count(I i, const typename I::type& t) {
   size_t cnt = 0;
 
   while (i.has()) {
-    if (i.get() == t) {
+    if (i.next() == t) {
       cnt += 1;
     }
-
-    i.next();
   }
 
   return cnt;
 }
 
-template <iterator I>
+template <input_stream I>
 constexpr size_t count(I i, auto&& pred) {
   size_t cnt = 0;
 
   while (i.has()) {
-    if (pred(i.get())) {
+    if (pred(i.next())) {
       cnt += 1;
     }
-
-    i.next();
   }
 
   return cnt;
 }
 
-template <iterator I>
-constexpr void transform(I i, auto&& unary) {
-  while (i.has()) {
-    auto& t = i.get();
-    t = unary(t);
-    i.next();
-  }
-}
-
-template <iterator I, collection C>
-constexpr void transform(I i, auto&& unary, C& c) {
-  while (i.has()) {
-    c.add(i.get());
-    i.next();
-  }
-}
-
-template <iterator I>
-constexpr size_t replace(I i,
-                         const typename I::type& old,
-                         const typename I::type& neo) {
-  size_t cnt = 0;
-
-  while (i.has()) {
-    auto& t = i.get();
-
-    if (t == old) {
-      t = neo;
-      ++cnt;
-    }
-
-    i.next();
-  }
-
-  return cnt;
-}
-
-template <iterator I, collection C>
-constexpr void replace(I i,
-                       const typename I::type& old,
-                       const typename I::type& neo,
-                       C& c) {
-  while (i.has()) {
-    auto& t = i.get();
-    c.add(t == old ? neo : t);
-    i.next();
-  }
-}
-
-template <iterator I>
+template <input_stream I>
 constexpr bool all_of(I i, const auto& pred) {
   while (i.has()) {
-    if (not pred(i.get())) {
+    if (not pred(i.next())) {
       return false;
     }
-
-    i.next();
   }
 
   return true;
 }
 
-template <iterator I>
+template <input_stream I>
 constexpr bool any_of(I i, const auto& pred) {
   while (i.has()) {
-    if (pred(i.get())) {
+    if (pred(i.next())) {
       return true;
     }
-
-    i.next();
   }
 
   return false;
 }
 
-template <iterator I>
+template <input_stream I>
 constexpr bool none_of(I i, const auto& pred) {
   while (i.has()) {
-    if (pred(i.get())) {
+    if (pred(i.next())) {
       return false;
     }
-
-    i.next();
   }
 
   return true;
 }
 
-template <iterator I, collection C>
-constexpr void copy(I i, C& c) {
+template <input_stream I, output_stream O>
+constexpr void copy(I i, O o) {
   while (i.has()) {
-    c.add(i.get());
-    i.next();
+    o.add(i.next());
   }
 }
 
-template <iterator I, collection C>
-constexpr void move(I i, C&& c) {
+template <input_stream I, output_stream O>
+constexpr void move(I i, O o) {
   while (i.has()) {
-    c.add(move(i.get()));
-    i.next();
+    o.add(move(i.next()));
   }
 }
 
-template <iterator I1, iterator I2>
+template <input_stream I1, input_stream I2>
 constexpr bool equals(I1 i1, I2 i2) {
   while (i1.has() and i2.has()) {
-    if (i1.get() != i2.get()) {
+    if (i1.next() != i2.next()) {
       break;
     }
-
-    i1.next();
-    i2.next();
   }
 
   return not i1.has() and not i2.has();
 }
 
-template <iterator I1, iterator I2>
+template <input_stream I1, input_stream I2>
 constexpr bool starts_with(I1 i1, I2 i2) {
   while (i1.has() and i2.has()) {
-    if (i1.get() != i2.get()) {
+    if (i1.next() != i2.next()) {
       break;
     }
-
-    i1.next();
-    i2.next();
   }
 
   return not i2.has();

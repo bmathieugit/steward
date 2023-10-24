@@ -2,45 +2,45 @@
 #include <tests.hpp>
 template <size_t N>
 bool operator==(const stringlike auto& s1, const char* s2) {
-  auto is1 = iter(s1);
-  auto is2 = iter(s2);
+  auto is1 = istream(s1);
+  auto is2 = istream(s2);
   return equals(is1, is2);
 }
 
 void test_string_create() {
-  string s = iter("Hello");
+  string s = istream("Hello");
   N_TEST_ASSERT_EQUALS(s.len(), 5);
 }
 
 void test_string_copy_constructor() {
-  string s = iter("Hello");
+  string s = istream("Hello");
   string s2 = s;
   ::printf("%lu", s2.len());
   N_TEST_ASSERT_EQUALS(s2.len(), 5);
 }
 
 void test_string_move_constructor() {
-  string s = iter("Hello");
+  string s = istream("Hello");
   string s3 = move(s);
   N_TEST_ASSERT_EQUALS(s3.len(), 5);
 }
 
 void test_string_copy_assignment() {
-  string s = iter("Hello");
+  string s = istream("Hello");
   string s2;
   s2 = s;
   N_TEST_ASSERT_EQUALS(s2.len(), 5);
 }
 
 void test_string_move_assignment() {
-  string s = iter("Hello");
+  string s = istream("Hello");
   string s3;
   s3 = move(s);
   N_TEST_ASSERT_EQUALS(s3.len(), 5);
 }
 
 void test_string_len() {
-  string s = iter("Hello");
+  string s = istream("Hello");
   N_TEST_ASSERT_EQUALS(s.len(), 5);
 }
 
@@ -50,7 +50,7 @@ void test_string_empty() {
 }
 
 void test_string_full() {
-  string s = iter("Hello");
+  string s = istream("Hello");
   N_TEST_ASSERT_FALSE(s.full());
 }
 
@@ -62,14 +62,14 @@ void test_string_add() {
 }
 
 void test_string_remove() {
-  string s = iter("Hi");
+  string s = istream("Hi");
   s.remove(typename string::position{s.len() - 1});
   N_TEST_ASSERT_EQUALS(s.len(), 1);
   N_TEST_ASSERT_FALSE(s.full());
 }
 
 void test_string_clear() {
-  string s = iter("Clear me");
+  string s = istream("Clear me");
   s.clear();
   N_TEST_ASSERT_TRUE(s.empty());
 }

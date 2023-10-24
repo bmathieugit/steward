@@ -214,32 +214,6 @@ concept collection =
     };
 
 /**
- * @brief Concept for C++ iterators.
- *
- * The 'iterator' concept specifies the requirements for a C++ iterator. To
- * satisfy this concept, a type 'I' must meet the following criteria:
- * - It must fulfill the 'collection_context' concept.
- * - It must provide the following functions with specific return types:
- *   - 'ci.has()' returns a boolean and checks if there are more elements to
- * iterate.
- *   - 'i.next()' returns void and is used to advance to the next element in the
- * collection.
- *   - 'i.get()' returns an element of the same type as 'typename I::type' and
- * retrieves the current element from the collection.
- *   - 'ci.pos()' returns a value of the type 'typename I::position' to specify
- * the current position within the collection.
- *
- * @tparam I The type to be checked for iterator requirements.
- */
-template <typename I>
-concept iterator = collection_context<I> and requires(I i, const I ci) {
-  { ci.has() } -> same_as<bool>;
-  { i.next() } -> same_as<void>;
-  { i.get() } -> same_as_declined<typename I::type>;
-  { ci.pos() } -> same_as<typename I::position>;
-};
-
-/**
  * @brief Generic input concept for streams.
  *
  * This concept checks if a given type, I, meets the requirements of a generic
@@ -269,21 +243,6 @@ concept output_stream =
     requires { typename O::type; } and requires(O o, typename O::type c) {
       { o.add(c) } -> same_as<bool>;
     };
-
-/**
- * @brief Concept for character iterators.
- *
- * The 'char_iterator' concept specifies the requirements for a character
- * iterator. To satisfy this concept, a type 'I' must meet the following
- * criteria:
- * - It must fulfill the 'iterator' concept.
- * - The element type of the iterator, 'typename I::type', must satisfy the
- * 'character' concept.
- *
- * @tparam I The type to be checked for character iterator requirements.
- */
-template <typename I>
-concept char_iterator = iterator<I> and character<typename I::type>;
 
 /**
  * @brief Concept for character input streams.

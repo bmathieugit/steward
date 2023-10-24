@@ -3,7 +3,7 @@
 #include <tests.hpp>
 
 void test_input_stream_unsigned_integer() {
-  auto is = iterator_input_stream(iter("12"));
+  auto is = istream("12");
   maybe<size_t> i;
   is >> i;
   N_TEST_ASSERT_TRUE(i.has());
@@ -11,7 +11,7 @@ void test_input_stream_unsigned_integer() {
 }
 
 void test_input_stream_signed_integer() {
-  auto is = iterator_input_stream(iter("12"));
+  auto is = istream("12");
   maybe<int> i;
   is >> i;
   N_TEST_ASSERT_TRUE(i.has());
@@ -19,7 +19,7 @@ void test_input_stream_signed_integer() {
 }
 
 void test_input_stream_signed_integer2() {
-  auto is = iterator_input_stream(iter("-12"));
+  auto is = istream("-12");
   maybe<int> i;
   is >> i;
   N_TEST_ASSERT_TRUE(i.has());
@@ -27,7 +27,7 @@ void test_input_stream_signed_integer2() {
 }
 
 void test_input_stream_bool_true() {
-  auto is = iterator_input_stream(iter("0"));
+  auto is = istream("0");
   maybe<bool> b;
   is >> b;
   N_TEST_ASSERT_TRUE(b.has());
@@ -35,7 +35,7 @@ void test_input_stream_bool_true() {
 }
 
 void test_input_stream_bool_false() {
-  auto is = iterator_input_stream(iter("1"));
+  auto is = istream("1");
   maybe<bool> b;
   is >> b;
   N_TEST_ASSERT_TRUE(b.has());

@@ -91,23 +91,13 @@ class array {
 };
 
 template <typename T, size_t N>
-constexpr auto iter(array<T, N>& v) {
-  return index_forward_iterator(v);
+constexpr auto istream(const array<T, N>& v) {
+  return index_forward_input_stream(v);
 }
 
 template <typename T, size_t N>
-constexpr auto iter(const array<T, N>& v) {
-  return index_forward_iterator(v);
-}
-
-template <typename T, size_t N>
-constexpr auto riter(array<T, N>& v) {
-  return index_backward_iterator(v);
-}
-
-template <typename T, size_t N>
-constexpr auto riter(const array<T, N>& v) {
-  return index_backward_iterator(v);
+constexpr auto ristream(const array<T, N>& v) {
+  return index_backward_input_stream(v);
 }
 
 #endif
