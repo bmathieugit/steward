@@ -229,6 +229,9 @@ class scoped_file : public raw_file<m> {
 template <typename T, mode m>
 class typed_file : public raw_file<m> {
  public:
+  using type = T;
+
+ public:
   typed_file(file_descriptor fd)
     requires console_mode<m>
   {
@@ -279,47 +282,43 @@ class scoped_typed_file : public typed_file<T, m> {
   size_t len() { return typed_file<T, m>::len() / sizeof(T); }
 };
 
-template <typename T, mode m>
-class basic_file_input_stream {
+template <typename F>
+class file_input_stream {
  public:
-  using type = T;
+  using type = typename F::type;
 
  private:
-  scoped_typed_file<T, m>& _f;
+  F& _f;
   size_t _pos;
   size_t _len;
 
  public:
-  constexpr basic_file_input_stream(scoped_typed_file<T, m>& f)
-    requires read_mode<m>
-      : _f(f), _pos(0), _len(f.len()) {}
+  constexpr file_input_stream(F& f) : _f(f), _pos(0), _len(f.len()) {}
 
  public:
   constexpr bool has() const { return _f.opened() and _len != _pos; }
 
-  constexpr T next() {
+  constexpr type next() {
     _pos += 1;
-    T tmp;
+    type tmp;
     _f.read(tmp);
     return tmp;
   }
 };
 
-template <typename T, mode m>
-class basic_file_output_stream {
+template <typename F>
+class file_output_stream {
  public:
-  using type = T;
+  using type = typename F::type;
 
  private:
-  scoped_typed_file<T, m>& _f;
+  F& _f;
 
  public:
-  basic_file_output_stream(scoped_typed_file<T, m>& f)
-    requires write_mode<m>
-      : _f(f) {}
+  file_output_stream(F& f) : _f(f) {}
 
  public:
-  bool add(const T& t) { return _f.write(t); }
+  bool add(const type& t) { return _f.write(t); }
 };
 
 template <character C, mode m>
@@ -343,43 +342,19 @@ using cout_text_file = text_file<C, mode::cout>;
 template <character C>
 using cerr_text_file = text_file<C, mode::cerr>;
 
-template <character C, mode m>
-using text_file_input_stream = basic_file_input_stream<C, m>;
-
-template <mode m>
-using byte_file_input_stream = basic_file_input_stream<byte_t, m>;
-
-template <character C, mode m>
-using text_file_output_stream = basic_file_output_stream<C, m>;
-
-template <mode m>
-using byte_file_output_stream = basic_file_output_stream<byte_t, m>;
-
 template <character C>
 static auto ferr = cerr_text_file<C>(stderr);
-static auto serr = text_file_output_stream(ferr<char>);
-static auto wserr = text_file_output_stream(ferr<wchar_t>);
+static auto serr = file_output_stream(ferr<char>);
+static auto wserr = file_output_stream(ferr<wchar_t>);
 
 template <character C>
 static auto fout = cout_text_file<C>(stdout);
-static auto sout = text_file_output_stream(fout<char>);
-static auto wsout = text_file_output_stream(fout<wchar_t>);
+static auto sout = file_output_stream(fout<char>);
+static auto wsout = file_output_stream(fout<wchar_t>);
 
 template <character C>
 static auto fin = cin_text_file<C>(stdin);
-static auto sin = text_file_input_stream(fin<char>);
-static auto wsin = text_file_input_stream(fin<wchar_t>);
-
-// TODO c'est surement pas le bon endroit pour mettre cette fonction
-template <character C, mode m>
-bool getline(string& s, basic_file_input_stream<C, m>& out) {
-  C c;
-  s.clear();
-  while (out.has() and (c = out.next()) != '\n') {
-    s.add(c);
-  }
-
-  return not s.empty();
-}
+static auto sin = file_input_stream(fin<char>);
+static auto wsin = file_input_stream(fin<wchar_t>);
 
 #endif

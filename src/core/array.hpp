@@ -91,13 +91,18 @@ class array {
 };
 
 template <typename T, size_t N>
-constexpr auto istream(const array<T, N>& v) {
-  return index_forward_input_stream(v);
+constexpr auto istream(const array<T, N>& a) {
+  return index_forward_input_stream(a);
 }
 
 template <typename T, size_t N>
-constexpr auto ristream(const array<T, N>& v) {
-  return index_backward_input_stream(v);
+constexpr auto ristream(const array<T, N>& a) {
+  return index_backward_input_stream(a);
 }
+
+template <typename T, size_t N>
+constexpr auto ostream(array<T, N>& a) {
+  return index_forward_output_stream(a);
+};
 
 #endif
