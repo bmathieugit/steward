@@ -189,20 +189,20 @@ class raw_file {
 };
 
 template <typename T, mode m>
-class typed_file : public raw_file<m> {
+class file : public raw_file<m> {
  public:
   using type = T;
 
  public:
-  typed_file(file_descriptor fd)
+  file(file_descriptor fd)
     requires console_mode<m>
       : raw_file<m>(fd) {}
 
-  typed_file(const char* name)
+  file(const char* name)
     requires not_console_mode<m>
       : raw_file<m>(name) {}
 
-  typed_file(char_input_stream auto name)
+  file(char_input_stream auto name)
     requires not_console_mode<m>
       : raw_file<m>(name) {}
 
@@ -216,13 +216,12 @@ class file_input_stream {
   using type = T;
 
  private:
-  typed_file<T, m>& _f;
+  file<T, m>& _f;
   size_t _pos;
   size_t _len;
 
  public:
-  constexpr file_input_stream(typed_file<T, m>& f)
-      : _f(f), _pos(0), _len(f.len()) {}
+  constexpr file_input_stream(file<T, m>& f) : _f(f), _pos(0), _len(f.len()) {}
 
  public:
   constexpr bool has() const { return _f.opened() and _len != _pos; }
@@ -236,7 +235,7 @@ class file_input_stream {
 };
 
 template <typename T, mode m>
-constexpr auto istream(typed_file<T, m>& f) {
+constexpr auto istream(file<T, m>& f) {
   return file_input_stream(f);
 }
 
@@ -247,54 +246,33 @@ class file_output_stream {
   using type = T;
 
  private:
-  typed_file<T, m>& _f;
+  file<T, m>& _f;
 
  public:
-  file_output_stream(typed_file<T, m>& f) : _f(f) {}
+  file_output_stream(file<T, m>& f) : _f(f) {}
 
  public:
   bool add(const type& t) { return _f.write(t); }
 };
 
 template <typename T, mode m>
-constexpr auto ostream(typed_file<T, m>& f) {
+constexpr auto ostream(file<T, m>& f) {
   return file_output_stream(f);
 }
 
-template <character C, mode m>
-using text_file = typed_file<C, m>;
+template <character C>
+static auto ferr = file<C, mode::cerr>(stderr);
+static auto serr = ostream(ferr<char>);
+static auto wserr = ostream(ferr<wchar_t>);
 
 template <character C>
-using read_text_file = text_file<C, mode::r>;
+static auto fout = file<C, mode::cout>(stdout);
+static auto sout = ostream(fout<char>);
+static auto wsout = ostream(fout<wchar_t>);
 
 template <character C>
-using write_text_file = text_file<C, mode::w>;
-
-template <character C>
-using append_text_file = text_file<C, mode::a>;
-
-template <character C>
-using cin_text_file = text_file<C, mode::cin>;
-
-template <character C>
-using cout_text_file = text_file<C, mode::cout>;
-
-template <character C>
-using cerr_text_file = text_file<C, mode::cerr>;
-
-template <character C>
-static auto ferr = text_file<C, mode::cerr>(stderr);
-static auto serr = file_output_stream(ferr<char>);
-static auto wserr = file_output_stream(ferr<wchar_t>);
-
-template <character C>
-static auto fout = text_file<C, mode::cout>(stdout);
-static auto sout = file_output_stream(fout<char>);
-static auto wsout = file_output_stream(fout<wchar_t>);
-
-template <character C>
-static auto fin = text_file<C, mode::cin>(stdin);
-static auto sin = file_input_stream(fin<char>);
-static auto wsin = file_input_stream(fin<wchar_t>);
+static auto fin = file<C, mode::cin>(stdin);
+static auto sin = istream(fin<char>);
+static auto wsin = istream(fin<wchar_t>);
 
 #endif
