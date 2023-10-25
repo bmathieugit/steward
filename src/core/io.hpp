@@ -51,6 +51,29 @@ class raw_file {
   file_descriptor _fd = null_file;
 
  public:
+  ~raw_file() {
+    if constexpr (not_console_mode<m>) {
+      close();
+    }
+  }
+
+  raw_file(file_descriptor fd)
+    requires console_mode<m>
+      : _fd(fd) {}
+
+  raw_file(const char* fname)
+    requires not_console_mode<m>
+  {
+    open(fname);
+  }
+
+  raw_file(char_input_stream auto fname)
+    requires not_console_mode<m>
+  {
+    open(fname);
+  }
+
+ public:
   inline bool close()
     requires not_console_mode<m>
   {
@@ -165,39 +188,6 @@ class raw_file {
   }
 };
 
-template <mode m>
-class scoped_file : public raw_file<m> {
- private:
-  bool close() { return raw_file<m>::close(); }
-
- public:
-  ~scoped_file() {
-    if constexpr (not_console_mode<m>) {
-      if (raw_file<m>::opened()) {
-        close();
-      }
-    }
-  }
-
-  scoped_file(file_descriptor fd)
-    requires console_mode<m>
-  {
-    raw_file<m>::open(fd);
-  }
-
-  scoped_file(const char* name)
-    requires not_console_mode<m>
-  {
-    raw_file<m>::open(name);
-  }
-
-  scoped_file(char_input_stream auto name)
-    requires not_console_mode<m>
-  {
-    raw_file<m>::open(name);
-  }
-};
-
 template <typename T, mode m>
 class typed_file : public raw_file<m> {
  public:
@@ -206,66 +196,33 @@ class typed_file : public raw_file<m> {
  public:
   typed_file(file_descriptor fd)
     requires console_mode<m>
-  {
-    raw_file<m>::open(fd);
-  }
+      : raw_file<m>(fd) {}
 
   typed_file(const char* name)
     requires not_console_mode<m>
-  {
-    raw_file<m>::open(name);
-  }
+      : raw_file<m>(name) {}
 
   typed_file(char_input_stream auto name)
     requires not_console_mode<m>
-  {
-    raw_file<m>::open(name);
-  }
+      : raw_file<m>(name) {}
 
   size_t len() { return raw_file<m>::len() / sizeof(T); }
 };
 
 template <typename T, mode m>
-class scoped_typed_file : public typed_file<T, m> {
- private:
-  bool close() { return typed_file<T, m>::close(); }
-
- public:
-  ~scoped_typed_file() {
-    if constexpr (not_console_mode<m>) {
-      if (typed_file<T, m>::opened()) {
-        close();
-      }
-    }
-  }
-
-  scoped_typed_file(file_descriptor fd)
-    requires console_mode<m>
-      : typed_file<T, m>(fd) {}
-
-  scoped_typed_file(const char* name)
-    requires not_console_mode<m>
-      : typed_file<T, m>(name) {}
-
-  scoped_typed_file(char_input_stream auto name)
-    requires not_console_mode<m>
-      : typed_file<T, m>(name) {}
-
-  size_t len() { return typed_file<T, m>::len() / sizeof(T); }
-};
-
-template <typename F>
+  requires read_mode<m>
 class file_input_stream {
  public:
-  using type = typename F::type;
+  using type = T;
 
  private:
-  F& _f;
+  typed_file<T, m>& _f;
   size_t _pos;
   size_t _len;
 
  public:
-  constexpr file_input_stream(F& f) : _f(f), _pos(0), _len(f.len()) {}
+  constexpr file_input_stream(typed_file<T, m>& f)
+      : _f(f), _pos(0), _len(f.len()) {}
 
  public:
   constexpr bool has() const { return _f.opened() and _len != _pos; }
@@ -278,23 +235,34 @@ class file_input_stream {
   }
 };
 
-template <typename F>
+template <typename T, mode m>
+constexpr auto istream(typed_file<T, m>& f) {
+  return file_input_stream(f);
+}
+
+template <typename T, mode m>
+  requires write_mode<m>
 class file_output_stream {
  public:
-  using type = typename F::type;
+  using type = T;
 
  private:
-  F& _f;
+  typed_file<T, m>& _f;
 
  public:
-  file_output_stream(F& f) : _f(f) {}
+  file_output_stream(typed_file<T, m>& f) : _f(f) {}
 
  public:
   bool add(const type& t) { return _f.write(t); }
 };
 
+template <typename T, mode m>
+constexpr auto ostream(typed_file<T, m>& f) {
+  return file_output_stream(f);
+}
+
 template <character C, mode m>
-using text_file = scoped_typed_file<C, m>;
+using text_file = typed_file<C, m>;
 
 template <character C>
 using read_text_file = text_file<C, mode::r>;
@@ -315,17 +283,17 @@ template <character C>
 using cerr_text_file = text_file<C, mode::cerr>;
 
 template <character C>
-static auto ferr = cerr_text_file<C>(stderr);
+static auto ferr = text_file<C, mode::cerr>(stderr);
 static auto serr = file_output_stream(ferr<char>);
 static auto wserr = file_output_stream(ferr<wchar_t>);
 
 template <character C>
-static auto fout = cout_text_file<C>(stdout);
+static auto fout = text_file<C, mode::cout>(stdout);
 static auto sout = file_output_stream(fout<char>);
 static auto wsout = file_output_stream(fout<wchar_t>);
 
 template <character C>
-static auto fin = cin_text_file<C>(stdin);
+static auto fin = text_file<C, mode::cin>(stdin);
 static auto sin = file_input_stream(fin<char>);
 static auto wsin = file_input_stream(fin<wchar_t>);
 

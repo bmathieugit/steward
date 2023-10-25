@@ -10,8 +10,8 @@ void test_file_input_stream() {
   fputs("Hello\n", _file);
   fclose(_file);
 
-  scoped_typed_file<char, mode::r> f(filename);
-  file_input_stream fs(f);
+  typed_file<char, mode::r> f(filename);
+  auto fs = istream(f);
   maybe<char> c;
   fs >> c;
   N_TEST_ASSERT_TRUE(c.has());
@@ -37,8 +37,8 @@ void test_file_input_stream() {
 
 void test_file_output_stream() {
   const char* filename = "test_file.txt";
-  scoped_typed_file<char, mode::w> f(filename);
-  file_output_stream fo(f);
+  typed_file<char, mode::w> f(filename);
+  auto fo = ostream(f);
   fo << "coucou";
   N_TEST_ASSERT_EQUALS(f.len(), 6);
   remove(filename);
@@ -53,11 +53,11 @@ int main() {
 
   N_TEST_RUN_SUITE;
 
-  raw_file<mode::r> r;
-  raw_file<mode::w> w;
+  raw_file<mode::w> w("tmp.txt");
   w.open("tmp.txt");
   w.writeall(istream("coucou"));
   w.close();
+  raw_file<mode::r> r("tmp.txt");
   r.open("tmp.txt");
   r.readall(sout);
   r.close();
