@@ -44,14 +44,6 @@ class test {
   constexpr test(const char* name, test_function func)
       : _name(name), _func(func) {}
 
-  // copy
-  constexpr test(const test&) = default;
-  constexpr test& operator=(const test&) = default;
-
-  // move
-  constexpr test(test&&) = default;
-  constexpr test& operator=(test&&) = default;
-
  public:
   constexpr const char* name() const { return _name; }
   constexpr test_result run() const try {
