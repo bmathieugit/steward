@@ -1,5 +1,5 @@
-#ifndef __n_collection_hpp__
-#define __n_collection_hpp__
+#ifndef __n_algorithm_hpp__
+#define __n_algorithm_hpp__
 
 #include <core/concepts.hpp>
 #include <core/utils.hpp>

@@ -56,7 +56,7 @@ int main() {
   raw_file<mode::r> r;
   raw_file<mode::w> w;
   w.open("tmp.txt");
-  w.write(istream("coucou"));
+  w.writeall(istream("coucou"));
   w.close();
   r.open("tmp.txt");
   r.readall(sout);

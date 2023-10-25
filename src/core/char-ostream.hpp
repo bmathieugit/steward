@@ -2,7 +2,7 @@
 #define __n_string_ostream_hpp__
 
 #include <core/array.hpp>
-#include <core/collection.hpp>
+#include <core/algorithm.hpp>
 #include <core/concepts.hpp>
 #include <core/string.hpp>
 #include <core/utils.hpp>

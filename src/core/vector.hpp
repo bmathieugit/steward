@@ -1,64 +1,17 @@
 #ifndef __n_vector_hpp__
 #define __n_vector_hpp__
 
-#include <core/collection.hpp>
+#include <core/algorithm.hpp>
 #include <core/utils.hpp>
-
-template <typename C>
-class index_forward_input_stream {
- public:
-  using type = typename C::type;
-  using position = typename C::position;
-
- private:
-  C& _col;
-  position _pos;
-
- public:
-  constexpr index_forward_input_stream(C& c) : _col(c), _pos(0) {}
-
- public:
-  constexpr bool has() const { return _col.has(_pos); }
-  constexpr auto next() -> decltype(auto) { return _col.at(_pos++); }
-};
-
-template <typename C>
-class index_forward_output_stream {
- public:
-  using type = typename C::type;
-  using position = typename C::position;
-
- private:
-  C& _col;
-
- public:
-  constexpr index_forward_output_stream(C& c) : _col(c) {}
-
- public:
-  constexpr bool add(const type& t) { return _col.add(t); }
-  constexpr bool add(type&& t) { return _col.add(move(t)); }
-};
-
-template <typename C>
-class index_backward_input_stream {
- public:
-  using type = typename C::type;
-  using position = typename C::position;
-
- private:
-  C& _col;
-  position _pos;
-
- public:
-  constexpr index_backward_input_stream(C& c) : _col(c), _pos(_col.len() - 1) {}
-
- public:
-  constexpr bool has() const { return _col.has(_pos); }
-  constexpr auto next() -> decltype(auto) { return _col.at(_pos--); }
-};
 
 template <typename T>
 using vector_input_stream = index_forward_input_stream<T>;
+
+template <typename T>
+using vector_backward_input_stream = index_backward_input_stream<T>;
+
+template <typename T>
+using vector_output_stream = index_forward_output_stream<T>;
 
 template <typename T>
 struct vector_allocator {
@@ -114,14 +67,14 @@ class vector {
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
   constexpr vector(const vector& v) : vector(v._max) {
-    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+    copy(vector_input_stream(v), vector_output_stream(*this));
   }
 
   template <input_stream I>
   constexpr vector(I i)
     requires same_as<rm_cref<typename I::type>, type>
   {
-    copy(i, index_forward_output_stream(*this));
+    copy(i, vector_output_stream(*this));
   }
 
   constexpr vector& operator=(const vector& v) {
@@ -136,7 +89,7 @@ class vector {
         _max = v._max;
       }
 
-      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+      copy(vector_input_stream(v), vector_output_stream(*this));
     }
 
     return *this;
@@ -262,12 +215,12 @@ class vector {
 
 template <typename T>
 constexpr auto istream(const vector<T>& v) {
-  return index_forward_input_stream(v);
+  return vector_input_stream(v);
 }
 
 template <typename T>
 constexpr auto ostream(vector<T>& v) {
-  return index_forward_output_stream(v);
+  return vector_output_stream(v);
 }
 
 template <typename T>
@@ -295,7 +248,7 @@ class fixed_vector {
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
   constexpr fixed_vector(const fixed_vector& v) : fixed_vector(v._max) {
-    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+    copy(vector_input_stream(v), vector_output_stream(*this));
   }
 
   constexpr fixed_vector& operator=(const fixed_vector& v) {
@@ -310,7 +263,7 @@ class fixed_vector {
         _max = v._max;
       }
 
-      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+      copy(vector_input_stream(v), vector_output_stream(*this));
     }
 
     return *this;
@@ -420,12 +373,12 @@ class fixed_vector {
 
 template <typename T>
 constexpr auto istream(const fixed_vector<T>& v) {
-  return index_forward_input_stream(v);
+  return vector_input_stream(v);
 }
 
 template <typename T>
 constexpr auto ostream(fixed_vector<T>& v) {
-  return index_forward_output_stream(v);
+  return vector_output_stream(v);
 }
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef __n_array_hpp__
 #define __n_array_hpp__
 
-#include <core/collection.hpp>
+#include <core/algorithm.hpp>
 #include <core/result.hpp>
 #include <core/utils.hpp>
 

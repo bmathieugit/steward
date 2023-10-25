@@ -110,29 +110,6 @@ class raw_file {
     return _fd != null_file and fread(&t, sizeof(T), 1, _fd) == 1;
   }
 
-  bool readn(output_stream auto os, size_t n)
-    requires read_mode<m>
-  {
-    using T = typename decltype(os)::type;
-
-    bool isread = true;
-
-    while (isread and n != 0) {
-      T buff;
-      isread &= read(buff);
-
-      if (isread) {
-        n -= 1;
-
-        if (not os.add(move(buff))) {
-          break;
-        }
-      }
-    }
-
-    return isread;
-  }
-
   bool readall(output_stream auto os)
     requires read_mode<m>
   {
@@ -143,7 +120,6 @@ class raw_file {
     while (isread) {
       T buff;
       isread &= read(buff);
-      ::printf("%c", buff);
 
       if (isread) {
         if (not os.add(buff)) {
@@ -162,22 +138,18 @@ class raw_file {
     return _fd != null_file and fwrite(&t, sizeof(T), 1, _fd) == 1;
   }
 
-  // bool writen(input_stream auto i)
-  //   requires write_mode<m>
-  // {
-  //   using T = typename decltype(i)::type;
-  //   bool res = true;
+  bool writeall(input_stream auto is)
+    requires write_mode<m>
+  {
+    using T = typename decltype(is)::type;
+    bool res = true;
 
-  //   while (i.has() and res) {
-  //     res &= write<T>(i.get());
+    while (is.has() and res) {
+      res &= write<T>(is.next());
+    }
 
-  //     if (res) {
-  //       i.next();
-  //     }
-  //   }
-
-  //   return res;
-  // }
+    return res;
+  }
 
   size_t len() {
     size_t len = 0;
