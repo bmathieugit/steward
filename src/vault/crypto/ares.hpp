@@ -82,17 +82,7 @@ class ares {
 
   constexpr string decrypt(char_input_stream auto key,
                            char_input_stream auto is) const {
-    string keycp(key);
-    string uncrypted(is);
-
-    for (size_t i = 0; i < uncrypted.len(); ++i) {
-      auto c = uncrypted.at(i);
-      auto ckey = keycp.at(i % keycp.len());
-      auto cc = c ^ ckey;
-      uncrypted.modify(i, cc);
-    }
-
-    return uncrypted;
+    return crypt(key, is);
   }
 };
 

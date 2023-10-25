@@ -8,9 +8,9 @@ int main() {
   constexpr vault::crypto::mash mash;
   constexpr vault::crypto::ares ares;
   auto mess = istream("bonjour tout le monde comment ca va?");
-  sout << mash.digest(mess) << '\n';
-  auto crypted = ares.crypt(istream(mash.digest(mess)), mess);
-  auto uncrypted = ares.crypt(istream(mash.digest(mess)), istream(crypted));
-  sout << "crypted " << base64(crypted) << '\n';
+  auto digest = mash.digest(mess);
+  auto&& crypted = ares.crypt(istream(digest), mess);
+  auto&& uncrypted = ares.decrypt(istream(digest), istream(crypted));
+  sout << "crypted " << crypted << '\n';
   sout << "uncrypted " << uncrypted << '\n';
 }
