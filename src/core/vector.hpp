@@ -232,6 +232,11 @@ constexpr auto istream(const vector<T>& v) {
 }
 
 template <typename T>
+constexpr auto ristream(const vector<T>& a) {
+  return index_backward_input_stream(a);
+}
+
+template <typename T>
 constexpr auto ostream(vector<T>& v) {
   return index_forward_output_stream(v);
 }
@@ -409,6 +414,11 @@ class fixed_vector {
 template <typename T>
 constexpr auto istream(const fixed_vector<T>& v) {
   return index_forward_input_stream(v);
+}
+
+template <typename T>
+constexpr auto ristream(const fixed_vector<T>& a) {
+  return index_backward_input_stream(a);
 }
 
 template <typename T>
