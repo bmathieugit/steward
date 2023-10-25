@@ -57,15 +57,26 @@ class vector {
   constexpr vector(size_t max)
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
-  constexpr vector(const vector& v) : vector(v._max) {
-    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
-  }
+  constexpr vector(const vector& v) : vector(v._max) { copy(v, *this); }
 
   template <input_stream I>
   constexpr vector(I i)
-    requires same_as<rm_cref<typename I::type>, type>
+    requires same_type<vector, I>
   {
     copy(i, index_forward_output_stream(*this));
+  }
+
+  template <collection C>
+  constexpr vector(const C& c)
+    requires same_type<vector, C>
+      : vector(c.len()) {
+    copy(c, *this);
+  }
+
+  constexpr vector(vector&& v) : _max(v._max), _len(v._len), _data(v._data) {
+    v._max = 0;
+    v._len = 0;
+    v._data = nullptr;
   }
 
   constexpr vector& operator=(const vector& v) {
@@ -80,16 +91,10 @@ class vector {
         _max = v._max;
       }
 
-      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+      copy(v, *this);
     }
 
     return *this;
-  }
-
-  constexpr vector(vector&& v) : _max(v._max), _len(v._len), _data(v._data) {
-    v._max = 0;
-    v._len = 0;
-    v._data = nullptr;
   }
 
   constexpr vector& operator=(vector&& v) {
@@ -108,6 +113,22 @@ class vector {
     }
 
     return *this;
+  }
+
+  template <input_stream I>
+  constexpr vector& operator=(I i)
+    requires same_type<vector, I>
+  {
+    clear();
+    copy(i, index_forward_output_stream(*this));
+  }
+
+  template <collection C>
+  constexpr vector& operator=(const C& c)
+    requires same_type<vector, C>
+  {
+    clear();
+    copy(c, *this);
   }
 
  private:
@@ -133,6 +154,7 @@ class vector {
   constexpr auto empty() const { return _len == 0; }
   constexpr auto max() const { return _max; }
   constexpr auto full() const { return _len == _max; }
+  constexpr auto ord() const { return index_based_ordinal<position>(0, _len); }
 
  public:
   constexpr bool has(position p) const { return p < _len; }
@@ -221,10 +243,10 @@ class fixed_vector {
   using position = size_t;
 
  private:
+  vector_allocator<T> _alloc;
   size_t _max = 0;
   size_t _len = 0;
   T* _data = nullptr;
-  vector_allocator<T> _alloc;
 
  public:
   constexpr ~fixed_vector() {
@@ -239,7 +261,21 @@ class fixed_vector {
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
   constexpr fixed_vector(const fixed_vector& v) : fixed_vector(v._max) {
-    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+    copy(v, *this);
+  }
+
+  template <collection C>
+  constexpr fixed_vector(const C& c)
+    requires same_type<fixed_vector, C>
+      : fixed_vector(c.len()) {
+    copy(c, *this);
+  }
+
+  constexpr fixed_vector(fixed_vector&& v)
+      : _max(v._max), _len(v._len), _data(v._data) {
+    v._max = 0;
+    v._len = 0;
+    v._data = nullptr;
   }
 
   constexpr fixed_vector& operator=(const fixed_vector& v) {
@@ -254,17 +290,10 @@ class fixed_vector {
         _max = v._max;
       }
 
-      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
+      copy(v, *this);
     }
 
     return *this;
-  }
-
-  constexpr fixed_vector(fixed_vector&& v)
-      : _max(v._max), _len(v._len), _data(v._data) {
-    v._max = 0;
-    v._len = 0;
-    v._data = nullptr;
   }
 
   constexpr fixed_vector& operator=(fixed_vector&& v) {
@@ -285,20 +314,35 @@ class fixed_vector {
     return *this;
   }
 
+  template <collection C>
+  constexpr fixed_vector& operator=(const C& c)
+    requires same_type<fixed_vector, C>
+  {
+    _alloc.destroy(_data, _len);
+    _alloc.deallocate(_data);
+    _len = 0;
+    _max = 0;
+
+    if (c.len() != 0) {
+      _data = _alloc.allocate(c.len());
+      _max = c.len();
+    }
+
+    copy(c, *this);
+
+    return *this;
+  }
+
  public:
   constexpr auto len() const { return _len; }
-
   constexpr auto empty() const { return _len == 0; }
-
   constexpr auto max() const { return _max; }
-
   constexpr auto full() const { return _len == _max; }
+  constexpr auto ord() const { return index_based_ordinal<position>(0, _len); }
 
  public:
   constexpr bool has(position p) const { return p < _len; }
-
   constexpr T& at(position p) { return _data[p]; }
-
   constexpr const T& at(position p) const { return _data[p]; }
 
   constexpr void clear() {

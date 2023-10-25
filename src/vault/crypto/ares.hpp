@@ -21,10 +21,10 @@ namespace vault::crypto {
 
 class ares {
  public:
-  constexpr string crypt(char_input_stream auto key,
-                         char_input_stream auto is) const {
-    string keycp(key);
-    string crypted(is);
+  constexpr fixed_string crypt(const char_collection auto& key,
+                               const char_collection auto& mess) const {
+    fixed_string keycp(key);
+    fixed_string crypted(mess);
 
     for (size_t i = 0; i < crypted.len(); ++i) {
       auto c = crypted.at(i);
@@ -33,12 +33,13 @@ class ares {
       crypted.modify(i, cc);
     }
 
-    return crypted;
+    return shuffle(crypted,
+                   random_index_input_stream(crypted.len(), crypted.len()));
   }
 
-  constexpr string decrypt(char_input_stream auto key,
-                           char_input_stream auto is) const {
-    return crypt(key, is);
+  constexpr fixed_string decrypt(const char_collection auto& key,
+                                 const char_collection auto& mess) const {
+    return crypt(key, mess);
   }
 };
 

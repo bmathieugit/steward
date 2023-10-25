@@ -1,11 +1,11 @@
 #ifndef __n_string_ostream_hpp__
 #define __n_string_ostream_hpp__
 
-#include <core/array.hpp>
 #include <core/algorithm.hpp>
+#include <core/array.hpp>
 
-#include <core/string.hpp>
 #include <core/core.hpp>
+#include <core/string.hpp>
 
 template <char_output_stream O, character C>
 constexpr O& operator<<(O& o, C c) {
@@ -17,6 +17,15 @@ template <char_output_stream O, char_input_stream I>
 constexpr O& operator<<(O& o, I i) {
   while (i.has()) {
     o.add(i.next());
+  }
+
+  return o;
+}
+
+template <char_output_stream O, input_stream I>
+constexpr O& operator<<(O& o, I i) {
+  while (i.has()) {
+    o << i.next();
   }
 
   return o;

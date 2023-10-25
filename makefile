@@ -6,8 +6,8 @@
 
 CXX=g++
 CXXFLAGS+= -Wall -Werror -pedantic
-CXXFLAGS+= -std=c++20 -O3 -save-temps
-CXXFLAGS+= -fconcepts-diagnostics-depth=5
+CXXFLAGS+= -std=c++20 -O3 
+CXXFLAGS+= -save-temps -fconcepts-diagnostics-depth=5
 CXXINCS=-Isrc -Itest
 
 all: clean test

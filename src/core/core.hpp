@@ -175,10 +175,27 @@ concept has_equals_operator = requires(const T& t, const U& u) { t == u; };
 template <typename T, typename U>
 concept has_diffs_operator = requires(const T& t, const U& u) { t != u; };
 
+template <typename P, typename T>
+concept predicate = requires(P p, T t) {
+  { p(t) } -> same_as<bool>;
+};
+
 template <typename T>
 concept collection_context = requires {
   typename T::type;
   typename T::position;
+};
+
+template <typename T1, typename T2>
+concept same_type = same_as<typename T1::type, typename T2::type>;
+
+template <typename T1, typename T2>
+concept same_position = same_as<typename T1::position, typename T2::position>;
+
+template <typename O>
+concept ordinal = requires { typename O::position; } and requires(O o) {
+  { o.has() } -> same_as<bool>;
+  { o.next() } -> same_as_declined<typename O::position>;
 };
 
 template <typename C>
@@ -189,12 +206,15 @@ concept collection =
       { cc.at(p) } -> same_as_declined<typename C::type>;
       { cc.empty() } -> same_as<bool>;
       { cc.len() } -> same_as<size_t>;
-      { cc.pos() };
+      { cc.ord() } -> ordinal;
       { c.add(t) } -> same_as<bool>;
       { c.modify(p, t) } -> same_as<bool>;
       { c.remove(p) } -> same_as<bool>;
       { c.clear() } -> same_as<void>;
     };
+
+template <typename C>
+concept char_collection = collection<C> and character<typename C::type>;
 
 template <typename I>
 concept input_stream = requires { typename I::type; } and requires(I i) {
@@ -213,6 +233,23 @@ concept char_input_stream = input_stream<S> and character<typename S::type>;
 
 template <typename S>
 concept char_output_stream = output_stream<S> and character<typename S::type>;
+
+template <integral I>
+class index_based_ordinal {
+ public:
+  using position = I;
+
+ private:
+  I _index;
+  I _max;
+
+ public:
+  constexpr index_based_ordinal(I index, I max) : _index(index), _max(max) {}
+
+ public:
+  constexpr bool has() { return _index != _max; }
+  constexpr I next() { return _index++; }
+};
 
 template <typename C>
 class index_forward_input_stream {
@@ -271,5 +308,22 @@ constexpr size_t rand(size_t seed) {
   seed = (1103515245 * seed + 12345) & max_of<unsigned>;
   return static_cast<size_t>(seed);
 }
+
+struct random_index_input_stream {
+ public:
+  using type = size_t;
+
+ private:
+  size_t _seed = 0;
+  size_t _max = 0;
+
+ public:
+  constexpr random_index_input_stream(size_t seed, size_t max)
+      : _seed(seed), _max(max) {}
+
+ public:
+  constexpr bool has() { return true; }
+  constexpr size_t next() { return (_seed = rand(_seed)) % _max; }
+};
 
 #endif

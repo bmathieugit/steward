@@ -2,8 +2,8 @@
 #define __n_array_hpp__
 
 #include <core/algorithm.hpp>
-#include <core/result.hpp>
 #include <core/core.hpp>
+#include <core/result.hpp>
 
 template <typename T, size_t N>
 class array {
@@ -29,17 +29,16 @@ class array {
   constexpr auto empty() const { return _len == 0; }
   constexpr auto max() const { return N; }
   constexpr auto full() const { return _len == N; }
+  constexpr auto ord() const { return index_based_ordinal<position>(0, _len); }
 
  public:
   constexpr bool has(position p) const { return p < _len; }
-
   constexpr T& at(position p) { return _data[p]; }
-
   constexpr const T& at(position p) const { return _data[p]; }
 
   constexpr void clear() {
     for (size_t i = 0; i < _len; ++i) {
-      _data[i] = T();
+      _data[i].~T();
     }
 
     _len = 0;
@@ -84,7 +83,7 @@ class array {
       return false;
     } else {
       for (size_t i = p; i < _len - 1; ++i) {
-        _data[i] = _data[i + 1];
+        _data[i] = move(_data[i + 1]);
       }
 
       _data[_len - 1] = T();
