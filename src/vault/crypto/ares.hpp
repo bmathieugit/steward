@@ -18,44 +18,47 @@ constexpr I rotr(I i, int n) {
 }
 
 // TODO: a booster en termes de perf
-constexpr string base64(const string& data) {
-  constexpr char base64Chars[] =
+
+fixed_string base64(const string& s) {
+  constexpr char k[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  string base64;
+
+  const size_t len = s.len();
   size_t i = 0;
 
-  while (i < data.len()) {
-    // Première séquence de 6 bits
-    base64.add(base64Chars[data.at(i) >> 2]);
+  fixed_string encoded(((len + 2) / 3 * 4) + 1);
 
-    // Deuxième séquence de 6 bits
-    if (i + 1 < data.len()) {
-      base64.add(
-          base64Chars[((data.at(i) & 0x03) << 4) | (data.at(i + 1) >> 4)]);
-    } else {
-      base64.add(base64Chars[(data.at(i) & 0x03) << 4]);
-      base64.add('=');
-      base64.add('=');
-      break;
-    }
+  for (i = 0; i < len - 2; i += 3) {
+    const auto c0 = s.at(i);
+    const auto c1 = s.at(i + 1);
+    const auto c2 = s.at(i + 2);
 
-    // Troisième séquence de 6 bits
-    if (i + 2 < data.len()) {
-      base64.add(
-          base64Chars[((data.at(i + 1) & 0x0F) << 2) | (data.at(i + 2) >> 6)]);
-    } else {
-      base64.add(base64Chars[(data.at(i + 1) & 0x0F) << 2]);
-      base64.add('=');
-      break;
-    }
-
-    // Quatrième séquence de 6 bits
-    base64.add(base64Chars[data.at(i + 2) & 0x3F]);
-
-    i += 3;
+    encoded.add(k[(c0 >> 2) & 0x3F]);
+    encoded.add(k[((c0 & 0x3) << 4) | ((c1 & 0xF0) >> 4)]);
+    encoded.add(k[((c1 & 0xF) << 2) | ((c2 & 0xC0) >> 6)]);
+    encoded.add(k[c2 & 0x3F]);
   }
 
-  return base64;
+  if (i < len) {
+    const auto c0 = s.at(i);
+
+    encoded.add(k[(c0 >> 2) & 0x3F]);
+
+    if (i == (len - 1)) {
+      encoded.add(k[((c0 & 0x3) << 4)]);
+      encoded.add('=');
+    }
+
+    else {
+      const auto c1 = s.at(i + 1);
+      encoded.add(k[((c0 & 0x3) << 4) | ((c1 & 0xF0) >> 4)]);
+      encoded.add(k[((c1 & 0xF) << 2)]);
+    }
+
+    encoded.add('=');
+  }
+
+  return encoded;
 }
 
 namespace vault::crypto {
