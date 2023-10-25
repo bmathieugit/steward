@@ -83,25 +83,27 @@ class test_suite {
     sout << "\nSUITE [" << _name << "] ";
 
     auto tests_os = istream(_tests);
-    
+
     while (tests_os.has()) {
       auto&& t = tests_os.next();
       sout << "\nTEST[" << t.name() << "]\n";
       auto res = t.run();
 
+      sout << (res == test_result::success
+                   ? " - Result : \033[1;32mPASSED\033[0m\n"
+                   : " - Result : \033[1;31mFAILED\033[0m\n");
+
       if (res == test_result::success) {
         ++succeed;
-        sout << " - Result : \033[1;32mPASSED\033[0m\n";
       } else {
         ++failed;
-        sout << " - Result : \033[1;31mFAILED\033[0m\n";
       }
     }
 
-    sout << "\nSUITE RECAP ";
-    sout << " - Passed : \033[1;32m" << succeed << "\033[0m\n";
-    sout << " - Failed : \033[1;31m" << failed << "\033[0m\n";
-    sout << '\n';
+    sout << "\nSUITE RECAP "
+         << " - Passed : \033[1;32m" << succeed << "\033[0m\n"
+         << " - Failed : \033[1;31m" << failed << "\033[0m\n"
+         << '\n';
   }
 };
 
