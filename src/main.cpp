@@ -2,6 +2,7 @@
 #include <core/io.hpp>
 #include <core/string.hpp>
 #include <vault/crypto/ares.hpp>
+#include <vault/crypto/base64.hpp>
 #include <vault/crypto/mash.hpp>
 
 int main() {
@@ -11,6 +12,6 @@ int main() {
   auto digest = mash.digest(mess);
   auto&& crypted = ares.crypt(istream(digest), mess);
   auto&& uncrypted = ares.decrypt(istream(digest), istream(crypted));
-  sout << "crypted " << crypted << '\n';
+  sout << "crypted " << vault::crypto::base64(crypted) << '\n';
   sout << "uncrypted " << uncrypted << '\n';
 }

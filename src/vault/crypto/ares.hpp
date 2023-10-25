@@ -17,50 +17,6 @@ constexpr I rotr(I i, int n) {
          (i << (sizeof(I) - (n % (sizeof(I) * 8))));
 }
 
-// TODO: a booster en termes de perf
-
-fixed_string base64(const string& s) {
-  constexpr char k[] =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-  const size_t len = s.len();
-  size_t i = 0;
-
-  fixed_string encoded(((len + 2) / 3 * 4) + 1);
-
-  for (i = 0; i < len - 2; i += 3) {
-    const auto c0 = s.at(i);
-    const auto c1 = s.at(i + 1);
-    const auto c2 = s.at(i + 2);
-
-    encoded.add(k[(c0 >> 2) & 0x3F]);
-    encoded.add(k[((c0 & 0x3) << 4) | ((c1 & 0xF0) >> 4)]);
-    encoded.add(k[((c1 & 0xF) << 2) | ((c2 & 0xC0) >> 6)]);
-    encoded.add(k[c2 & 0x3F]);
-  }
-
-  if (i < len) {
-    const auto c0 = s.at(i);
-
-    encoded.add(k[(c0 >> 2) & 0x3F]);
-
-    if (i == (len - 1)) {
-      encoded.add(k[((c0 & 0x3) << 4)]);
-      encoded.add('=');
-    }
-
-    else {
-      const auto c1 = s.at(i + 1);
-      encoded.add(k[((c0 & 0x3) << 4) | ((c1 & 0xF0) >> 4)]);
-      encoded.add(k[((c1 & 0xF) << 2)]);
-    }
-
-    encoded.add('=');
-  }
-
-  return encoded;
-}
-
 namespace vault::crypto {
 
 class ares {
