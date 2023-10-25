@@ -1,8 +1,8 @@
 #ifndef __n_result_hpp__
 #define __n_result_hpp__
 
-#include <core/concepts.hpp>
-#include <core/utils.hpp>
+
+#include <core/core.hpp>
 
 template <typename... TN>
 constexpr auto sizest = sizest<TN...>;

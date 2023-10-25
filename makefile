@@ -15,11 +15,9 @@ all: clean test
 clean:
 	rm -rf building
 	rm -rf dist
-	rm -f test*
 
 building:
 	mkdir -p building
-
 
 main: src/main.cpp building
 	${CXX} -o  building/main.app src/main.cpp ${CXXFLAGS} ${CXXINCS}

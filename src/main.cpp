@@ -1,34 +1,16 @@
-#include <iostream>
-#include <string>
-
+#include <core/char-ostream.hpp>
 #include <core/io.hpp>
 #include <core/string.hpp>
-
-string chiffrementAres(const string& cle, char_iterator auto texte) {
-  string texte_chiffre;
-  int length = cle.len();
-
-  while (texte.has()) {
-    char octet_a_chiffrer = texte.get();
-    char cle_octet = cle.at(texte.pos() % length);
-    char octet_chiffre = octet_a_chiffrer + cle_octet;
-    texte_chiffre.add(octet_chiffre);
-    texte.next();
-  }
-
-  return texte_chiffre;
-}
+#include <vault/crypto/ares.hpp>
+#include <vault/crypto/mash.hpp>
 
 int main() {
-  stdr.at(size_t(-1));
-
-  auto cle = iter("votre_cle");  // Remplacez "votre_cle" par la clé souhaitée
-  auto texte = iter("Le texte que vous souhaitez chiffrer.");
-
-  string texte_chiffre = chiffrementAres(cle, texte);
-
-  // cout << "Texte chiffré : " << texte_chiffre << endl;
-  // cout << "Texte déchiffré : " << texte_dechiffre << endl;
-
-  return 0;
+  constexpr vault::crypto::mash mash;
+  constexpr vault::crypto::ares ares;
+  auto mess = istream("bonjour tout le monde comment ca va?");
+  sout << mash.digest(mess) << '\n';
+  auto crypted = ares.crypt(istream(mash.digest(mess)), mess);
+  auto uncrypted = ares.crypt(istream(mash.digest(mess)), istream(crypted));
+  sout << "crypted " << base64(crypted) << '\n';
+  sout << "uncrypted " << uncrypted << '\n';
 }

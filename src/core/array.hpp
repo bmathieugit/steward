@@ -3,7 +3,7 @@
 
 #include <core/algorithm.hpp>
 #include <core/result.hpp>
-#include <core/utils.hpp>
+#include <core/core.hpp>
 
 template <typename T, size_t N>
 class array {
@@ -18,6 +18,11 @@ class array {
  public:
   constexpr ~array() = default;
   constexpr array() = default;
+  constexpr array(const T (&data)[N]) {
+    for (size_t i = 0; i < N; ++i) {
+      add(data[i]);
+    }
+  }
 
  public:
   constexpr auto len() const { return _len; }

@@ -2,16 +2,7 @@
 #define __n_vector_hpp__
 
 #include <core/algorithm.hpp>
-#include <core/utils.hpp>
-
-template <typename T>
-using vector_input_stream = index_forward_input_stream<T>;
-
-template <typename T>
-using vector_backward_input_stream = index_backward_input_stream<T>;
-
-template <typename T>
-using vector_output_stream = index_forward_output_stream<T>;
+#include <core/core.hpp>
 
 template <typename T>
 struct vector_allocator {
@@ -48,10 +39,10 @@ class vector {
   using position = size_t;
 
  private:
+  vector_allocator<T> _alloc;
   size_t _max = 0;
   size_t _len = 0;
   T* _data = nullptr;
-  vector_allocator<T> _alloc;
 
  public:
   constexpr ~vector() {
@@ -67,14 +58,14 @@ class vector {
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
   constexpr vector(const vector& v) : vector(v._max) {
-    copy(vector_input_stream(v), vector_output_stream(*this));
+    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
   }
 
   template <input_stream I>
   constexpr vector(I i)
     requires same_as<rm_cref<typename I::type>, type>
   {
-    copy(i, vector_output_stream(*this));
+    copy(i, index_forward_output_stream(*this));
   }
 
   constexpr vector& operator=(const vector& v) {
@@ -89,7 +80,7 @@ class vector {
         _max = v._max;
       }
 
-      copy(vector_input_stream(v), vector_output_stream(*this));
+      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
     }
 
     return *this;
@@ -215,12 +206,12 @@ class vector {
 
 template <typename T>
 constexpr auto istream(const vector<T>& v) {
-  return vector_input_stream(v);
+  return index_forward_input_stream(v);
 }
 
 template <typename T>
 constexpr auto ostream(vector<T>& v) {
-  return vector_output_stream(v);
+  return index_forward_output_stream(v);
 }
 
 template <typename T>
@@ -248,7 +239,7 @@ class fixed_vector {
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
 
   constexpr fixed_vector(const fixed_vector& v) : fixed_vector(v._max) {
-    copy(vector_input_stream(v), vector_output_stream(*this));
+    copy(index_forward_input_stream(v), index_forward_output_stream(*this));
   }
 
   constexpr fixed_vector& operator=(const fixed_vector& v) {
@@ -263,7 +254,7 @@ class fixed_vector {
         _max = v._max;
       }
 
-      copy(vector_input_stream(v), vector_output_stream(*this));
+      copy(index_forward_input_stream(v), index_forward_output_stream(*this));
     }
 
     return *this;
@@ -373,12 +364,12 @@ class fixed_vector {
 
 template <typename T>
 constexpr auto istream(const fixed_vector<T>& v) {
-  return vector_input_stream(v);
+  return index_forward_input_stream(v);
 }
 
 template <typename T>
 constexpr auto ostream(fixed_vector<T>& v) {
-  return vector_output_stream(v);
+  return index_forward_output_stream(v);
 }
 
 #endif

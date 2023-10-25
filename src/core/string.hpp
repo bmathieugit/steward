@@ -3,7 +3,7 @@
 
 #include <core/array.hpp>
 #include <core/cstring.hpp>
-#include <core/utils.hpp>
+#include <core/core.hpp>
 #include <core/vector.hpp>
 
 template <typename S>

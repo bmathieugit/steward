@@ -1,6 +1,6 @@
 #include <core/char-ostream.hpp>
 #include <tests.hpp>
-#include <core/utils.hpp>
+#include <core/core.hpp>
 
 using char_array_stream = char_array<100>;
 

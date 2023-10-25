@@ -1,8 +1,7 @@
 #ifndef __n_algorithm_hpp__
 #define __n_algorithm_hpp__
 
-#include <core/concepts.hpp>
-#include <core/utils.hpp>
+#include <core/core.hpp>
 
 template <input_stream I>
 constexpr size_t count(I i) {

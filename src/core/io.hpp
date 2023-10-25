@@ -210,7 +210,7 @@ class file : public raw_file<m> {
 };
 
 template <typename T, mode m>
-  requires read_mode<m>
+  requires read_mode<m> and not_console_mode<m>
 class file_input_stream {
  public:
   using type = T;
@@ -237,6 +237,32 @@ class file_input_stream {
 template <typename T, mode m>
 constexpr auto istream(file<T, m>& f) {
   return file_input_stream(f);
+}
+
+template <character C, mode m>
+  requires(m == mode::cin)
+class cin_file_input_stream {
+ public:
+  using type = C;
+
+ private:
+  file<C, m>& _f;
+  mutable C _c;
+
+ public:
+  constexpr cin_file_input_stream(file<C, m>& f) : _f(f) {}
+
+ public:
+  constexpr bool has() const {
+    return _f.opened() and _f.read(_c) and _c != '\n';
+  }
+
+  constexpr auto next() { return _c; }
+};
+
+template <typename T>
+constexpr auto istream(file<T, mode::cin>& f) {
+  return cin_file_input_stream(f);
 }
 
 template <typename T, mode m>

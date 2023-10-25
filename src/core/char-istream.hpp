@@ -2,8 +2,8 @@
 #define __n_string_istream_hpp__
 
 #include <core/result.hpp>
-#include <core/utils.hpp>
-#include <core/concepts.hpp>
+#include <core/core.hpp>
+
 
 template <char_input_stream S, character C>
 constexpr S& operator>>(S& s, maybe<C>& c) {

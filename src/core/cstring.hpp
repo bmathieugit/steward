@@ -1,7 +1,7 @@
 #ifndef __n_cstring_hpp__
 #define __n_cstring_hpp__
 
-#include <core/utils.hpp>
+#include <core/core.hpp>
 
 template <character C>
 constexpr size_t strlen(const C* s) {
