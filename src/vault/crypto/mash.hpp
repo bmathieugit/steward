@@ -25,14 +25,14 @@ class mash {
     size_t seed = 0;
 
     while (mess.has()) {
-      auto c = mess.next();
+      const auto c = mess.next();
       seed += c;
-      size_t a = 100000000 + c;
-      size_t b = 12345 + c;
 
+      const size_t a = 1103515245 + c;
+      const size_t b = 12345 + c;
+    
       for (size_t i = 0; i < res.len(); ++i) {
-        auto nc = k.at((seed = (prand(a, b, seed) + res.at(i))) % k.len());
-        res.modify(i, nc);
+        res.modify(i, k.at((seed = (prand(a, b, seed) + res.at(i))) % k.len()));
       }
     }
 

@@ -4,7 +4,6 @@
 #include <core/string.hpp>
 #include <vault/crypto/ares.hpp>
 #include <vault/crypto/base64.hpp>
-#include <vault/crypto/mash.hpp>
 
 int main() {
   auto mess = cstring(
@@ -20,4 +19,7 @@ int main() {
   sout << "uncrypted " << uncrypted << '\n';
 
   sout << sizeof(vault::crypto::ares) << '\n';
+  // sout << min_of<u32> << '\n';
+  sout << '[' << min_of<i32> << ',' << max_of<i32> << ']' << '\n';
+  sout << '[' << min_of<u32> << ',' << max_of<u32> << ']' << '\n';
 }

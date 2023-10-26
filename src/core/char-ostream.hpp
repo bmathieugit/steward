@@ -45,7 +45,7 @@ template <char_output_stream S, character C>
 constexpr S& operator<<(S& o, const C* s) {
   return o << istream(s);
 }
-
+#include <stdio.h>
 template <char_output_stream S, signed_integral I>
 constexpr S& operator<<(S& o, I i) {
   array<typename S::type, 20> tbuff;
@@ -54,11 +54,10 @@ constexpr S& operator<<(S& o, I i) {
     tbuff.add('0');
   } else {
     const bool neg = i < 0;
-    I tmp = neg ? -i : i;
 
-    while (tmp != 0) {
-      tbuff.add("0123456789"[tmp % 10]);
-      tmp /= 10;
+    while (i != 0) {
+      tbuff.add("0123456789"[neg ? -(i % 10) : i % 10]);
+      i /= 10;
     }
 
     if (neg) {
