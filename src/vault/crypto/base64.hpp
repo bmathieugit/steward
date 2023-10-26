@@ -5,7 +5,7 @@
 #include <core/string.hpp>
 
 namespace vault::crypto {
-auto base64(const string& s) {
+auto base64(const char_collection auto& s) {
   constexpr char k[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

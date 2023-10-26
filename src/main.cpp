@@ -7,19 +7,17 @@
 #include <vault/crypto/mash.hpp>
 
 int main() {
-  constexpr vault::crypto::ares ares;
-
   auto mess = cstring(
       "bonjour tout le monde comment ca va?bonjour tout le monde comment ca "
       "va?bonjour tout le monde comment ca va?bonjour tout le monde comment ca "
       "va?bonjour tout le monde comment ca va?");
-  auto key = cstring("ceci est ma clé");
-
-  auto crypted = ares.crypt(key, mess);
-  auto uncrypted = ares.decrypt(key, crypted);
+  auto key = istream("ceci est ma clé");
+  auto ares = vault::crypto::ares(key);
+  auto crypted = ares.crypt(mess);
+  auto uncrypted = ares.decrypt(crypted);
 
   sout << "crypted " << vault::crypto::base64(crypted) << '\n';
   sout << "uncrypted " << uncrypted << '\n';
 
-  
+  sout << sizeof(vault::crypto::ares) << '\n';
 }

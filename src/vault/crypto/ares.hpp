@@ -9,61 +9,51 @@
 namespace vault::crypto {
 
 class ares {
+ private:
+  array<array<char, 64>, 64> _keys;
+
  public:
-  constexpr fixed_string crypt(const char_collection auto& key,
-                               const char_collection auto& mess) const {
-    array<char, 64> keycp = mash{}.digest(istream(key));
+  constexpr ares(char_input_stream auto key) {
+    _keys.add(mash{}.digest(key));
 
-    // array<array<char, 64>, 64> matrix;
+    for (size_t i = 1; i < 64; ++i) {
+      _keys.add(mash{}.digest(istream(_keys.at(i - 1))));
+    }
+  }
 
-    // for (size_t i = 0; i < 64; ++i) {
-    //   matrix.add(array<char, 64>());
-    //   size_t seed = keycp.at(i);
-
-    //   for (size_t j = 0; j < 64; ++j) {
-    //     matrix.at(i).add((seed = rand(seed)) % 64);
-    //   }
-    // }
-
+ public:
+  constexpr fixed_string crypt(const char_collection auto& mess) const {
     fixed_string crypted(mess);
+    auto im = istream(_keys);
 
-    for (size_t occ = 0; occ < key.len(); ++occ) {
-      for (size_t i = 0; i < crypted.len(); ++i) {
+    while (im.has()) {
+      auto&& krow = im.next();
+      auto ordi = crypted.ord();
+
+      while (ordi.has()) {
+        auto i = ordi.next();
         auto c = crypted.at(i);
-        auto ckey = keycp.at(i % keycp.len());
-//        auto cm = matrix.at(i % keycp.len()).at(occ);
-        auto cc = (c ^ ckey) + ckey /*+ cm*/;
-        crypted.modify(i, cc);
+        auto ckey = krow.at(i % 64);
+        crypted.modify(i, c ^ ckey);
       }
     }
 
     return crypted;
   }
 
-  constexpr fixed_string decrypt(const char_collection auto& key,
-                                 const char_collection auto& mess) const {
-    array<char, 64> keycp = mash{}.digest(istream(key));
-
-    // array<array<char, 64>, 64> matrix;
-
-    // for (size_t i = 0; i < 64; ++i) {
-    //   matrix.add(array<char, 64>());
-    //   size_t seed = keycp.at(i);
-
-    //   for (size_t j = 0; j < 64; ++j) {
-    //     matrix.at(i).add((seed = rand(seed)) % 64);
-    //   }
-    // }
-
+  constexpr fixed_string decrypt(const char_collection auto& mess) const {
     fixed_string crypted(mess);
+    auto rim = ristream(_keys);
 
-    for (size_t occ = 0; occ < key.len(); ++occ) {
-      for (size_t i = 0; i < crypted.len(); ++i) {
+    while (rim.has()) {
+      auto&& krow = rim.next();
+      auto ordi = crypted.ord();
+
+      while (ordi.has()) {
+        auto i = ordi.next();
         auto c = crypted.at(i);
-        auto ckey = keycp.at(i % keycp.len());
-        // auto cm = matrix.at(i % keycp.len()).at(occ);
-        auto cc = (c - /*cm -*/ ckey) ^ ckey;
-        crypted.modify(i, cc);
+        auto ckey = krow.at(i % 64);
+        crypted.modify(i, c ^ ckey);
       }
     }
 
