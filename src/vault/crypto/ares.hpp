@@ -34,7 +34,7 @@ class ares {
         auto i = ordi.next();
         auto c = crypted.at(i);
         auto ckey = krow.at(i % 64);
-        crypted.modify(i, c ^ ckey);
+        crypted.modify(c ^ ckey, i);
       }
     }
 
@@ -53,7 +53,7 @@ class ares {
         auto i = ordi.next();
         auto c = crypted.at(i);
         auto ckey = krow.at(i % 64);
-        crypted.modify(i, c ^ ckey);
+        crypted.modify(c ^ ckey, i);
       }
     }
 

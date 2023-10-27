@@ -166,33 +166,43 @@ class vector {
     _len = 0;
   }
 
-  constexpr bool add(const T& t) {
+  constexpr bool add(const type& t, position p = max_of<decltype(_len)>) {
+    p = p == max_of<decltype(_len)> ? _len : p;
+
     if (_len == _max) {
       if (increase(_max + 10) == 0) {
         return false;
       }
     }
 
-    _data[_len] = t;
-    _len += 1;
+    for (size_t i = _len; i > p; --i) {
+      _data[i] = move(_data[i - 1]);
+    }
 
+    _data[p] = t;
+    ++_len;
     return true;
   }
 
-  constexpr bool add(T&& t) {
+  constexpr bool add(type&& t, position p = max_of<decltype(_len)>) {
+    p = p == max_of<decltype(_len)> ? _len : p;
+
     if (_len == _max) {
       if (increase(_max + 10) == 0) {
         return false;
       }
     }
 
-    _data[_len] = move(t);
-    _len += 1;
+    for (size_t i = _len; i > p; --i) {
+      _data[i] = move(_data[i - 1]);
+    }
 
+    _data[p] = move(t);
+    ++_len;
     return true;
   }
 
-  constexpr bool modify(position p, const T& t) {
+  constexpr bool modify(const T& t, position p) {
     if (p >= _len) {
       return false;
     } else {
@@ -201,7 +211,7 @@ class vector {
     }
   }
 
-  constexpr bool modify(position p, T&& t) {
+  constexpr bool modify(T&& t, position p) {
     if (p >= _len) {
       return false;
     } else {
@@ -355,29 +365,39 @@ class fixed_vector {
     _len = 0;
   }
 
-  constexpr bool add(const T& t) {
-    if (_len == _max) {
-      return false;
+  constexpr bool add(const type& t, position p = max_of<decltype(_len)>) {
+    p = p == max_of<decltype(_len)> ? _len : p;
+
+    if (p <= _len and not full()) {
+      for (size_t i = _len; i > p; --i) {
+        _data[i] = move(_data[i - 1]);
+      }
+
+      _data[p] = t;
+      ++_len;
+      return true;
     }
 
-    _data[_len] = t;
-    _len += 1;
-
-    return true;
+    return false;
   }
 
-  constexpr bool add(T&& t) {
-    if (_len == _max) {
-      return false;
+  constexpr bool add(type&& t, position p = max_of<decltype(_len)>) {
+    p = p == max_of<decltype(_len)> ? _len : p;
+
+    if (p <= _len and not full()) {
+      for (size_t i = _len; i > p; --i) {
+        _data[i] = move(_data[i - 1]);
+      }
+
+      _data[p] = t;
+      ++_len;
+      return true;
     }
 
-    _data[_len] = move(t);
-    _len += 1;
-
-    return true;
+    return false;
   }
 
-  constexpr bool modify(position p, const T& t) {
+  constexpr bool modify(const T& t, position p) {
     if (p >= _len) {
       return false;
     } else {
@@ -386,7 +406,7 @@ class fixed_vector {
     }
   }
 
-  constexpr bool modify(position p, T&& t) {
+  constexpr bool modify(T&& t, position p) {
     if (p >= _len) {
       return false;
     } else {

@@ -32,7 +32,7 @@ class mash {
       const size_t b = 12345 + c;
     
       for (size_t i = 0; i < res.len(); ++i) {
-        res.modify(i, k.at((seed = (prand(a, b, seed) + res.at(i))) % k.len()));
+        res.modify(k.at((seed = (prand(a, b, seed) + res.at(i))) % k.len()), i);
       }
     }
 

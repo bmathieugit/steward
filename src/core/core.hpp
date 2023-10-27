@@ -276,32 +276,12 @@ concept collection =
       { cc.empty() } -> same_as<bool>;
       { cc.len() } -> same_as<size_t>;
       { cc.ord() } -> ordinal;
-      { c.add(t) } -> same_as<bool>;
-      { c.modify(p, t) } -> same_as<bool>;
+      { c.add(t, p) } -> same_as<bool>;
+      { c.modify(t, p) } -> same_as<bool>;
       { c.remove(p) } -> same_as<bool>;
       { c.clear() } -> same_as<void>;
     };
 
-template <typename T>
-concept associated_collection_context = requires {
-  typename T::key;
-  typename T::value;
-};
-
-template <typename C>
-concept associated_collection =
-    associated_collection_context<C> and
-    requires(C c, const C cc, typename C::value v, typename C::key k) {
-      { cc.has(k) } -> same_as<bool>;
-      { cc.at(k) } -> same_as_declined<typename C::value>;
-      { cc.empty() } -> same_as<bool>;
-      { cc.len() } -> same_as<size_t>;
-      //{ cc.ord() } -> ordinal;
-      { c.add(k, v) } -> same_as<bool>;
-      //{ c.modify(k, v) } -> same_as<bool>;
-      { c.remove(k) } -> same_as<bool>;
-      { c.clear() } -> same_as<void>;
-    };
 template <typename C>
 concept char_collection = collection<C> and character<typename C::type>;
 

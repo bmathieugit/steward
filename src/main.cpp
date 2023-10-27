@@ -27,8 +27,8 @@ int main() {
   sout << '[' << min_of<u32> << ',' << max_of<u32> << ']' << '\n';
 
   map<int, int> m(10);
-  m.add(1, 2);
-  m.add(3, 3);
+  sout << m.add(1, 2) << '\n';
+  sout << m.add(3, 3) << '\n';
   sout << m.len() << '\n';
   sout << m.has(3) << '\n';
   m.modify(5, 2);

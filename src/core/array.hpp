@@ -44,23 +44,39 @@ class array {
     _len = 0;
   }
 
-  constexpr bool add(const T& t) {
-    if (not full()) {
-      _data[_len++] = t;
+  constexpr bool add(const type& t, position p = max_of<decltype(_len)>) {
+    p = p == max_of<decltype(_len)> ? _len : p;
+
+    if (p <= _len and not full()) {
+      for (size_t i = _len; i > p; --i) {
+        _data[i] = move(_data[i - 1]);
+      }
+
+      _data[p] = t;
+      ++_len;
       return true;
     }
+
     return false;
   }
 
-  constexpr bool add(T&& t) {
-    if (not full()) {
-      _data[_len++] = move(t);
+  constexpr bool add(type&& t, position p = max_of<decltype(_len)>) {
+    p = p == max_of<decltype(_len)> ? _len : p;
+
+    if (p <= _len and not full()) {
+      for (size_t i = _len; i > p; --i) {
+        _data[i] = move(_data[i - 1]);
+      }
+
+      _data[p] = move(t);
+      ++_len;
       return true;
     }
+
     return false;
   }
 
-  constexpr bool modify(position p, const type& t) {
+  constexpr bool modify(const type& t, position p) {
     if (p >= _len) {
       return false;
     } else {
@@ -69,7 +85,7 @@ class array {
     }
   }
 
-  constexpr bool modify(position p, type&& t) {
+  constexpr bool modify(type&& t, position p) {
     if (p >= _len) {
       return false;
     } else {

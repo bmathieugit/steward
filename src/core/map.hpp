@@ -18,6 +18,11 @@ struct map_item {
     auto fnv = fnv_ostream<sizeof(size_t) * 8>{};
     hash = (fnv << key).hash();
   }
+
+  map_item(const K& k, V&& v) : key(k), value(move(v)) {
+    auto fnv = fnv_ostream<sizeof(size_t) * 8>{};
+    hash = (fnv << key).hash();
+  }
 };
 
 template <typename K, typename V>
@@ -38,26 +43,34 @@ class map {
   constexpr map& operator=(const map&) = default;
   constexpr map& operator=(map&&) = default;
 
- public:
-  constexpr bool has(const position& p) const {
+ private:
+  constexpr auto to_data_position(const position& p) const {
     auto fnv = fnv_ostream<sizeof(size_t) * 8>{};
     auto hash = (fnv << p).hash();
-    return find(_data,
-                [hash, &p](const map_item<K, V>& item) {
-                  return item.hash == hash and item.key == p;
-                })
-        .has();
+
+    size_t pos = max_of<size_t>;
+
+    for (size_t i = 0; i < _data.len(); ++i) {
+      if (_data.at(i).hash == hash) {
+        if (_data.at(i).key == p) {
+          pos = i;
+        }
+      }
+    }
+
+    return pos;
+  }
+
+ public:
+  constexpr bool has(const position& p) const {
+    return to_data_position(p) != max_of<size_t>;
   }
 
   constexpr bool empty() const { return len() == 0; }
   constexpr size_t len() const { return _data.len(); }
 
-  constexpr const type& at(const position& p) const {
-    auto fnv = fnv_ostream<sizeof(size_t) * 8>{};
-    auto hash = (fnv << p).hash();
-    return _data.at(find(_data, [hash, &p](const map_item<K, V>& item) {
-                      return hash == item.hash and p == item.key;
-                    }).get());
+  constexpr const type& at(const position& k) const {
+    return _data.at(to_data_position(k)).value;
   }
 
   constexpr auto ord() const {}
@@ -65,12 +78,10 @@ class map {
  public:
   constexpr void clear() { _data.clear(); }
 
-  constexpr bool add(const V& v, const K& k) {
+  constexpr bool add(const type& v, const position& k) {
     map_item<K, V> mi(k, v);
 
-    if (not find(_data, [&mi](const map_item<K, V>& item) {
-              return mi.hash == item.hash and mi.key == item.key;
-            }).has()) {
+    if (to_data_position(k) == max_of<size_t>) {
       _data.add(move(mi));
       return true;
     }
@@ -78,28 +89,33 @@ class map {
     return false;
   }
 
-  // constexpr bool add(const V& v, const K& k) {
-  //   map_item<K, V> mi(move(k), move(v));
+  constexpr bool add(type&& v, const position& k) {
+    map_item<K, V> mi(k, move(v));
 
-  //   if (not find(_data, [&mi](const map_item<K, V>& item) {
-  //             return mi.hash == item.hash and mi.key == item.key;
-  //           }).has()) {
-  //     _data.add(move(mi));
-  //     return true;
-  //   }
+    if (to_data_position(k) == max_of<size_t>) {
+      _data.add(move(mi));
+      return true;
+    }
 
-  //   return false;
-  // }
+    return false;
+  }
 
-  constexpr bool modify(const V& v, const K& k) {
-    map_item<K, V> mi(k, v);
+  constexpr bool modify(const type& v, const position& k) {
+    size_t p = to_data_position(k);
 
-    auto found = find(_data, [&mi](const map_item<K, V>& item) {
-      return mi.hash == item.hash and mi.key == item.key;
-    });
+    if (p != max_of<decltype(_data.len())>) {
+      _data.modify(map_item<K, V>(k, v), p);
+      return true;
+    }
 
-    if (found.has()) {
-      _data.modify(found.get(), move(mi));
+    return false;
+  }
+
+  constexpr bool modify(type&& v, const position& k) {
+    size_t p = to_data_position(k);
+
+    if (p != max_of<decltype(_data.len())>) {
+      _data.modify(map_item<K, V>(k, move(v)), p);
       return true;
     }
 
