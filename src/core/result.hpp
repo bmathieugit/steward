@@ -88,7 +88,7 @@ class variant {
 
   constexpr variant(const variant& v) { __copy__<T0, T...>(v); }
 
-  constexpr variant(variant&& v) { __move__<T0, T...>(v); }
+  constexpr variant(variant&& v) { __move__<T0, T...>(move(v)); }
 
   constexpr variant& operator=(const variant& v) {
     if (this != &v) {

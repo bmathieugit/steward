@@ -10,21 +10,21 @@ namespace vault::crypto {
 
 class ares {
  private:
-  array<array<char, 64>, 64> _keys;
+  static_vector<static_vector<char, 64>, 64> _keys;
 
  public:
   constexpr ares(char_input_stream auto key) {
     _keys.add(mash{}.digest(key));
 
     for (size_t i = 1; i < 64; ++i) {
-      _keys.add(mash{}.digest(istream(_keys.at(i - 1))));
+      _keys.add(mash{}.digest(iter(_keys.at(i - 1))));
     }
   }
 
  public:
   constexpr fixed_string crypt(const char_collection auto& mess) const {
     fixed_string crypted(mess);
-    auto im = istream(_keys);
+    auto im = iter(_keys);
 
     while (im.has()) {
       auto&& krow = im.next();

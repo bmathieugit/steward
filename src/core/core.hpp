@@ -258,15 +258,6 @@ concept collection_context = requires {
 template <typename T1, typename T2>
 concept same_type = same_as<typename T1::type, typename T2::type>;
 
-template <typename T1, typename T2>
-concept same_position = same_as<typename T1::position, typename T2::position>;
-
-template <typename O>
-concept ordinal = requires { typename O::position; } and requires(O o) {
-  { o.has() } -> same_as<bool>;
-  { o.next() } -> same_as_declined<typename O::position>;
-};
-
 template <typename C>
 concept collection =
     collection_context<C> and
@@ -275,7 +266,6 @@ concept collection =
       { cc.at(p) } -> same_as_declined<typename C::type>;
       { cc.empty() } -> same_as<bool>;
       { cc.len() } -> same_as<size_t>;
-      { cc.ord() } -> ordinal;
       { c.add(t, p) } -> same_as<bool>;
       { c.modify(t, p) } -> same_as<bool>;
       { c.remove(p) } -> same_as<bool>;
@@ -286,91 +276,66 @@ template <typename C>
 concept char_collection = collection<C> and character<typename C::type>;
 
 template <typename I>
-concept input_stream = requires { typename I::type; } and requires(I i) {
-  { i.next() } -> same_as_declined<typename I::type>;
+concept iterator = requires(I i) {
+  typename I::type;
   { i.has() } -> same_as<bool>;
+  { i.next() } -> same_as_declined<typename I::type>;
 };
 
 template <typename O>
-concept output_stream =
-    requires { typename O::type; } and requires(O o, typename O::type c) {
-      { o.add(c) } -> same_as<bool>;
-    };
-
-template <typename S>
-concept char_input_stream = input_stream<S> and character<typename S::type>;
-
-template <typename S>
-concept char_output_stream = output_stream<S> and character<typename S::type>;
-
-template <integral I>
-class index_based_ordinal {
- public:
-  using position = I;
-
- private:
-  I _index;
-  I _max;
-
- public:
-  constexpr index_based_ordinal(I index, I max) : _index(index), _max(max) {}
-
- public:
-  constexpr bool has() { return _index != _max; }
-  constexpr I next() { return _index++; }
+concept oterator = requires(O o, typename O::type c) {
+  typename O::type;
+  { o.add(c) } -> same_as<bool>;
 };
 
 template <typename C>
-class index_forward_input_stream {
- public:
-  using type = typename C::type;
-  using position = typename C::position;
-
- private:
-  C& _col;
-  position _pos;
-
- public:
-  constexpr index_forward_input_stream(C& c) : _col(c), _pos(0) {}
-
- public:
-  constexpr bool has() const { return _col.has(_pos); }
-  constexpr auto next() -> decltype(auto) { return _col.at(_pos++); }
-};
+concept char_iterator = character<typename C::type> and iterator<C>;
 
 template <typename C>
-class index_forward_output_stream {
+concept char_oterator = character<typename C::type> and oterator<C>;
+
+template <collection C>
+class index_based_iterator {
  public:
   using type = typename C::type;
-  using position = typename C::position;
+
+ private:
+  const C& _col;
+  size_t _index;
+
+ public:
+  constexpr index_based_iterator(const C& c) : _col(c), _index(0) {}
+  constexpr bool has() { return _index != _col.len(); }
+  constexpr const type& next() { return _col.at(_index++); }
+};
+
+template <collection C>
+class index_based_riterator {
+ public:
+  using type = typename C::type;
+
+ private:
+  const C& _col;
+  size_t _index;
+
+ public:
+  constexpr index_based_riterator(const C& c) : _col(c), _index(_col.len()) {}
+  constexpr bool has() { return _index != 0; }
+  constexpr const type& next() { return _col.at(--_index); }
+};
+
+template <collection C>
+class index_based_oterator {
+ public:
+  using type = typename C::type;
 
  private:
   C& _col;
 
  public:
-  constexpr index_forward_output_stream(C& c) : _col(c) {}
-
- public:
+  constexpr index_based_oterator(C& c) : _col(c) {}
   constexpr bool add(const type& t) { return _col.add(t); }
   constexpr bool add(type&& t) { return _col.add(move(t)); }
-};
-
-template <typename C>
-class index_backward_input_stream {
- public:
-  using type = typename C::type;
-  using position = typename C::position;
-
- private:
-  C& _col;
-  position _pos;
-
- public:
-  constexpr index_backward_input_stream(C& c) : _col(c), _pos(_col.len() - 1) {}
-
- public:
-  constexpr bool has() const { return _col.has(_pos); }
-  constexpr auto next() -> decltype(auto) { return _col.at(_pos--); }
 };
 
 constexpr size_t prand(size_t a, size_t b, size_t seed) {

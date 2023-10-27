@@ -6,7 +6,7 @@ void test_default_constructor() {
   vector<int> v;
   N_TEST_ASSERT_TRUE(v.empty());
   N_TEST_ASSERT_EQUALS(v.len(), 0);
-  N_TEST_ASSERT_EQUALS(v.max(), 0);
+  N_TEST_ASSERT_EQUALS(v.max(), 10);
 }
 
 // Test du constructeur avec taille initiale

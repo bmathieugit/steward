@@ -1,8 +1,6 @@
 #ifndef __n_tests_hpp__
 #define __n_tests_hpp__
 
-#include <core/array.hpp>
-#include <core/char-ostream.hpp>
 #include <core/io.hpp>
 #include <core/string.hpp>
 
@@ -50,14 +48,16 @@ class test {
     _func();
     return test_result::success;
   } catch (const char* e) {
-    sout << "\033[1;31merror : " << e << "\033[0m\n";
+    insert(sout, "\033[1;31merror : ");
+    insert(sout, e);
+    insert(sout, "\033[0m\n");
     return test_result::failure;
   }
 };
 
 class test_suite {
  private:
-  array<test, 100> _tests;
+  static_vector<test, 100> _tests;
   const char* _name = nullptr;
 
  public:
@@ -72,18 +72,23 @@ class test_suite {
     int succeed = 0;
     int failed = 0;
 
-    sout << "\nSUITE [" << _name << "] ";
+    insert(sout, "\nSUITE [");
+    insert(sout, _name);
+    insert(sout, "] ");
 
-    auto tests_os = istream(_tests);
+    auto tests_os = iter(_tests);
 
     while (tests_os.has()) {
       auto&& t = tests_os.next();
-      sout << "\nTEST[" << t.name() << "]\n";
+      insert(sout, "\nTEST[");
+      insert(sout, t.name());
+      insert(sout, "]\n");
+
       auto res = t.run();
 
-      sout << (res == test_result::success
-                   ? " - Result : \033[1;32mPASSED\033[0m\n"
-                   : " - Result : \033[1;31mFAILED\033[0m\n");
+      insert(sout, (res == test_result::success
+                        ? " - Result : \033[1;32mPASSED\033[0m\n"
+                        : " - Result : \033[1;31mFAILED\033[0m\n"));
 
       if (res == test_result::success) {
         ++succeed;
@@ -92,10 +97,12 @@ class test_suite {
       }
     }
 
-    sout << "\nSUITE RECAP "
-         << " - Passed : \033[1;32m" << succeed << "\033[0m\n"
-         << " - Failed : \033[1;31m" << failed << "\033[0m\n"
-         << '\n';
+    insert(sout, "\nSUITE RECAP - Passed : \033[1;32m");
+    insert(sout, " ");
+    insert(sout, succeed);
+    insert(sout, "\033[0m\n - Failed : \033[1;31m");
+    insert(sout, failed);
+    insert(sout, "\033[0m\n\n");
   }
 };
 

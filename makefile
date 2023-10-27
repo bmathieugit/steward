@@ -31,19 +31,15 @@ test-vector: test/test-vector.cpp building
 	${CXX} -o  building/test-vector.app test/test-vector.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-vector.app
 
-test-ostream: test/test-ostream.cpp building
-	${CXX} -o  building/test-ostream.app test/test-ostream.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/test-ostream.app
-
-test-istream: test/test-istream.cpp building
-	${CXX} -o  building/test-istream.app test/test-istream.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/test-istream.app
+test-variant: test/test-variant.cpp building
+	${CXX} -o  building/test-variant.app test/test-variant.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test-variant.app
 
 test-io: test/test-io.cpp building
 	${CXX} -o  building/test-io.app test/test-io.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-io.app
 
-test: test-vector test-string test-ostream test-istream test-io  
+test: test-variant test-vector test-string test-io  
 
 stat:
 	wc -l building/*.s

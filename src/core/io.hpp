@@ -67,7 +67,7 @@ class raw_file {
     open(fname);
   }
 
-  raw_file(char_input_stream auto fname)
+  raw_file(char_iterator auto fname)
     requires not_console_mode<m>
   {
     open(fname);
@@ -114,7 +114,7 @@ class raw_file {
     return false;
   }
 
-  bool open(char_input_stream auto fname)
+  bool open(char_iterator auto fname)
     requires not_console_mode<m>
   {
     string s(100);
@@ -133,7 +133,7 @@ class raw_file {
     return _fd != null_file and fread(&t, sizeof(T), 1, _fd) == 1;
   }
 
-  bool readall(output_stream auto os)
+  bool readall(oterator auto os)
     requires read_mode<m>
   {
     using T = typename decltype(os)::type;
@@ -161,7 +161,7 @@ class raw_file {
     return _fd != null_file and fwrite(&t, sizeof(T), 1, _fd) == 1;
   }
 
-  bool writeall(input_stream auto is)
+  bool writeall(iterator auto is)
     requires write_mode<m>
   {
     using T = typename decltype(is)::type;
@@ -202,7 +202,7 @@ class file : public raw_file<m> {
     requires not_console_mode<m>
       : raw_file<m>(name) {}
 
-  file(char_input_stream auto name)
+  file(char_iterator auto name)
     requires not_console_mode<m>
       : raw_file<m>(name) {}
 
@@ -211,7 +211,7 @@ class file : public raw_file<m> {
 
 template <typename T, mode m>
   requires read_mode<m> and not_console_mode<m>
-class file_input_stream {
+class file_iterator {
  public:
   using type = T;
 
@@ -221,11 +221,10 @@ class file_input_stream {
   size_t _len;
 
  public:
-  constexpr file_input_stream(file<T, m>& f) : _f(f), _pos(0), _len(f.len()) {}
+  constexpr file_iterator(file<T, m>& f) : _f(f), _pos(0), _len(f.len()) {}
 
  public:
-  constexpr bool has() const { return _f.opened() and _len != _pos; }
-
+  constexpr bool has() const { return _f.opened() and _pos != _len; }
   constexpr type next() {
     _pos += 1;
     type tmp;
@@ -235,13 +234,13 @@ class file_input_stream {
 };
 
 template <typename T, mode m>
-constexpr auto istream(file<T, m>& f) {
-  return file_input_stream(f);
+constexpr auto iter(file<T, m>& f) {
+  return file_iterator(f);
 }
 
 template <character C, mode m>
   requires(m == mode::cin)
-class cin_file_input_stream {
+class cin_iterator {
  public:
   using type = C;
 
@@ -250,7 +249,7 @@ class cin_file_input_stream {
   mutable C _c;
 
  public:
-  constexpr cin_file_input_stream(file<C, m>& f) : _f(f) {}
+  constexpr cin_iterator(file<C, m>& f) : _f(f) {}
 
  public:
   constexpr bool has() const {
@@ -261,13 +260,13 @@ class cin_file_input_stream {
 };
 
 template <typename T>
-constexpr auto istream(file<T, mode::cin>& f) {
-  return cin_file_input_stream(f);
+constexpr auto iter(file<T, mode::cin>& f) {
+  return cin_iterator(f);
 }
 
 template <typename T, mode m>
   requires write_mode<m>
-class file_output_stream {
+class file_oterator {
  public:
   using type = T;
 
@@ -275,30 +274,30 @@ class file_output_stream {
   file<T, m>& _f;
 
  public:
-  file_output_stream(file<T, m>& f) : _f(f) {}
+  file_oterator(file<T, m>& f) : _f(f) {}
 
  public:
   bool add(const type& t) { return _f.write(t); }
 };
 
 template <typename T, mode m>
-constexpr auto ostream(file<T, m>& f) {
-  return file_output_stream(f);
+constexpr auto oter(file<T, m>& f) {
+  return file_oterator(f);
 }
 
 template <character C>
-static auto ferr = file<C, mode::cerr>(stderr);
-static auto serr = ostream(ferr<char>);
-static auto wserr = ostream(ferr<wchar_t>);
+static auto __ferr = file<C, mode::cerr>(stderr);
+static auto serr = oter(__ferr<char>);
+static auto wserr = oter(__ferr<wchar_t>);
 
 template <character C>
-static auto fout = file<C, mode::cout>(stdout);
-static auto sout = ostream(fout<char>);
-static auto wsout = ostream(fout<wchar_t>);
+static auto __fout = file<C, mode::cout>(stdout);
+static auto sout = oter(__fout<char>);
+static auto wsout = oter(__fout<wchar_t>);
 
 template <character C>
-static auto fin = file<C, mode::cin>(stdin);
-static auto sin = istream(fin<char>);
-static auto wsin = istream(fin<wchar_t>);
+static auto __fin = file<C, mode::cin>(stdin);
+static auto sin = iter(__fin<char>);
+static auto wsin = iter(__fin<wchar_t>);
 
 #endif

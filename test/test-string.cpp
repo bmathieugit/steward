@@ -1,46 +1,47 @@
 #include <core/string.hpp>
 #include <tests.hpp>
+
 template <size_t N>
-constexpr bool operator==(const stringlike auto& s1, const char* s2) {
-  auto is1 = istream(s1);
-  auto is2 = istream(s2);
+constexpr bool operator==(const char_collection auto& s1, const char* s2) {
+  auto is1 = iter(s1);
+  auto is2 = iter(s2);
   return equals(is1, is2);
 }
 
 constexpr void test_string_create() {
-  string s = istream("Hello");
+  string s = iter("Hello");
   N_TEST_ASSERT_EQUALS(s.len(), 5);
 }
 
 constexpr void test_string_copy_constructor() {
-  string s = istream("Hello");
+  string s = iter("Hello");
   string s2 = s;
   ::printf("%lu", s2.len());
   N_TEST_ASSERT_EQUALS(s2.len(), 5);
 }
 
 constexpr void test_string_move_constructor() {
-  string s = istream("Hello");
+  string s = iter("Hello");
   string s3 = move(s);
   N_TEST_ASSERT_EQUALS(s3.len(), 5);
 }
 
 constexpr void test_string_copy_assignment() {
-  string s = istream("Hello");
+  string s = iter("Hello");
   string s2;
   s2 = s;
   N_TEST_ASSERT_EQUALS(s2.len(), 5);
 }
 
 constexpr void test_string_move_assignment() {
-  string s = istream("Hello");
+  string s = iter("Hello");
   string s3;
   s3 = move(s);
   N_TEST_ASSERT_EQUALS(s3.len(), 5);
 }
 
 constexpr void test_string_len() {
-  string s = istream("Hello");
+  string s = iter("Hello");
   N_TEST_ASSERT_EQUALS(s.len(), 5);
 }
 
@@ -50,7 +51,7 @@ constexpr void test_string_empty() {
 }
 
 constexpr void test_string_full() {
-  string s = istream("Hello");
+  string s = iter("Hello");
   N_TEST_ASSERT_FALSE(s.full());
 }
 
@@ -62,16 +63,119 @@ constexpr void test_string_add() {
 }
 
 constexpr void test_string_remove() {
-  string s = istream("Hi");
+  string s = iter("Hi");
   s.remove(typename string::position{s.len() - 1});
   N_TEST_ASSERT_EQUALS(s.len(), 1);
   N_TEST_ASSERT_FALSE(s.full());
 }
 
 constexpr void test_string_clear() {
-  string s = istream("Clear me");
+  string s = iter("Clear me");
   s.clear();
   N_TEST_ASSERT_TRUE(s.empty());
+}
+
+void test_input_stream_unsigned_integer() {
+  auto is = iter("12");
+  maybe<size_t> i;
+  extract(is, i);
+  N_TEST_ASSERT_TRUE(i.has());
+  N_TEST_ASSERT_EQUALS(i.get(), 12);
+}
+
+void test_input_stream_signed_integer() {
+  auto is = iter("12");
+  maybe<int> i;
+  extract(is, i);
+  N_TEST_ASSERT_TRUE(i.has());
+  N_TEST_ASSERT_EQUALS(i.get(), 12);
+}
+
+void test_input_stream_signed_integer2() {
+  auto is = iter("-12");
+  maybe<int> i;
+  extract(is, i);
+  N_TEST_ASSERT_TRUE(i.has());
+  N_TEST_ASSERT_EQUALS(i.get(), -12);
+}
+
+void test_input_stream_bool_true() {
+  auto is = iter("0");
+  maybe<bool> b;
+  extract(is, b);
+  N_TEST_ASSERT_TRUE(b.has());
+  N_TEST_ASSERT_EQUALS(b.get(), true);
+}
+
+void test_input_stream_bool_false() {
+  auto is = iter("1");
+  maybe<bool> b;
+  extract(is, b);
+  N_TEST_ASSERT_TRUE(b.has());
+  N_TEST_ASSERT_EQUALS(b.get(), false);
+}
+
+using char_static_vector_stream = char_static_vector<100>;
+
+template <size_t N>
+bool operator==(const char_static_vector<N>& s1, const char* s2) {
+  auto is1 = iter(s1);
+  auto is2 = iter(s2);
+  return equals(is1, is2);
+}
+
+void test_ostream_string() {
+  char_static_vector_stream result;
+
+  insert(result, "Hello, ");
+  insert(result, "world");
+  insert(result, "!");
+  N_TEST_ASSERT_EQUALS(result, "Hello, world!");
+  result.clear();
+
+  insert(result, "The answer is ");
+  insert(result, 42);
+  N_TEST_ASSERT_EQUALS(result, "The answer is 42");
+  result.clear();
+  insert(result, "John");
+  insert(result, " is ");
+  insert(result, 30);
+  insert(result, " years old");
+  N_TEST_ASSERT_EQUALS(result, "John is 30 years old");
+}
+
+void test_ostream_signed_integral() {
+  char_static_vector_stream result;
+
+  insert(result, -42);
+  N_TEST_ASSERT_EQUALS(result, "-42");
+  result.clear();
+  insert(result, 0);
+  N_TEST_ASSERT_EQUALS(result, "0");
+  result.clear();
+  insert(result, 123456789);
+  N_TEST_ASSERT_EQUALS(result, "123456789");
+}
+
+void test_ostream_unsigned_integral() {
+  char_static_vector_stream result;
+  insert(result, 42u);
+  N_TEST_ASSERT_EQUALS(result, "42");
+  result.clear();
+  insert(result, 0u);
+  N_TEST_ASSERT_EQUALS(result, "0");
+  result.clear();
+  insert(result, 123456789u);
+  N_TEST_ASSERT_EQUALS(result, "123456789");
+}
+
+void test_ostream_bool() {
+  char_static_vector_stream result;
+  insert(result, true);
+  N_TEST_ASSERT_EQUALS(result, "true");
+  result.clear();
+  insert(result, false);
+  N_TEST_ASSERT_EQUALS(result, "false");
 }
 
 int main() {
@@ -87,6 +191,17 @@ int main() {
   N_TEST_REGISTER(test_string_add)
   N_TEST_REGISTER(test_string_remove)
   N_TEST_REGISTER(test_string_clear)
+  
+  N_TEST_REGISTER(test_input_stream_unsigned_integer)
+  N_TEST_REGISTER(test_input_stream_signed_integer)
+  N_TEST_REGISTER(test_input_stream_signed_integer2)
+  N_TEST_REGISTER(test_input_stream_bool_true)
+  N_TEST_REGISTER(test_input_stream_bool_false)
+
+  N_TEST_REGISTER(test_ostream_string)
+  N_TEST_REGISTER(test_ostream_signed_integral)
+  N_TEST_REGISTER(test_ostream_unsigned_integral)
+  N_TEST_REGISTER(test_ostream_bool)
   N_TEST_RUN_SUITE
   return 0;
 }
