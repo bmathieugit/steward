@@ -58,6 +58,9 @@ class index_backward_input_stream {
 };
 
 template <typename T>
+using vector_input_stream = index_forward_input_stream<T>;
+
+template <typename T>
 struct vector_allocator {
   constexpr T* allocate(size_t n) const {
     return n == 0 ? nullptr : static_cast<T*>(::operator new(n * sizeof(T)));
