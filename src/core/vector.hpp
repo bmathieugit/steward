@@ -4,6 +4,59 @@
 #include <core/collection.hpp>
 #include <core/utils.hpp>
 
+template <typename C>
+class index_forward_input_stream {
+ public:
+  using type = typename C::type;
+  using position = typename C::position;
+
+ private:
+  C& _col;
+  position _pos;
+
+ public:
+  constexpr index_forward_input_stream(C& c) : _col(c), _pos(0) {}
+
+ public:
+  constexpr bool has() const { return _col.has(_pos); }
+  constexpr auto next() -> decltype(auto) { return _col.at(_pos++); }
+};
+
+template <typename C>
+class index_forward_output_stream {
+ public:
+  using type = typename C::type;
+  using position = typename C::position;
+
+ private:
+  C& _col;
+
+ public:
+  constexpr index_forward_output_stream(C& c) : _col(c) {}
+
+ public:
+  constexpr bool add(const type& t) { return _col.add(t); }
+  constexpr bool add(type&& t) { return _col.add(move(t)); }
+};
+
+template <typename C>
+class index_backward_input_stream {
+ public:
+  using type = typename C::type;
+  using position = typename C::position;
+
+ private:
+  C& _col;
+  position _pos;
+
+ public:
+  constexpr index_backward_input_stream(C& c) : _col(c), _pos(_col.len() - 1) {}
+
+ public:
+  constexpr bool has() const { return _col.has(_pos); }
+  constexpr auto next() -> decltype(auto) { return _col.at(_pos--); }
+};
+
 template <typename T>
 struct vector_allocator {
   constexpr T* allocate(size_t n) const {
