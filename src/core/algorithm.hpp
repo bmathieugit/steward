@@ -145,6 +145,11 @@ constexpr bool equals(const C1& c1, const C2& c2) {
 }
 
 template <collection C1, collection C2>
+constexpr bool operator==(const C1& c1, const C2& c2) {
+  return equals(c1, c2);
+}
+
+template <collection C1, collection C2>
 constexpr bool starts_with(const C1& c1, const C2& c2) {
   auto ord1 = c1.ord();
   auto ord2 = c2.ord();

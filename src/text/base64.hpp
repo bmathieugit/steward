@@ -4,7 +4,7 @@
 #include <core/core.hpp>
 #include <core/string.hpp>
 
-namespace vault::crypto {
+namespace text {
 auto base64(const char_collection auto& s) {
   constexpr char k[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -46,6 +46,6 @@ auto base64(const char_collection auto& s) {
 
   return encoded;
 }
-}  // namespace vault::crypto
+}  // namespace text
 
 #endif
