@@ -1,7 +1,6 @@
 #ifndef __n_tuple_hpp__
 #define __n_tuple_hpp__
 
-
 template <typename... T>
 class tuple;
 
@@ -49,10 +48,9 @@ struct tuple_item {
 // };
 
 template <typename T0, typename... TN>
-class tuple<T0, TN...>: public tuple<TN...> {
+class tuple<T0, TN...> : public tuple<TN...> {
  private:
   tuple_item<T0> _item;
-  
 
  public:
   constexpr ~tuple() = default;
@@ -68,7 +66,8 @@ class tuple<T0, TN...>: public tuple<TN...> {
         : _t{relay<U0>(u0)}, tuple<TN...>(relay<Un>(un)...) {}
   */
 
-  constexpr tuple(const T0& t0, const TN&... tn) : tuple<TN...>(tn...), _item{t0} {}
+  constexpr tuple(const T0& t0, const TN&... tn)
+      : tuple<TN...>(tn...), _item{t0} {}
 
  public:
   template <size_t I>
@@ -111,27 +110,27 @@ class tuple<T0, TN...>: public tuple<TN...> {
 template <typename... T>
 tuple(T...) -> tuple<T...>;
 
-
 template <size_t I, typename T0, typename... TN>
-constexpr auto get(tuple<T0, TN...> &t) -> decltype(auto) {
+constexpr auto get(tuple<T0, TN...>& t) -> decltype(auto) {
   return t.template get<I>();
 }
 
 template <size_t I, typename T0, typename... TN>
-constexpr auto get(tuple<T0, TN...> &&t) -> decltype(auto) {
+constexpr auto get(tuple<T0, TN...>&& t) -> decltype(auto) {
   return t.template get<I>();
 }
 
 template <size_t I, typename T0, typename... TN>
-constexpr auto get(const tuple<T0, TN...> &t) -> decltype(auto) {
+constexpr auto get(const tuple<T0, TN...>& t) -> decltype(auto) {
   return t.template get<I>();
 }
 
 template <size_t I, typename T0, typename... TN>
-constexpr auto get(const tuple<T0, TN...> &&t) -> decltype(auto) {
+constexpr auto get(const tuple<T0, TN...>&& t) -> decltype(auto) {
   return t.template get<I>();
 }
 
-
+template <typename T0, typename T1>
+using pair = tuple<T0, T1>;
 
 #endif

@@ -204,11 +204,19 @@ using u64 = uof<64>;
 using u128 = uof<128>;
 
 using byte_t = u8;
-using size_t = if_<(not same_as<void, u64>),
-                   u64,
-                   if_<(not same_as<void, u32>),
-                       u32,
-                       if_<(not same_as<void, u16>), u16, void>>>;
+
+using size_t = if_<(not same_as<void, u128>),
+                   u128,
+                   if_<(not same_as<void, u64>),
+                       u64,
+                       if_<(not same_as<void, u32>),
+                           u32,
+                           if_<(not same_as<void, u16>), u16, void>>>>;
+
+template <typename T>
+concept byteable = requires(T t) {
+  { bytes(t) } -> same_as<byte_t[sizeof(size_t) + 1]>;
+};
 
 template <typename T>
 constexpr rm_ref<T>&& move(T&& t) {
@@ -274,6 +282,26 @@ concept collection =
       { c.clear() } -> same_as<void>;
     };
 
+template <typename T>
+concept associated_collection_context = requires {
+  typename T::key;
+  typename T::value;
+};
+
+template <typename C>
+concept associated_collection =
+    associated_collection_context<C> and
+    requires(C c, const C cc, typename C::value v, typename C::key k) {
+      { cc.has(k) } -> same_as<bool>;
+      { cc.at(k) } -> same_as_declined<typename C::value>;
+      { cc.empty() } -> same_as<bool>;
+      { cc.len() } -> same_as<size_t>;
+      //{ cc.ord() } -> ordinal;
+      { c.add(k, v) } -> same_as<bool>;
+      //{ c.modify(k, v) } -> same_as<bool>;
+      { c.remove(k) } -> same_as<bool>;
+      { c.clear() } -> same_as<void>;
+    };
 template <typename C>
 concept char_collection = collection<C> and character<typename C::type>;
 

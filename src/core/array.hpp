@@ -60,7 +60,7 @@ class array {
     return false;
   }
 
-  constexpr bool modify(position p, const T& t) {
+  constexpr bool modify(position p, const type& t) {
     if (p >= _len) {
       return false;
     } else {
@@ -69,7 +69,7 @@ class array {
     }
   }
 
-  constexpr bool modify(position p, T&& t) {
+  constexpr bool modify(position p, type&& t) {
     if (p >= _len) {
       return false;
     } else {

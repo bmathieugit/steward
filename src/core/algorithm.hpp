@@ -2,6 +2,7 @@
 #define __n_algorithm_hpp__
 
 #include <core/core.hpp>
+#include <core/result.hpp>
 /////////////////////////////
 /// Collection algorithms ///
 /////////////////////////////
@@ -37,6 +38,39 @@ constexpr size_t count(const C& c, predicate<typename C::type> auto&& pred) {
   }
 
   return cnt;
+}
+
+template <collection C>
+constexpr maybe<typename C::position> find(const C& c,
+                                           const typename C::type& t) {
+  auto ord = c.ord();
+
+  while (ord.has()) {
+    auto p = ord.next();
+
+    if (c.at(p) == t) {
+      return p;
+    };
+  }
+
+  return {};
+}
+
+template <collection C>
+constexpr maybe<typename C::position> find(
+    const C& c,
+    predicate<typename C::type> auto&& pred) {
+  auto ord = c.ord();
+
+  while (ord.has()) {
+    auto p = ord.next();
+
+    if (pred(c.at(p))) {
+      return p;
+    };
+  }
+
+  return {};
 }
 
 template <collection C>

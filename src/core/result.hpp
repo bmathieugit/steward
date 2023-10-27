@@ -1,7 +1,6 @@
 #ifndef __n_result_hpp__
 #define __n_result_hpp__
 
-
 #include <core/core.hpp>
 
 template <typename... TN>
