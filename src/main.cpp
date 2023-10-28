@@ -1,6 +1,7 @@
-#include <core/io.hpp>
+#include <core/file.hpp>
 #include <core/string.hpp>
+#include <core/chars.hpp>
 
 int main() {
-  insert(sout, "coucou");
+  to_chars(sout, "coucou");
 }

@@ -1,8 +1,9 @@
 #ifndef __n_tests_hpp__
 #define __n_tests_hpp__
 
-#include <core/io.hpp>
+#include <core/file.hpp>
 #include <core/string.hpp>
+#include <core/chars.hpp>
 
 #define N_TEST_ASSERT_TRUE(condition)    \
   if (!(condition)) {                    \
@@ -48,9 +49,9 @@ class test {
     _func();
     return test_result::success;
   } catch (const char* e) {
-    insert(sout, "\033[1;31merror : ");
-    insert(sout, e);
-    insert(sout, "\033[0m\n");
+    to_chars(sout, "\033[1;31merror : ");
+    to_chars(sout, e);
+    to_chars(sout, "\033[0m\n");
     return test_result::failure;
   }
 };
@@ -72,21 +73,21 @@ class test_suite {
     int succeed = 0;
     int failed = 0;
 
-    insert(sout, "\nSUITE [");
-    insert(sout, _name);
-    insert(sout, "] ");
+    to_chars(sout, "\nSUITE [");
+    to_chars(sout, _name);
+    to_chars(sout, "] ");
 
     auto tests_os = iter(_tests);
 
     while (tests_os.has()) {
       auto&& t = tests_os.next();
-      insert(sout, "\nTEST[");
-      insert(sout, t.name());
-      insert(sout, "]\n");
+      to_chars(sout, "\nTEST[");
+      to_chars(sout, t.name());
+      to_chars(sout, "]\n");
 
       auto res = t.run();
 
-      insert(sout, (res == test_result::success
+      to_chars(sout, (res == test_result::success
                         ? " - Result : \033[1;32mPASSED\033[0m\n"
                         : " - Result : \033[1;31mFAILED\033[0m\n"));
 
@@ -97,12 +98,12 @@ class test_suite {
       }
     }
 
-    insert(sout, "\nSUITE RECAP - Passed : \033[1;32m");
-    insert(sout, " ");
-    insert(sout, succeed);
-    insert(sout, "\033[0m\n - Failed : \033[1;31m");
-    insert(sout, failed);
-    insert(sout, "\033[0m\n\n");
+    to_chars(sout, "\nSUITE RECAP - Passed : \033[1;32m");
+    to_chars(sout, " ");
+    to_chars(sout, succeed);
+    to_chars(sout, "\033[0m\n - Failed : \033[1;31m");
+    to_chars(sout, failed);
+    to_chars(sout, "\033[0m\n\n");
   }
 };
 

@@ -1,4 +1,4 @@
-#include <core/io.hpp>
+#include <core/file.hpp>
 #include <tests.hpp>
 
 void test_file_input_stream() {
@@ -10,22 +10,22 @@ void test_file_input_stream() {
   file<char, mode::r> f(filename);
   auto fs = iter(f);
   maybe<char> c;
-  extract(fs, c);
+  from_chars(fs, c);
   N_TEST_ASSERT_TRUE(c.has());
   N_TEST_ASSERT_EQUALS(c.get(), 'H');
-  extract(fs, c);
+  from_chars(fs, c);
   N_TEST_ASSERT_TRUE(c.has());
   N_TEST_ASSERT_EQUALS(c.get(), 'e');
-  extract(fs, c);
+  from_chars(fs, c);
   N_TEST_ASSERT_TRUE(c.has());
   N_TEST_ASSERT_EQUALS(c.get(), 'l');
-  extract(fs, c);
+  from_chars(fs, c);
   N_TEST_ASSERT_TRUE(c.has());
   N_TEST_ASSERT_EQUALS(c.get(), 'l');
-  extract(fs, c);
+  from_chars(fs, c);
   N_TEST_ASSERT_TRUE(c.has());
   N_TEST_ASSERT_EQUALS(c.get(), 'o');
-  extract(fs, c);
+  from_chars(fs, c);
   N_TEST_ASSERT_TRUE(c.has());
   N_TEST_ASSERT_EQUALS(c.get(), '\n');
 
@@ -36,7 +36,7 @@ void test_file_output_stream() {
   const char* filename = "test_file.txt";
   file<char, mode::w> f(filename);
   auto fo = oter(f);
-  insert(fo, "coucou");
+  to_chars(fo, "coucou");
   N_TEST_ASSERT_EQUALS(f.len(), 6);
   remove(filename);
 }

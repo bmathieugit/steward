@@ -78,7 +78,7 @@ constexpr void test_string_clear() {
 void test_input_stream_unsigned_integer() {
   auto is = iter("12");
   maybe<size_t> i;
-  extract(is, i);
+  from_chars(is, i);
   N_TEST_ASSERT_TRUE(i.has());
   N_TEST_ASSERT_EQUALS(i.get(), 12);
 }
@@ -86,7 +86,7 @@ void test_input_stream_unsigned_integer() {
 void test_input_stream_signed_integer() {
   auto is = iter("12");
   maybe<int> i;
-  extract(is, i);
+  from_chars(is, i);
   N_TEST_ASSERT_TRUE(i.has());
   N_TEST_ASSERT_EQUALS(i.get(), 12);
 }
@@ -94,7 +94,7 @@ void test_input_stream_signed_integer() {
 void test_input_stream_signed_integer2() {
   auto is = iter("-12");
   maybe<int> i;
-  extract(is, i);
+  from_chars(is, i);
   N_TEST_ASSERT_TRUE(i.has());
   N_TEST_ASSERT_EQUALS(i.get(), -12);
 }
@@ -102,7 +102,7 @@ void test_input_stream_signed_integer2() {
 void test_input_stream_bool_true() {
   auto is = iter("0");
   maybe<bool> b;
-  extract(is, b);
+  from_chars(is, b);
   N_TEST_ASSERT_TRUE(b.has());
   N_TEST_ASSERT_EQUALS(b.get(), true);
 }
@@ -110,7 +110,7 @@ void test_input_stream_bool_true() {
 void test_input_stream_bool_false() {
   auto is = iter("1");
   maybe<bool> b;
-  extract(is, b);
+  from_chars(is, b);
   N_TEST_ASSERT_TRUE(b.has());
   N_TEST_ASSERT_EQUALS(b.get(), false);
 }
@@ -127,54 +127,54 @@ bool operator==(const char_static_vector<N>& s1, const char* s2) {
 void test_ostream_string() {
   char_static_vector_stream result;
 
-  insert(result, "Hello, ");
-  insert(result, "world");
-  insert(result, "!");
+  to_chars(result, "Hello, ");
+  to_chars(result, "world");
+  to_chars(result, "!");
   N_TEST_ASSERT_EQUALS(result, "Hello, world!");
   result.clear();
 
-  insert(result, "The answer is ");
-  insert(result, 42);
+  to_chars(result, "The answer is ");
+  to_chars(result, 42);
   N_TEST_ASSERT_EQUALS(result, "The answer is 42");
   result.clear();
-  insert(result, "John");
-  insert(result, " is ");
-  insert(result, 30);
-  insert(result, " years old");
+  to_chars(result, "John");
+  to_chars(result, " is ");
+  to_chars(result, 30);
+  to_chars(result, " years old");
   N_TEST_ASSERT_EQUALS(result, "John is 30 years old");
 }
 
 void test_ostream_signed_integral() {
   char_static_vector_stream result;
 
-  insert(result, -42);
+  to_chars(result, -42);
   N_TEST_ASSERT_EQUALS(result, "-42");
   result.clear();
-  insert(result, 0);
+  to_chars(result, 0);
   N_TEST_ASSERT_EQUALS(result, "0");
   result.clear();
-  insert(result, 123456789);
+  to_chars(result, 123456789);
   N_TEST_ASSERT_EQUALS(result, "123456789");
 }
 
 void test_ostream_unsigned_integral() {
   char_static_vector_stream result;
-  insert(result, 42u);
+  to_chars(result, 42u);
   N_TEST_ASSERT_EQUALS(result, "42");
   result.clear();
-  insert(result, 0u);
+  to_chars(result, 0u);
   N_TEST_ASSERT_EQUALS(result, "0");
   result.clear();
-  insert(result, 123456789u);
+  to_chars(result, 123456789u);
   N_TEST_ASSERT_EQUALS(result, "123456789");
 }
 
 void test_ostream_bool() {
   char_static_vector_stream result;
-  insert(result, true);
+  to_chars(result, true);
   N_TEST_ASSERT_EQUALS(result, "true");
   result.clear();
-  insert(result, false);
+  to_chars(result, false);
   N_TEST_ASSERT_EQUALS(result, "false");
 }
 
@@ -191,7 +191,7 @@ int main() {
   N_TEST_REGISTER(test_string_add)
   N_TEST_REGISTER(test_string_remove)
   N_TEST_REGISTER(test_string_clear)
-  
+
   N_TEST_REGISTER(test_input_stream_unsigned_integer)
   N_TEST_REGISTER(test_input_stream_signed_integer)
   N_TEST_REGISTER(test_input_stream_signed_integer2)
