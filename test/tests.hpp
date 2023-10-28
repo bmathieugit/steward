@@ -1,9 +1,9 @@
 #ifndef __n_tests_hpp__
 #define __n_tests_hpp__
 
-#include <core/file.hpp>
-#include <core/string.hpp>
 #include <core/chars.hpp>
+#include <core/file.hpp>
+#include <core/readwrite.hpp>
 
 #define N_TEST_ASSERT_TRUE(condition)    \
   if (!(condition)) {                    \
@@ -49,9 +49,7 @@ class test {
     _func();
     return test_result::success;
   } catch (const char* e) {
-    to_chars(sout, "\033[1;31merror : ");
-    to_chars(sout, e);
-    to_chars(sout, "\033[0m\n");
+    write(sout, "\033[1;31merror : ", e, "\033[0m\n");
     return test_result::failure;
   }
 };
@@ -69,27 +67,22 @@ class test_suite {
   constexpr void add(const test& t) { _tests.add(t); }
 
  public:
-  constexpr void run_all() {
+  void run_all() {
     int succeed = 0;
     int failed = 0;
-
-    to_chars(sout, "\nSUITE [");
-    to_chars(sout, _name);
-    to_chars(sout, "] ");
+    write(sout, "\nSUITE [", _name, "] ");
 
     auto tests_os = iter(_tests);
 
     while (tests_os.has()) {
       auto&& t = tests_os.next();
-      to_chars(sout, "\nTEST[");
-      to_chars(sout, t.name());
-      to_chars(sout, "]\n");
+      write(sout, "\nTEST[", t.name(), "]\n");
 
       auto res = t.run();
 
-      to_chars(sout, (res == test_result::success
-                        ? " - Result : \033[1;32mPASSED\033[0m\n"
-                        : " - Result : \033[1;31mFAILED\033[0m\n"));
+      write(sout, (res == test_result::success
+                       ? " - Result : \033[1;32mPASSED\033[0m\n"
+                       : " - Result : \033[1;31mFAILED\033[0m\n"));
 
       if (res == test_result::success) {
         ++succeed;
@@ -98,12 +91,8 @@ class test_suite {
       }
     }
 
-    to_chars(sout, "\nSUITE RECAP - Passed : \033[1;32m");
-    to_chars(sout, " ");
-    to_chars(sout, succeed);
-    to_chars(sout, "\033[0m\n - Failed : \033[1;31m");
-    to_chars(sout, failed);
-    to_chars(sout, "\033[0m\n\n");
+    write(sout, "\nSUITE RECAP - Passed : \033[1;32m", succeed,
+          "\033[0m\n - Failed : \033[1;31m", failed, "\033[0m\n\n");
   }
 };
 
