@@ -189,6 +189,7 @@ concept collection =
       { cc.at(p) } -> same_as_declined<typename C::type>;
       { cc.empty() } -> same_as<bool>;
       { cc.len() } -> same_as<size_t>;
+      { cc.pos() };
       { c.add(t) } -> same_as<bool>;
       { c.modify(p, t) } -> same_as<bool>;
       { c.remove(p) } -> same_as<bool>;
