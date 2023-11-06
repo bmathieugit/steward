@@ -27,8 +27,8 @@ class mash {
     while (mess.has()) {
       auto c = mess.next();
       seed += c;
-      size_t a = ;
-      size_t b = ;
+      size_t a = 100000000 + c;
+      size_t b = 12345 + c;
 
       for (size_t i = 0; i < res.len(); ++i) {
         auto nc = k.at((seed = (prand(seed) + res.at(i))) % k.len());
