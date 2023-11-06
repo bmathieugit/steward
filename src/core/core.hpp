@@ -304,9 +304,13 @@ class index_backward_input_stream {
   constexpr auto next() -> decltype(auto) { return _col.at(_pos--); }
 };
 
-constexpr size_t rand(size_t seed) {
-  seed = (1103515245 * seed + 12345) & max_of<unsigned>;
+constexpr size_t prand(size_t a, size_t b, size_t seed) {
+  seed = (a* seed + b) & max_of<unsigned>;
   return static_cast<size_t>(seed);
+} 
+
+constexpr size_t rand(size_t seed) {
+  return prand(1103515245, 12345, seed);
 }
 
 struct random_index_input_stream {
