@@ -31,7 +31,7 @@ class mash {
       size_t b = 12345 + c;
 
       for (size_t i = 0; i < res.len(); ++i) {
-        auto nc = k.at((seed = (prand(seed) + res.at(i))) % k.len());
+        auto nc = k.at((seed = (prand(a, b, seed) + res.at(i))) % k.len());
         res.modify(i, nc);
       }
     }
