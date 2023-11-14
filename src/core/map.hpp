@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <core/algorithm.hpp>
 #include <core/core.hpp>
-#include <core/fnv-ostream.hpp>
+#include <core/hash.hpp>
 #include <core/tuple.hpp>
 #include <core/vector.hpp>
 
@@ -15,13 +15,11 @@ struct map_item {
   V value;
 
   map_item(const K& k, const V& v) : key(k), value(v) {
-    auto fnv = fnv_ostream<sizeof(size_t) * 8>{};
-    hash = (fnv << key).hash();
+    hash = to_hash<sizeof(size_t) * 8>(key);
   }
 
   map_item(const K& k, V&& v) : key(k), value(move(v)) {
-    auto fnv = fnv_ostream<sizeof(size_t) * 8>{};
-    hash = (fnv << key).hash();
+    hash = to_hash<sizeof(size_t) * 8>(key);
   }
 };
 
@@ -45,8 +43,7 @@ class map {
 
  private:
   constexpr auto to_data_position(const position& p) const {
-    auto fnv = fnv_ostream<sizeof(size_t) * 8>{};
-    auto hash = (fnv << p).hash();
+    hash = to_hash<sizeof(size_t) * 8>(key);
 
     size_t pos = max_of<size_t>;
 
