@@ -3,7 +3,6 @@
 
 #include <core/chars.hpp>
 #include <core/file.hpp>
-#include <core/readwrite.hpp>
 
 #define N_TEST_ASSERT_TRUE(condition)    \
   if (!(condition)) {                    \
@@ -76,7 +75,7 @@ class test_suite {
 
     while (tests_os.has()) {
       auto&& t = tests_os.next();
-      write(sout, "\nTEST[", t.name(), "]\n");
+      write(sout, "\nTEST [", t.name(), "]\n");
 
       auto res = t.run();
 

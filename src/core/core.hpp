@@ -59,6 +59,11 @@ concept same_as_declined = contains<T,
                                     const rm_cref<U>&,
                                     const rm_cref<U>&&>;
 
+template <typename From, typename To>
+concept convertible_to =
+    (same_as<From, void> && same_as<To, void>) ||
+    requires { static_cast<rm_cref<To>>(*((rm_cref<From>*)nullptr)); };
+
 template <typename T>
 concept character = same_as<T, char> or same_as<T, wchar_t>;
 
@@ -363,5 +368,4 @@ struct random_index_input_stream {
   constexpr bool has() { return true; }
   constexpr size_t next() { return (_seed = rand(_seed)) % _max; }
 };
-
 #endif

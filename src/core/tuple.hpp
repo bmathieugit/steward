@@ -1,6 +1,8 @@
 #ifndef __n_tuple_hpp__
 #define __n_tuple_hpp__
 
+#include <core/core.hpp>
+
 template <typename... T>
 class tuple;
 
@@ -17,35 +19,35 @@ struct tuple_item {
   constexpr const T&& get() const&& { return _t; }
 };
 
-// template <typename T>
-// struct tuple_item<T&&> {
-//   T&& _t;
+template <typename T>
+struct tuple_item<T&&> {
+  T&& _t;
 
-//   constexpr T&& get() & { return _t; }
-//   constexpr const T&& get() const& { return _t; }
-//   constexpr T&& get() && { return _t; }
-//   constexpr const T&& get() const&& { return _t; }
-// };
+  constexpr T&& get() & { return _t; }
+  constexpr const T&& get() const& { return _t; }
+  constexpr T&& get() && { return _t; }
+  constexpr const T&& get() const&& { return _t; }
+};
 
-// template <typename T>
-// struct tuple_item<const T&&> {
-//   const T&& _t;
+template <typename T>
+struct tuple_item<const T&&> {
+  const T&& _t;
 
-//   constexpr const T&& get() & { return _t; }
-//   constexpr const T&& get() const& { return _t; }
-//   constexpr const T&& get() && { return _t; }
-//   constexpr const T&& get() const&& { return _t; }
-// };
+  constexpr const T&& get() & { return _t; }
+  constexpr const T&& get() const& { return _t; }
+  constexpr const T&& get() && { return _t; }
+  constexpr const T&& get() const&& { return _t; }
+};
 
-// template <typename T>
-// struct tuple_item<const T&> {
-//   const T& _t;
+template <typename T>
+struct tuple_item<const T&> {
+  const T& _t;
 
-//   constexpr const T& get() & { return _t; }
-//   constexpr const T& get() const& { return _t; }
-//   constexpr const T&& get() && { return _t; }
-//   constexpr const T&& get() const&& { return _t; }
-// };
+  constexpr const T& get() & { return _t; }
+  constexpr const T& get() const& { return _t; }
+  constexpr const T&& get() && { return _t; }
+  constexpr const T&& get() const&& { return _t; }
+};
 
 template <typename T0, typename... TN>
 class tuple<T0, TN...> : public tuple<TN...> {
@@ -61,13 +63,9 @@ class tuple<T0, TN...> : public tuple<TN...> {
   constexpr tuple& operator=(tuple&&) = default;
 
  public:
-  /*  template <convertible_to<T0> U0, convertible_to<TN>... Un>
-    constexpr tuple(U0&& u0, Un&&... un)
-        : _t{relay<U0>(u0)}, tuple<TN...>(relay<Un>(un)...) {}
-  */
-
-  constexpr tuple(const T0& t0, const TN&... tn)
-      : tuple<TN...>(tn...), _item{t0} {}
+  template <convertible_to<T0> U0, convertible_to<TN>... Un>
+  constexpr tuple(U0&& u0, Un&&... un)
+      : tuple<TN...>(relay<Un>(un)...), _item{relay<U0>(u0)}  {}
 
  public:
   template <size_t I>

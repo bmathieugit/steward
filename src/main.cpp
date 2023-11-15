@@ -1,6 +1,8 @@
 #include <core/file.hpp>
-#include <core/readwrite.hpp>
+#include <core/chars.hpp>
+
+#include <core/tuple.hpp>
 
 int main() {
-  write(sout, "coucou");
+ return 0;
 }
