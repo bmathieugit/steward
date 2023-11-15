@@ -43,7 +43,7 @@ class map {
 
  private:
   constexpr auto to_data_position(const position& p) const {
-    hash = to_hash<sizeof(size_t) * 8>(key);
+    auto hash = to_hash<sizeof(size_t) * 8>(p);
 
     size_t pos = max_of<size_t>;
 
