@@ -19,6 +19,7 @@ struct map_item {
 template <typename K>
 struct map_index {
   size_t hash;
+  size_t rank;
   size_t index;
 
   constexpr map_index(const K& key, size_t i)
@@ -50,15 +51,30 @@ class map {
 
     size_t pos = max_of<size_t>;
 
-    for (size_t i = 0; i < _index.len(); ++i) {
-      if (_index.at(i).hash == hash) {
-        if (_data.at(_index.at(i).index).key == p) {
-          pos = i;
-        }
+    int left = 0;
+    int right = _index.len() - 1;
+
+    while (left <= right) {
+      int middle = left + (right - left) / 2;
+
+      if (_index.at(middle).hash == hash) {
+        pos = middle;
+        break;
+      }
+
+      else if (_index.at(middle).hash > hash) {
+        right = middle - 1;
+      } 
+      
+      else {
+        left = middle + 1;
       }
     }
 
-    return pos;
+    printf("pos %lu\n", pos);
+
+
+    return _data.at(pos).key == p ? _index.at(pos).index : max_of<size_t>;
   }
 
  public:
@@ -89,7 +105,7 @@ class map {
   }
 
   constexpr bool add(type&& v, const position& k) {
-if (to_data_position(k) == max_of<size_t>) {
+    if (to_data_position(k) == max_of<size_t>) {
       _data.add(map_item<K, V>(k, move(v)));
       _index.add(map_index<K>(k, _data.len() - 1));
       return true;

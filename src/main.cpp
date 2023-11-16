@@ -8,8 +8,8 @@
 int main(int argc, char** argv) {
 
   map<string, int> m;
-  m.add(12, iter("Bob"));
-  m.add(15, iter("Leon"));
+  m.add(14, iter("Leo"));
+  m.add(15, iter("Bob"));
   write(sout, "note de Bob ", m.at(iter("Bob")), '\n');
 
 
