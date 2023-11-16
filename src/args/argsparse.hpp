@@ -67,7 +67,6 @@ class program {
       const auto& opt = i.next();
 
       if (equals(iter(opt._name), name)) {
-        printf("je suis egal\n");
         return opt._fallback;
       }
     }

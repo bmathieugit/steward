@@ -26,37 +26,42 @@ uof<N> to_hash(byte_t b, uof<N> h = fnvoffset<N>) {
   return (h ^ b) * fnvprime<N>;
 }
 
+
 template <size_t N, size_t M>
 uof<N> to_hash(const byte_t (&bs)[M], uof<N> h = fnvoffset<N>) {
   for (size_t i = 0; i < M; ++i) {
-    h = to_hash(bs[i], h);
+    h = to_hash<N>(bs[i], h);
   }
 
   return h;
 }
 
+
 template <size_t N>
-uof<N> to_hash(const byte_t (&bs)[1], uof<N> h = fnvoffset<N>) {
-  return to_hash(bs[0], h);
+uof<N> to_hash(wchar_t c, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(static_cast<const byte_t[sizeof(wchar_t)]>(c), h);
 }
 
-template <size_t N, character C>
-uof<N> to_hash(const C c, uof<N> h = fnvoffset<N>) {
-  return to_hash(static_cast<const byte_t[sizeof(C)]>(c), h);
-}
+
+
 
 template <size_t N, integral I>
 uof<N> to_hash(const I i, uof<N> h = fnvoffset<N>) {
-  return to_hash(static_cast<const byte_t[sizeof(I)]>(i), h);
+  return to_hash<N>(static_cast<const byte_t[sizeof(I)]>(i), h);
 }
 
 template <size_t N, iterator I>
 uof<N> to_hash(I i, uof<N> h = fnvoffset<N>) {
   while (i.has()) {
-    to_hash(i.next(), h);
+    to_hash<N>(i.next(), h);
   }
 
   return h;
+}
+
+template <size_t N, collection C>
+uof<N> to_hash(const C& c, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(c), h);
 }
 
 #endif

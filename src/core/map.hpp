@@ -1,7 +1,6 @@
 #ifndef __stew_core_map_hpp__
 #define __stew_core_map_hpp__
 
-#include <stdio.h>
 #include <core/algorithm.hpp>
 #include <core/core.hpp>
 #include <core/hash.hpp>
@@ -10,17 +9,20 @@
 
 template <typename K, typename V>
 struct map_item {
-  size_t hash;
   K key;
   V value;
 
-  map_item(const K& k, const V& v) : key(k), value(v) {
-    hash = to_hash<sizeof(size_t) * 8>(key);
-  }
+  constexpr map_item(const K& k, const V& v) : key(k), value(v) {}
+  constexpr map_item(const K& k, V&& v) : key(k), value(move(v)) {}
+};
 
-  map_item(const K& k, V&& v) : key(k), value(move(v)) {
-    hash = to_hash<sizeof(size_t) * 8>(key);
-  }
+template <typename K>
+struct map_index {
+  size_t hash;
+  size_t index;
+
+  constexpr map_index(const K& key, size_t i)
+      : hash(to_hash<sizeof(size_t) * 8>(key)), index(i) {}
 };
 
 template <typename K, typename V>
@@ -30,6 +32,7 @@ class map {
   using position = K;
 
  private:
+  vector<map_index<K>> _index;
   vector<map_item<K, V>> _data;
 
  public:
@@ -47,9 +50,9 @@ class map {
 
     size_t pos = max_of<size_t>;
 
-    for (size_t i = 0; i < _data.len(); ++i) {
-      if (_data.at(i).hash == hash) {
-        if (_data.at(i).key == p) {
+    for (size_t i = 0; i < _index.len(); ++i) {
+      if (_index.at(i).hash == hash) {
+        if (_data.at(_index.at(i).index).key == p) {
           pos = i;
         }
       }
@@ -76,10 +79,9 @@ class map {
   constexpr void clear() { _data.clear(); }
 
   constexpr bool add(const type& v, const position& k) {
-    map_item<K, V> mi(k, v);
-
     if (to_data_position(k) == max_of<size_t>) {
-      _data.add(move(mi));
+      _data.add(map_item<K, V>(k, v));
+      _index.add(map_index<K>(k, _data.len() - 1));
       return true;
     }
 
@@ -87,10 +89,9 @@ class map {
   }
 
   constexpr bool add(type&& v, const position& k) {
-    map_item<K, V> mi(k, move(v));
-
-    if (to_data_position(k) == max_of<size_t>) {
-      _data.add(move(mi));
+if (to_data_position(k) == max_of<size_t>) {
+      _data.add(map_item<K, V>(k, move(v)));
+      _index.add(map_index<K>(k, _data.len() - 1));
       return true;
     }
 
