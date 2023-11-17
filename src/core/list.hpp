@@ -235,13 +235,13 @@ class list {
     if (p < _len) {
       _data[_index[p]].~T();
 
-      if (p < _len - 1) {
-        _data[_index[p]] = move(_data[_len - 1]);
-        _index[_len - 1] = _index[p];
-      }
-
       for (size_t i = p; i < _len - 1; ++i) {
         _index[i] = _index[i + 1];
+      }
+
+      if (p < _len - 1) {
+        _data[_index[p]] = move(_data[_len - 1]);
+        _index[_len - 2] = _index[p];
       }
 
       _len -= 1;
