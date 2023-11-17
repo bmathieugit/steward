@@ -21,6 +21,8 @@ int main(int argc, char** argv) {
   l.remove(2);
 
   write(sout, '\n');  
+  I = iter(l);
+
   while (i.has()) {
     write(sout, i.next(), '\n');
   }
