@@ -53,7 +53,7 @@ uof<N> to_hash(const I i, uof<N> h = fnvoffset<N>) {
 template <size_t N, iterator I>
 uof<N> to_hash(I i, uof<N> h = fnvoffset<N>) {
   while (i.has()) {
-    to_hash<N>(i.next(), h);
+    h = to_hash<N>(i.next(), h);
   }
 
   return h;

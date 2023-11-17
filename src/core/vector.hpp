@@ -71,7 +71,7 @@ class static_vector {
   }
 
   constexpr bool add(const type& t, position p = max_of<decltype(_len)>) {
-    p = p == max_of<decltype(_len)> ? _len : p;
+    p = p >= max_of<decltype(_len)> ? _len : p;
 
     if (p <= _len and not full()) {
       for (size_t i = _len; i > p; --i) {
@@ -87,7 +87,7 @@ class static_vector {
   }
 
   constexpr bool add(type&& t, position p = max_of<decltype(_len)>) {
-    p = p == max_of<decltype(_len)> ? _len : p;
+    p = p >= max_of<decltype(_len)> ? _len : p;
 
     if (p <= _len and not full()) {
       for (size_t i = _len; i > p; --i) {
@@ -239,7 +239,7 @@ class fixed_vector {
   }
 
   constexpr bool add(const type& t, position p = max_of<decltype(_len)>) {
-    p = p == max_of<decltype(_len)> ? _len : p;
+    p = p >= max_of<decltype(_len)> ? _len : p;
 
     if (p <= _len and not full()) {
       for (size_t i = _len; i > p; --i) {
@@ -255,7 +255,7 @@ class fixed_vector {
   }
 
   constexpr bool add(type&& t, position p = max_of<decltype(_len)>) {
-    p = p == max_of<decltype(_len)> ? _len : p;
+    p = p >= max_of<decltype(_len)> ? _len : p;
 
     if (p <= _len and not full()) {
       for (size_t i = _len; i > p; --i) {
@@ -380,7 +380,7 @@ class vector {
   constexpr void clear() { _data.clear(); }
 
   constexpr bool add(const type& t, position p = max_of<size_t>) {
-    p = p == max_of<size_t> ? _data.len() : p;
+    p = p >= max_of<size_t> ? _data.len() : p;
 
     if (_data.full()) {
       auto tmp = fixed_vector<T>(_data.len() * 2 + 10);
@@ -392,7 +392,7 @@ class vector {
   }
 
   constexpr bool add(type&& t, position p = max_of<size_t>) {
-    p = p == max_of<size_t> ? _data.len() : p;
+    p = p >= max_of<size_t>? _data.len() : p;
 
     if (_data.full()) {
       auto tmp = fixed_vector<T>(_data.len() * 2 + 10);

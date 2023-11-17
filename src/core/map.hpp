@@ -19,7 +19,7 @@ struct map_item {
 template <typename K>
 struct map_index {
   size_t hash;
-  size_t rank;
+  size_t rank; // à prendre en compte une fois le trie fait
   size_t index;
 
   constexpr map_index(const K& key, size_t i)
@@ -32,7 +32,7 @@ class map {
   using type = V;
   using position = K;
 
- private:
+ public:
   vector<map_index<K>> _index;
   vector<map_item<K, V>> _data;
 
@@ -71,10 +71,29 @@ class map {
       }
     }
 
-    printf("pos %lu\n", pos);
-
-
     return _data.at(pos).key == p ? _index.at(pos).index : max_of<size_t>;
+  }
+
+  constexpr auto get_upper_bound_position(const position& p) {
+    auto hash = to_hash<sizeof(size_t) * 8>(p);
+    size_t pos = max_of<size_t>;
+    
+    while (left <= right) {
+      int middle = left + (right - left) / 2;
+
+      if (_index.at(middle).hash == hash) {
+        pos = middle;
+        break;
+      }
+
+      else if (_index.at(middle).hash > hash) {
+        right = middle - 1;
+      } 
+      
+      else {
+        left = middle + 1;
+      }
+    }
   }
 
  public:
@@ -95,7 +114,8 @@ class map {
   constexpr void clear() { _data.clear(); }
 
   constexpr bool add(const type& v, const position& k) {
-    if (to_data_position(k) == max_of<size_t>) {
+    if (not has(k)) {
+      
       _data.add(map_item<K, V>(k, v));
       _index.add(map_index<K>(k, _data.len() - 1));
       return true;
