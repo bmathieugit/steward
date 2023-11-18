@@ -210,13 +210,7 @@ using u128 = uof<128>;
 
 using byte_t = u8;
 
-using size_t = if_<(not same_as<void, u128>),
-                   u128,
-                   if_<(not same_as<void, u64>),
-                       u64,
-                       if_<(not same_as<void, u32>),
-                           u32,
-                           if_<(not same_as<void, u16>), u16, void>>>>;
+using size_t = decltype(sizeof(int));
 
 template <typename T>
 concept byteable = requires(T t) {
