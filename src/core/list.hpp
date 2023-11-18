@@ -56,11 +56,11 @@ class list {
 
  private:
   vector_allocator<T> _alloc;
-  vector_allocator<size_t> _ialloc;
+  vector_allocator<T*> _ialloc;
   size_t _max = 0;
   size_t _len = 0;
   T* _data = nullptr;
-  size_t* _index = nullptr;
+  T** _index = nullptr;
 
  public:
   constexpr ~list() {
@@ -134,8 +134,8 @@ class list {
 
  public:
   constexpr bool has(position p) const { return p < _len; }
-  constexpr T& at(position p) { return _data[_index[p]]; }
-  constexpr const T& at(position p) const { return _data[_index[p]]; }
+  constexpr T& at(position p) { return _index[p]; }
+  constexpr const T& at(position p) const { return _index[p]; }
 
   constexpr void clear() {
     _alloc.destroy(_data, _len);
@@ -170,7 +170,7 @@ class list {
         _index[i] = move(_index[i - 1]);
       }
 
-      _index[p] = _len;
+      _index[p] = &_data[_len];
       _data[_len++] = t;
       return true;
     }
@@ -205,7 +205,7 @@ class list {
         _index[i] = move(_index[i - 1]);
       }
 
-      _index[p] = _len;
+      _index[p] = _data[_len];
       _data[_len++] = move(t);
       return true;
     }
@@ -217,7 +217,7 @@ class list {
     if (p >= _len) {
       return false;
     } else {
-      _data[_index[p]] = t;
+      _index[p] = t;
       return true;
     }
   }
@@ -226,14 +226,14 @@ class list {
     if (p >= _len) {
       return false;
     } else {
-      _data[_index[p]] = move(t);
+      _index[p] = move(t);
       return true;
     }
   }
 
   constexpr bool remove(position p) {
     if (p < _len) {
-      _data[_index[p]].~T();
+      _index[p].~T();
 
       for (size_t i = p; i < _len - 1; ++i) {
         _index[i] = _index[i + 1];
