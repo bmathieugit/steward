@@ -269,6 +269,7 @@ concept collection =
       { c.modify(t, p) } -> same_as<bool>;
       { c.remove(p) } -> same_as<bool>;
       { c.clear() } -> same_as<void>;
+      { c.exchange(p,p) } -> same_as<bool>; 
     };
 
 template <typename C>
