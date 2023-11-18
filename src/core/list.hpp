@@ -6,49 +6,6 @@
 #include <core/vector.hpp>
 
 template <typename T>
-class list;
-
-template <typename T>
-class list_iterator {
- public:
-  using type = T;
-
- private:
-  const list<T>& _l;
-  size_t _pos;
-
- public:
-  constexpr list_iterator(const list<T>& l) : _l(l) {}
-
-  constexpr bool has() { return _pos != _l.len(); }
-  constexpr const type& next() { return _l.at(_pos++); }
-};
-
-template <typename T>
-class list_oterator {
- public:
-  using type = T;
-
- private:
-  list<T>& _l;
-
- public:
-  constexpr list_oterator(list<T>& l) : _l(l) {}
-  constexpr bool add(const type& t) { return _l.add(t); }
-  constexpr bool add(type&& t) { return _l.add(move(t)); }
-};
-
-template <typename T>
-constexpr auto iter(const list<T>& l) {
-  return list_iterator<T>(l);
-}
-
-template <typename T>
-constexpr auto oter(const list<T>& l) {
-  return list_oterator<T>(l);
-}
-
-template <typename T>
 class list {
  public:
   using type = T;
@@ -252,5 +209,15 @@ class list {
     return false;
   }
 };
+
+template <typename T>
+constexpr auto iter(const list<T>& l) {
+  return index_based_iterator<T>(l);
+}
+
+template <typename T>
+constexpr auto oter(const list<T>& l) {
+  return index_based_oterator<T>(l);
+}
 
 #endif
