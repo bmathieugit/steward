@@ -19,6 +19,8 @@ int main(int argc, char** argv) {
   }
 
   l.remove(2);
+  l.remove(2);
+  l.remove(3);
 
   write(sout, '\n');  
   auto i2 = iter(l);
@@ -26,7 +28,6 @@ int main(int argc, char** argv) {
   while (i2.has()) {
     write(sout, i2.next(), '\n');
   }
-
 
   return 0;
 }

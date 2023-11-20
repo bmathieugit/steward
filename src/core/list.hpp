@@ -207,14 +207,10 @@ class list {
   constexpr bool remove(position p) {
     if (p < _len) {
       _index[p]->~T();
-
+      *_index[p] = move(*_index[_len - 1]);
+      
       for (size_t i = p; i < _len - 1; ++i) {
         _index[i] = _index[i + 1];
-      }
-
-      if (p < _len - 1) {
-        *_index[p] = move(_data[_len - 1]);
-        _index[_len - 2] = _index[p];
       }
 
       _len -= 1;
