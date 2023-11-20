@@ -21,10 +21,10 @@ int main(int argc, char** argv) {
   l.remove(2);
 
   write(sout, '\n');  
-  i = iter(l);
+  auto i2 = iter(l);
 
-  while (i.has()) {
-    write(sout, i.next(), '\n');
+  while (i2.has()) {
+    write(sout, i2.next(), '\n');
   }
 
 

@@ -102,6 +102,20 @@ class static_vector {
     return false;
   }
 
+  constexpr bool exchange(position p1, position p2) {
+    if (has(p1) and has(p2)) {
+      auto tmp1 = move(_data[p1]);
+      _data[p1] = move(_data[p2]);
+      _data[p2] = move(tmp1);
+    
+      return true;
+    }
+
+    else {
+      return false;
+    }
+  }
+
   constexpr bool modify(const type& t, position p) {
     if (p >= _len) {
       return false;
@@ -270,6 +284,19 @@ class fixed_vector {
     return false;
   }
 
+  constexpr bool exchange(position p1, position p2) {
+    if (has(p1) and has(p2)) {
+      auto tmp1 = move(_data[p1]);
+      _data[p1] = move(_data[p2]);
+      _data[p2] = move(tmp1);
+      return true;
+    }
+
+    else {
+      return false;
+    }
+  }
+
   constexpr bool modify(const T& t, position p) {
     if (p >= _len) {
       return false;
@@ -392,7 +419,7 @@ class vector {
   }
 
   constexpr bool add(type&& t, position p = max_of<size_t>) {
-    p = p >= max_of<size_t>? _data.len() : p;
+    p = p >= max_of<size_t> ? _data.len() : p;
 
     if (_data.full()) {
       auto tmp = fixed_vector<T>(_data.len() * 2 + 10);
@@ -401,6 +428,10 @@ class vector {
     }
 
     return _data.add(move(t));
+  }
+
+  constexpr bool exchange(position p1, position p2) {
+    return _data.exchange(p1, p2);
   }
 
   constexpr bool modify(const T& t, position p) { return _data.modify(t, p); }

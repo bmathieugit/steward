@@ -33,7 +33,7 @@ class list {
   constexpr list() = default;
 
   constexpr list(const list& l) {
-    copy(list_iterator(l), list_oterator(*this));
+    copy(index_based_iterator(l), index_based_oterator(*this));
   }
 
   constexpr list(list&& l)
@@ -58,7 +58,7 @@ class list {
         _max = l._max;
       }
 
-      copy(list_iterator(l), list_oterator(*this));
+      copy(index_based_iterator(l), index_based_oterator(*this));
     }
   }
 
@@ -91,8 +91,8 @@ class list {
 
  public:
   constexpr bool has(position p) const { return p < _len; }
-  constexpr T& at(position p) { return _index[p]; }
-  constexpr const T& at(position p) const { return _index[p]; }
+  constexpr T& at(position p) { return *_index[p]; }
+  constexpr const T& at(position p) const { return *_index[p]; }
 
   constexpr void clear() {
     _alloc.destroy(_data, _len);
@@ -162,7 +162,7 @@ class list {
         _index[i] = move(_index[i - 1]);
       }
 
-      _index[p] = _data[_len];
+      _index[p] = &_data[_len];
       _data[_len++] = move(t);
       return true;
     }
@@ -170,11 +170,27 @@ class list {
     return false;
   }
 
+  constexpr bool exchange(position p1, position p2) {
+    if (has(p1) and has(p2)) {
+      auto ip1 = _index[p1];
+      auto ip2 = _index[p2];
+
+      _index[p1] = ip2;
+      _index[p2] = ip1;
+
+      return true;
+    }
+
+    else {
+      return false;
+    }
+  }
+
   constexpr bool modify(const T& t, position p) {
     if (p >= _len) {
       return false;
     } else {
-      _index[p] = t;
+      *_index[p] = t;
       return true;
     }
   }
@@ -183,21 +199,21 @@ class list {
     if (p >= _len) {
       return false;
     } else {
-      _index[p] = move(t);
+      *_index[p] = move(t);
       return true;
     }
   }
 
   constexpr bool remove(position p) {
     if (p < _len) {
-      _index[p].~T();
+      _index[p]->~T();
 
       for (size_t i = p; i < _len - 1; ++i) {
         _index[i] = _index[i + 1];
       }
 
       if (p < _len - 1) {
-        _data[_index[p]] = move(_data[_len - 1]);
+        *_index[p] = move(_data[_len - 1]);
         _index[_len - 2] = _index[p];
       }
 
@@ -212,12 +228,12 @@ class list {
 
 template <typename T>
 constexpr auto iter(const list<T>& l) {
-  return index_based_iterator<T>(l);
+  return index_based_iterator(l);
 }
 
 template <typename T>
 constexpr auto oter(const list<T>& l) {
-  return index_based_oterator<T>(l);
+  return index_based_oterator(l);
 }
 
 #endif
