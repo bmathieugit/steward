@@ -4,27 +4,8 @@
 #include <core/algorithm.hpp>
 #include <core/core.hpp>
 #include <core/hash.hpp>
+#include <core/list.hpp>
 #include <core/tuple.hpp>
-#include <core/vector.hpp>
-
-template <typename K, typename V>
-struct map_item {
-  K key;
-  V value;
-
-  constexpr map_item(const K& k, const V& v) : key(k), value(v) {}
-  constexpr map_item(const K& k, V&& v) : key(k), value(move(v)) {}
-};
-
-template <typename K>
-struct map_index {
-  size_t hash;
-  size_t rank; // à prendre en compte une fois le trie fait
-  size_t index;
-
-  constexpr map_index(const K& key, size_t i)
-      : hash(to_hash<sizeof(size_t) * 8>(key)), index(i) {}
-};
 
 template <typename K, typename V>
 class map {
@@ -33,8 +14,7 @@ class map {
   using position = K;
 
  public:
-  vector<map_index<K>> _index;
-  vector<map_item<K, V>> _data;
+  list<tuple<size_t, K, V>> _data;
 
  public:
   constexpr ~map() = default;
@@ -46,54 +26,23 @@ class map {
   constexpr map& operator=(map&&) = default;
 
  private:
-  constexpr auto to_data_position(const position& p) const {
+  constexpr size_t to_data_position(const position& p) const {
     auto hash = to_hash<sizeof(size_t) * 8>(p);
+    size_t pos = 0;
 
-    size_t pos = max_of<size_t>;
+    auto i = iter(_data);
 
-    int left = 0;
-    int right = _index.len() - 1;
-
-    while (left <= right) {
-      int middle = left + (right - left) / 2;
-
-      if (_index.at(middle).hash == hash) {
-        pos = middle;
-        break;
+    while (i.has()) {
+      if (get<0>(i.next()) == hash) {
+        return pos;
       }
 
-      else if (_index.at(middle).hash > hash) {
-        right = middle - 1;
-      } 
-      
       else {
-        left = middle + 1;
+        ++pos;
       }
     }
 
-    return _data.at(pos).key == p ? _index.at(pos).index : max_of<size_t>;
-  }
-
-  constexpr auto get_upper_bound_position(const position& p) {
-    auto hash = to_hash<sizeof(size_t) * 8>(p);
-    size_t pos = max_of<size_t>;
-    
-    while (left <= right) {
-      int middle = left + (right - left) / 2;
-
-      if (_index.at(middle).hash == hash) {
-        pos = middle;
-        break;
-      }
-
-      else if (_index.at(middle).hash > hash) {
-        right = middle - 1;
-      } 
-      
-      else {
-        left = middle + 1;
-      }
-    }
+    return max_of<size_t>;
   }
 
  public:
@@ -105,19 +54,15 @@ class map {
   constexpr size_t len() const { return _data.len(); }
 
   constexpr const type& at(const position& k) const {
-    return _data.at(to_data_position(k)).value;
+    return get<2>(_data.at(to_data_position(k)));
   }
-
-  constexpr auto ord() const {}
 
  public:
   constexpr void clear() { _data.clear(); }
 
   constexpr bool add(const type& v, const position& k) {
     if (not has(k)) {
-      
-      _data.add(map_item<K, V>(k, v));
-      _index.add(map_index<K>(k, _data.len() - 1));
+      _data.add(tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, v));
       return true;
     }
 
@@ -125,38 +70,38 @@ class map {
   }
 
   constexpr bool add(type&& v, const position& k) {
-    if (to_data_position(k) == max_of<size_t>) {
-      _data.add(map_item<K, V>(k, move(v)));
-      _index.add(map_index<K>(k, _data.len() - 1));
+    if (not has(k)) {
+      _data.add(
+          tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, move(v)));
       return true;
     }
 
     return false;
   }
 
-  constexpr bool modify(const type& v, const position& k) {
-    size_t p = to_data_position(k);
+  // constexpr bool modify(const type& v, const position& k) {
+  //   size_t p = to_data_position(k);
 
-    if (p != max_of<decltype(_data.len())>) {
-      _data.modify(map_item<K, V>(k, v), p);
-      return true;
-    }
+  //   if (p != max_of<decltype(_data.len())>) {
+  //     _data.modify(map_item<K, V>(k, v), p);
+  //     return true;
+  //   }
 
-    return false;
-  }
+  //   return false;
+  // }
 
-  constexpr bool modify(type&& v, const position& k) {
-    size_t p = to_data_position(k);
+  // constexpr bool modify(type&& v, const position& k) {
+  //   size_t p = to_data_position(k);
 
-    if (p != max_of<decltype(_data.len())>) {
-      _data.modify(map_item<K, V>(k, move(v)), p);
-      return true;
-    }
+  //   if (p != max_of<decltype(_data.len())>) {
+  //     _data.modify(map_item<K, V>(k, move(v)), p);
+  //     return true;
+  //   }
 
-    return false;
-  }
+  //   return false;
+  // }
 
-  constexpr bool remove(const position& p);
+  // constexpr bool remove(const position& p);
 };
 
 #endif

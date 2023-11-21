@@ -228,7 +228,7 @@ constexpr auto iter(const list<T>& l) {
 }
 
 template <typename T>
-constexpr auto oter(const list<T>& l) {
+constexpr auto oter(list<T>& l) {
   return index_based_oterator(l);
 }
 

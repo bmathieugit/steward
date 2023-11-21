@@ -269,7 +269,7 @@ concept collection =
       { c.modify(t, p) } -> same_as<bool>;
       { c.remove(p) } -> same_as<bool>;
       { c.clear() } -> same_as<void>;
-      { c.exchange(p,p) } -> same_as<bool>; 
+      { c.exchange(p, p) } -> same_as<bool>;
     };
 
 template <typename C>
@@ -300,13 +300,13 @@ class index_based_iterator {
   using type = typename C::type;
 
  private:
-  const C& _col;
+  const C* _col = nullptr;
   size_t _index;
 
  public:
-  constexpr index_based_iterator(const C& c) : _col(c), _index(0) {}
-  constexpr bool has() { return _index != _col.len(); }
-  constexpr const type& next() { return _col.at(_index++); }
+  constexpr index_based_iterator(const C& c) : _col(&c), _index(0) {}
+  constexpr bool has() { return _index != _col->len(); }
+  constexpr const type& next() { return _col->at(_index++); }
 };
 
 template <collection C>
@@ -315,13 +315,13 @@ class index_based_riterator {
   using type = typename C::type;
 
  private:
-  const C& _col;
+  const C* _col = nullptr;
   size_t _index;
 
  public:
-  constexpr index_based_riterator(const C& c) : _col(c), _index(_col.len()) {}
+  constexpr index_based_riterator(const C& c) : _col(&c), _index(_col->len()) {}
   constexpr bool has() { return _index != 0; }
-  constexpr const type& next() { return _col.at(--_index); }
+  constexpr const type& next() { return _col->at(--_index); }
 };
 
 template <collection C>
@@ -330,12 +330,12 @@ class index_based_oterator {
   using type = typename C::type;
 
  private:
-  C& _col;
+  C* _col = nullptr;
 
  public:
-  constexpr index_based_oterator(C& c) : _col(c) {}
-  constexpr bool add(const type& t) { return _col.add(t); }
-  constexpr bool add(type&& t) { return _col.add(move(t)); }
+  constexpr index_based_oterator(C& c) : _col(&c) {}
+  constexpr bool add(const type& t) { return _col->add(t); }
+  constexpr bool add(type&& t) { return _col->add(move(t)); }
 };
 
 constexpr size_t prand(size_t a, size_t b, size_t seed) {
@@ -347,20 +347,4 @@ constexpr size_t rand(size_t seed) {
   return prand(1103515245, 12345, seed);
 }
 
-struct random_index_input_stream {
- public:
-  using type = size_t;
-
- private:
-  size_t _seed = 0;
-  size_t _max = 0;
-
- public:
-  constexpr random_index_input_stream(size_t seed, size_t max)
-      : _seed(seed), _max(max) {}
-
- public:
-  constexpr bool has() { return true; }
-  constexpr size_t next() { return (_seed = rand(_seed)) % _max; }
-};
 #endif

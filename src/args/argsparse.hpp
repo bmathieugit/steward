@@ -29,6 +29,7 @@ class program {
  public:
   constexpr bool parse(int argc, char** argv) {
     for (int i = 0; i < argc; ++i) {
+      
     }
 
     return true;

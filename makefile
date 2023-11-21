@@ -27,6 +27,10 @@ test-string: test/test-string.cpp building
 	${CXX} -o  building/test-string.app test/test-string.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-string.app
 
+test-map: test/test-map.cpp building
+	${CXX} -o  building/test-map.app test/test-map.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test-map.app
+
 test-vector: test/test-vector.cpp building
 	${CXX} -o  building/test-vector.app test/test-vector.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-vector.app
