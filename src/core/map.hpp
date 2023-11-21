@@ -6,6 +6,14 @@
 #include <core/hash.hpp>
 #include <core/list.hpp>
 #include <core/tuple.hpp>
+#include <core/vector.hpp>
+
+template <typename K, typename V>
+struct item {
+  size_t hash;
+  K key;
+  V value;
+};
 
 template <typename K, typename V>
 class map {
@@ -14,7 +22,7 @@ class map {
   using position = K;
 
  public:
-  list<tuple<size_t, K, V>> _data;
+  list<item<K, V>> _data;
 
  public:
   constexpr ~map() = default;
@@ -33,7 +41,7 @@ class map {
     auto i = iter(_data);
 
     while (i.has()) {
-      if (get<0>(i.next()) == hash) {
+      if (i.next().hash == hash) {
         return pos;
       }
 
@@ -54,7 +62,7 @@ class map {
   constexpr size_t len() const { return _data.len(); }
 
   constexpr const type& at(const position& k) const {
-    return get<2>(_data.at(to_data_position(k)));
+    return _data.at(to_data_position(k)).value;
   }
 
  public:
@@ -62,7 +70,7 @@ class map {
 
   constexpr bool add(const type& v, const position& k) {
     if (not has(k)) {
-      _data.add(tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, v));
+      _data.add(item<K, V>{to_hash<sizeof(size_t) * 8>(k), k, v});
       return true;
     }
 
@@ -71,8 +79,7 @@ class map {
 
   constexpr bool add(type&& v, const position& k) {
     if (not has(k)) {
-      _data.add(
-          tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, move(v)));
+      _data.add(item<K, V>{to_hash<sizeof(size_t) * 8>(k), k, move(v)});
       return true;
     }
 

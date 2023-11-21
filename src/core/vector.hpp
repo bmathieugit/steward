@@ -2,35 +2,8 @@
 #define __n_vector_hpp__
 
 #include <core/algorithm.hpp>
+#include <core/allocator.hpp>
 #include <core/core.hpp>
-
-template <typename T>
-struct vector_allocator {
-  constexpr T* allocate(size_t n) const {
-    return n == 0 ? nullptr : static_cast<T*>(::operator new(n * sizeof(T)));
-  }
-
-  constexpr void deallocate(T* p) const noexcept { ::operator delete(p); }
-
-  template <typename... A>
-  constexpr void construct(T* p, A&&... args) const {
-    new (p) T(relay<A>(args)...);
-  }
-
-  constexpr void destroy(T* p) const noexcept {
-    if (p != nullptr) {
-      p->~T();
-    }
-  }
-
-  constexpr void destroy(T* p, size_t n) const noexcept {
-    if (p != nullptr) {
-      for (size_t i = 0; i < n; ++i) {
-        p[i].~T();
-      }
-    }
-  }
-};
 
 template <typename T, size_t N>
 class static_vector {
@@ -107,7 +80,7 @@ class static_vector {
       auto tmp1 = move(_data[p1]);
       _data[p1] = move(_data[p2]);
       _data[p2] = move(tmp1);
-    
+
       return true;
     }
 
@@ -172,7 +145,7 @@ class fixed_vector {
   using position = size_t;
 
  private:
-  vector_allocator<T> _alloc;
+  allocator<T> _alloc;
   size_t _max = 0;
   size_t _len = 0;
   T* _data = nullptr;
@@ -185,6 +158,8 @@ class fixed_vector {
     _max = 0;
     _len = 0;
   }
+
+  constexpr fixed_vector() = default;
 
   constexpr fixed_vector(size_t max)
       : _max(max == 0 ? 10 : max), _len(0), _data(_alloc.allocate(_max)) {}
@@ -204,6 +179,7 @@ class fixed_vector {
     if (this != &v) {
       _alloc.destroy(_data, _len);
       _alloc.deallocate(_data);
+      _data = nullptr;
       _len = 0;
       _max = 0;
 
@@ -353,35 +329,23 @@ class vector {
   using position = size_t;
 
  private:
-  fixed_vector<T> _data{10};
+  fixed_vector<T> _data;
 
  public:
   constexpr ~vector() = default;
   constexpr vector() = default;
   constexpr vector(size_t max) : _data(max) {}
-  constexpr vector(const vector& v) : _data(v._data) {}
-  constexpr vector(vector&& v) : _data(move(v._data)) {}
+  constexpr vector(const vector&) = default;
+  constexpr vector(vector&&) = default;
 
   template <iterator I>
   constexpr vector(I i) : vector() {
     copy(i, index_based_oterator(*this));
   }
 
-  constexpr vector& operator=(const vector& v) {
-    if (this != &v) {
-      _data = v._data;
-    }
+  constexpr vector& operator=(const vector&) = default;
 
-    return *this;
-  }
-
-  constexpr vector& operator=(vector&& v) {
-    if (this != &v) {
-      _data = move(v._data);
-    }
-
-    return *this;
-  }
+  constexpr vector& operator=(vector&&) = default;
 
   template <iterator I>
   constexpr vector& operator=(I i) {
@@ -423,7 +387,11 @@ class vector {
 
     if (_data.full()) {
       auto tmp = fixed_vector<T>(_data.len() * 2 + 10);
-      move(iter(_data), oter(tmp));
+      
+      for (size_t i = 0; i<_data.len(); ++i) {
+        tmp.add(move(_data.at(i)));
+      }
+
       _data = move(tmp);
     }
 

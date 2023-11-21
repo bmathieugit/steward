@@ -12,8 +12,8 @@ class list {
   using position = size_t;
 
  private:
-  vector_allocator<T> _alloc;
-  vector_allocator<T*> _ialloc;
+  allocator<T> _alloc;
+  allocator<T*> _ialloc;
   size_t _max = 0;
   size_t _len = 0;
   T* _data = nullptr;
@@ -90,7 +90,7 @@ class list {
   constexpr auto full() const { return _len == _max; }
 
  public:
-  constexpr bool has(position p) const { return p < _len; }
+  constexpr bool has(const position& p) const { return p < _len; }
   constexpr T& at(position p) { return *_index[p]; }
   constexpr const T& at(position p) const { return *_index[p]; }
 
@@ -123,7 +123,7 @@ class list {
     }
 
     if (not full()) {
-      for (size_t i = _len; i > p; --p) {
+      for (size_t i = _len; i > p; --i) {
         _index[i] = move(_index[i - 1]);
       }
 
@@ -158,7 +158,7 @@ class list {
     }
 
     if (not full()) {
-      for (size_t i = _len; i > p; --p) {
+      for (size_t i = _len; i > p; --i) {
         _index[i] = move(_index[i - 1]);
       }
 
@@ -170,7 +170,7 @@ class list {
     return false;
   }
 
-  constexpr bool exchange(position p1, position p2) {
+  constexpr bool exchange(const position& p1, const position& p2) {
     if (has(p1) and has(p2)) {
       auto ip1 = _index[p1];
       auto ip2 = _index[p2];
@@ -186,7 +186,7 @@ class list {
     }
   }
 
-  constexpr bool modify(const T& t, position p) {
+  constexpr bool modify(const T& t, const position& p) {
     if (p >= _len) {
       return false;
     } else {
@@ -195,7 +195,7 @@ class list {
     }
   }
 
-  constexpr bool modify(T&& t, position p) {
+  constexpr bool modify(T&& t, const position& p) {
     if (p >= _len) {
       return false;
     } else {
@@ -204,11 +204,11 @@ class list {
     }
   }
 
-  constexpr bool remove(position p) {
+  constexpr bool remove(const position& p) {
     if (p < _len) {
       _index[p]->~T();
       *_index[p] = move(*_index[_len - 1]);
-      
+
       for (size_t i = p; i < _len - 1; ++i) {
         _index[i] = _index[i + 1];
       }

@@ -35,7 +35,7 @@ constexpr size_t strlen(const C* s) {
 }
 
 template <character C>
-class null_terminating_string_forward_input_stream {
+class null_terminating_string_iterator {
  public:
   using type = C;
 
@@ -43,8 +43,7 @@ class null_terminating_string_forward_input_stream {
   const char* _data;
 
  public:
-  constexpr null_terminating_string_forward_input_stream(const C* data)
-      : _data(data) {}
+  constexpr null_terminating_string_iterator(const C* data) : _data(data) {}
 
  public:
   constexpr bool has() const { return *_data != '\0'; }
@@ -53,11 +52,10 @@ class null_terminating_string_forward_input_stream {
 
 template <character C>
 constexpr auto iter(const C* s) {
-  return null_terminating_string_forward_input_stream(s);
+  return null_terminating_string_iterator(s);
 }
 
 template <character C, size_t N>
 using cstring = basic_char_static_vector<C, N>;
-
 
 #endif

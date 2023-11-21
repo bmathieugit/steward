@@ -43,7 +43,7 @@ test-io: test/test-io.cpp building
 	${CXX} -o  building/test-io.app test/test-io.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-io.app
 
-test: test-variant test-vector test-string test-io  
+test: test-variant test-vector test-string test-io test-map  
 
 stat:
 	wc -l building/*.s
