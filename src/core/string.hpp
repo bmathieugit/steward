@@ -58,4 +58,17 @@ constexpr auto iter(const C* s) {
 template <character C, size_t N>
 using cstring = basic_char_static_vector<C, N>;
 
+template <typename T>
+constexpr bool is_fixed_sized_char_array = false;
+
+template <size_t N, character C>
+constexpr bool is_fixed_sized_char_array<C[N]> = true;
+
+template <size_t N, character C>
+constexpr bool is_fixed_sized_char_array<const C[N]> = true;
+
+template <typename C>
+concept string_view =
+    char_collection<C> or iterator<C> or is_fixed_sized_char_array<C>;
+
 #endif

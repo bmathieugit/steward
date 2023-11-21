@@ -6,14 +6,6 @@
 #include <core/hash.hpp>
 #include <core/list.hpp>
 #include <core/tuple.hpp>
-#include <core/vector.hpp>
-
-template <typename K, typename V>
-struct item {
-  size_t hash;
-  K key;
-  V value;
-};
 
 template <typename K, typename V>
 class map {
@@ -22,7 +14,7 @@ class map {
   using position = K;
 
  public:
-  list<item<K, V>> _data;
+  list<tuple<size_t, K, V>> _data;
 
  public:
   constexpr ~map() = default;
@@ -41,7 +33,7 @@ class map {
     auto i = iter(_data);
 
     while (i.has()) {
-      if (i.next().hash == hash) {
+      if (get<0>(i.next()) == hash) {
         return pos;
       }
 
@@ -62,15 +54,17 @@ class map {
   constexpr size_t len() const { return _data.len(); }
 
   constexpr const type& at(const position& k) const {
-    return _data.at(to_data_position(k)).value;
+    return get<2>(_data.at(to_data_position(k)));
   }
+
+  constexpr const auto& data() const { return _data; }
 
  public:
   constexpr void clear() { _data.clear(); }
 
   constexpr bool add(const type& v, const position& k) {
     if (not has(k)) {
-      _data.add(item<K, V>{to_hash<sizeof(size_t) * 8>(k), k, v});
+      _data.add(tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, v));
       return true;
     }
 
@@ -79,36 +73,62 @@ class map {
 
   constexpr bool add(type&& v, const position& k) {
     if (not has(k)) {
-      _data.add(item<K, V>{to_hash<sizeof(size_t) * 8>(k), k, move(v)});
+      _data.add(
+          tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, move(v)));
       return true;
     }
 
     return false;
   }
 
-  // constexpr bool modify(const type& v, const position& k) {
-  //   size_t p = to_data_position(k);
+  constexpr bool modify(const type& v, const position& k) {
+    size_t p = to_data_position(k);
 
-  //   if (p != max_of<decltype(_data.len())>) {
-  //     _data.modify(map_item<K, V>(k, v), p);
-  //     return true;
-  //   }
+    if (p != max_of<decltype(_data.len())>) {
+      _data.modify(tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, v),
+                   p);
+      return true;
+    }
 
-  //   return false;
-  // }
+    return false;
+  }
 
-  // constexpr bool modify(type&& v, const position& k) {
-  //   size_t p = to_data_position(k);
+  constexpr bool modify(type&& v, const position& k) {
+    size_t p = to_data_position(k);
 
-  //   if (p != max_of<decltype(_data.len())>) {
-  //     _data.modify(map_item<K, V>(k, move(v)), p);
-  //     return true;
-  //   }
+    if (p != max_of<decltype(_data.len())>) {
+      _data.modify(
+          tuple<size_t, K, V>(to_hash<sizeof(size_t) * 8>(k), k, move(v)), p);
+      return true;
+    }
 
-  //   return false;
-  // }
+    return false;
+  }
 
-  // constexpr bool remove(const position& p);
+  constexpr bool remove(const position& k) {
+    return _data.remove(to_data_position(k));
+  }
 };
+
+template <typename K, typename V>
+class map_iterator {
+ public:
+  using type = V;
+
+ private:
+  const map<K, V>* _m = nullptr;
+  size_t _p = 0;
+
+ public:
+  constexpr map_iterator(const map<K, V>& m) : _m(&m), _p(0) {}
+
+  constexpr bool has() { return _p != _m->len(); }
+  constexpr const type& next() { return get<2>(_m->data().at(_p++)); }
+};
+
+template <typename K, typename V>
+constexpr auto iter(const map<K, V>& m) {
+  return map_iterator(m);
+}
 
 #endif

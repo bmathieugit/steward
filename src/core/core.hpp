@@ -282,11 +282,19 @@ concept iterator = requires(I i) {
   { i.next() } -> same_as_declined<typename I::type>;
 };
 
+constexpr auto iter(iterator auto i) {
+  return i;
+}
+
 template <typename O>
 concept oterator = requires(O o, typename O::type c) {
   typename O::type;
   { o.add(c) } -> same_as<bool>;
 };
+
+constexpr auto oter(oterator auto o) {
+  return o;
+}
 
 template <typename C>
 concept char_iterator = character<typename C::type> and iterator<C>;

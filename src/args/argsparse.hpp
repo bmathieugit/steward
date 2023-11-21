@@ -4,8 +4,8 @@
 #include <core/algorithm.hpp>
 #include <core/chars.hpp>
 #include <core/file.hpp>
+#include <core/map.hpp>
 #include <core/string.hpp>
-#include <core/vector.hpp>
 
 namespace args {
 
@@ -21,15 +21,17 @@ struct option {
 class program {
  private:
   string _name;
-  vector<option> _options;
+  string _location;
+  map<string, option> _options;
 
  public:
   constexpr program(char_iterator auto name) : _name(name) {}
 
  public:
   constexpr bool parse(int argc, char** argv) {
-    for (int i = 0; i < argc; ++i) {
-      
+    _location = iter(argv[0]);
+
+    for (int i = 1; i < argc; ++i) {
     }
 
     return true;
@@ -58,7 +60,8 @@ class program {
                             bool required,
                             char_iterator auto fallback,
                             char_iterator auto help) {
-    return _options.add(option{name, shortname, required, fallback, help});
+    return _options.add(option{name, shortname, required, fallback, help},
+                        name);
   }
 
   constexpr string get_value(char_iterator auto name) {
@@ -71,6 +74,7 @@ class program {
         return opt._fallback;
       }
     }
+
     return iter("");
   }
 };

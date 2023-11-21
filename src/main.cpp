@@ -1,33 +1,27 @@
+#include <args/argsparse.hpp>
 #include <core/chars.hpp>
 #include <core/file.hpp>
-#include <core/list.hpp>
+
+#include <core/string.hpp>
+
+int foo(string_view auto& s) {
+  write(sout, iter(s), '\n');
+  return 0;
+}
 
 int main(int argc, char** argv) {
-  list<int> l;
-  
-  l.add(0);
-  l.add(1);
-  l.add(2);
-  l.add(3);
-  l.add(4);
-  l.add(5);
+  args::program p(iter("main program"));
 
-  auto i = iter(l);
+  p.add_option(iter("--valid"), 'v', false, iter("false"),
+               iter("est ce que le champ est valide ou pas"));
+  p.add_option(iter("--force"), 'f', true, iter("false"),
+               iter("est ce que le champ est forcé ou pas"));
 
-  while (i.has()) {
-    write(sout, i.next(), '\n');
+  if (argc == 1) {
+    write(sout, p.help());
   }
 
-  l.remove(2);
-  l.remove(2);
-  l.remove(3);
-
-  write(sout, '\n');  
-  auto i2 = iter(l);
-
-  while (i2.has()) {
-    write(sout, i2.next(), '\n');
-  }
+  foo("coucou");
 
   return 0;
 }

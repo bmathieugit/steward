@@ -21,6 +21,7 @@ void test_constructor_with_size() {
 void test_add_method() {
   vector<int> v;
   v.add(42);
+  printf("length : %lu\n", v.len());
   N_TEST_ASSERT_FALSE(v.empty());
   N_TEST_ASSERT_EQUALS(v.len(), 1);
   N_TEST_ASSERT_EQUALS(v.at(0), 42);
