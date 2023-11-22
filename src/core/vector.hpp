@@ -252,7 +252,7 @@ class fixed_vector {
         _data[i] = move(_data[i - 1]);
       }
 
-      _data[p] = t;
+      _data[p] = move(t);
       ++_len;
       return true;
     }

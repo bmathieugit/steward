@@ -132,7 +132,7 @@ constexpr S& to_chars(S& o, const C* s) {
 
 template <char_oterator S, signed_integral I>
 constexpr S& to_chars(S& o, I i) {
-  static_vector<typename S::type, 20> tbuff;
+  basic_static_string<typename S::type, 20> tbuff;
 
   if (i == 0) {
     tbuff.add('0');
@@ -160,7 +160,7 @@ constexpr S& to_chars(S& o, I i) {
 
 template <char_oterator S, unsigned_integral I>
 constexpr S& to_chars(S& o, I i) {
-  static_vector<typename S::type, 20> tbuff;
+  basic_static_string<typename S::type, 20> tbuff;
 
   if (i == 0) {
     tbuff.add('0');

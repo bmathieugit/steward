@@ -3,6 +3,7 @@
 
 #include <core/chars.hpp>
 #include <core/file.hpp>
+#include <core/vector.hpp>
 
 #define N_TEST_ASSERT_TRUE(condition)    \
   if (!(condition)) {                    \

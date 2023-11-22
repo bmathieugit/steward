@@ -10,22 +10,22 @@
 namespace args {
 
 struct option {
-  string _name;
+  string_iterator _name;
   char _shortname;
   bool _required;
-  string _fallback;
-  string _help;
-  string _value;
+  string_iterator _fallback;
+  string_iterator _help;
+  string_iterator _value;
 };
 
 class program {
  private:
-  string _name;
-  string _location;
-  map<string, option> _options;
+  string_iterator _name;
+  string_iterator _location;
+  map<string_iterator, option> _options;
 
  public:
-  constexpr program(char_iterator auto name) : _name(name) {}
+  constexpr program(string_iterator name) : _name(name) {}
 
  public:
   constexpr bool parse(int argc, char** argv) {
@@ -37,10 +37,7 @@ class program {
     return true;
   }
 
-  constexpr string help() {
-    auto buff = string();
-    auto out = oter(buff);
-
+  constexpr void help(char_oterator auto& out) {
     write(out, "\033[1mSYNOPSIS\033[0m\n\t", _name, "\n\n");
     write(out, "\033[1mOPTIONS\033[0m\n");
 
@@ -51,20 +48,18 @@ class program {
       write(out, "\t-", opt._shortname, ", ", opt._name, '\t', opt._help,
             "\n\n");
     }
-
-    return buff;
   }
 
-  constexpr bool add_option(char_iterator auto name,
+  constexpr bool add_option(string_iterator name,
                             char shortname,
                             bool required,
-                            char_iterator auto fallback,
-                            char_iterator auto help) {
+                            string_iterator fallback,
+                            string_iterator help) {
     return _options.add(option{name, shortname, required, fallback, help},
                         name);
   }
 
-  constexpr string get_value(char_iterator auto name) {
+  constexpr string_iterator get_value(string_iterator name) {
     auto i = iter(_options);
 
     while (i.has()) {
@@ -75,7 +70,7 @@ class program {
       }
     }
 
-    return iter("");
+    return "";
   }
 };
 
