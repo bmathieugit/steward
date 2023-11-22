@@ -5,6 +5,50 @@
 #include <core/allocator.hpp>
 #include <core/core.hpp>
 
+template <collection C>
+class index_based_iterator {
+ public:
+  using type = typename C::type;
+
+ private:
+  const C* _col = nullptr;
+  size_t _index;
+
+ public:
+  constexpr index_based_iterator(const C& c) : _col(&c), _index(0) {}
+  constexpr bool has() { return _index != _col->len(); }
+  constexpr const type& next() { return _col->at(_index++); }
+};
+
+template <collection C>
+class index_based_riterator {
+ public:
+  using type = typename C::type;
+
+ private:
+  const C* _col = nullptr;
+  size_t _index;
+
+ public:
+  constexpr index_based_riterator(const C& c) : _col(&c), _index(_col->len()) {}
+  constexpr bool has() { return _index != 0; }
+  constexpr const type& next() { return _col->at(--_index); }
+};
+
+template <collection C>
+class index_based_oterator {
+ public:
+  using type = typename C::type;
+
+ private:
+  C* _col = nullptr;
+
+ public:
+  constexpr index_based_oterator(C& c) : _col(&c) {}
+  constexpr bool add(const type& t) { return _col->add(t); }
+  constexpr bool add(type&& t) { return _col->add(move(t)); }
+};
+
 template <typename T, size_t N>
 class static_vector {
  public:

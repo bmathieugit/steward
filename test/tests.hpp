@@ -1,7 +1,6 @@
 #ifndef __n_tests_hpp__
 #define __n_tests_hpp__
 
-#include <core/chars.hpp>
 #include <core/file.hpp>
 #include <core/vector.hpp>
 
@@ -76,14 +75,15 @@ class test_suite {
 
     while (tests_os.has()) {
       auto&& t = tests_os.next();
+#ifdef N_TEST_VERBOSE
       write(sout, "\nTEST [", t.name(), "]\n");
-
+#endif
       auto res = t.run();
-
+#ifdef N_TEST_VERBOSE
       write(sout, (res == test_result::success
                        ? " - Result : \033[1;32mPASSED\033[0m\n"
                        : " - Result : \033[1;31mFAILED\033[0m\n"));
-
+#endif
       if (res == test_result::success) {
         ++succeed;
       } else {
@@ -92,7 +92,7 @@ class test_suite {
     }
 
     write(sout, "\nSUITE RECAP - Passed : \033[1;32m", succeed,
-          "\033[0m\n - Failed : \033[1;31m", failed, "\033[0m\n\n");
+          "\033[0m - Failed : \033[1;31m", failed, "\033[0m\n\n");
   }
 };
 

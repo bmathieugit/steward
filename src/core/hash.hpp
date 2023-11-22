@@ -26,7 +26,6 @@ uof<N> to_hash(byte_t b, uof<N> h = fnvoffset<N>) {
   return (h ^ b) * fnvprime<N>;
 }
 
-
 template <size_t N, size_t M>
 uof<N> to_hash(const byte_t (&bs)[M], uof<N> h = fnvoffset<N>) {
   for (size_t i = 0; i < M; ++i) {
@@ -36,14 +35,10 @@ uof<N> to_hash(const byte_t (&bs)[M], uof<N> h = fnvoffset<N>) {
   return h;
 }
 
-
 template <size_t N>
 uof<N> to_hash(wchar_t c, uof<N> h = fnvoffset<N>) {
   return to_hash<N>(static_cast<const byte_t[sizeof(wchar_t)]>(c), h);
 }
-
-
-
 
 template <size_t N, integral I>
 uof<N> to_hash(const I i, uof<N> h = fnvoffset<N>) {

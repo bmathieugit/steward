@@ -2,11 +2,6 @@
 #define __n_algorithm_hpp__
 
 #include <core/core.hpp>
-#include <core/result.hpp>
-
-///////////////////////////////
-/// (I/O)terator algorithms ///
-///////////////////////////////
 
 template <iterator I>
 constexpr size_t count(I i) {

@@ -65,16 +65,7 @@ concept convertible_to =
     requires { static_cast<rm_cref<To>>(*((rm_cref<From>*)nullptr)); };
 
 template <typename T>
-concept character = same_as<T, char> or same_as<T, wchar_t>;
-
-template <typename T>
-concept signed_integral = same_as<T, short> or same_as<T, int> or
-                          same_as<T, long> or same_as<T, long long>;
-
-template <typename T>
-concept unsigned_integral =
-    same_as<T, unsigned short> or same_as<T, unsigned int> or
-    same_as<T, unsigned long> or same_as<T, unsigned long long>;
+concept default_constructible = requires { T(); };
 
 template <bool test, typename T, typename U>
 struct __if_ {
@@ -88,21 +79,6 @@ struct __if_<true, T, U> {
 
 template <bool test, typename T, typename U>
 using if_ = typename __if_<test, T, U>::type;
-
-template <bool test, auto t, auto f>
-constexpr auto tern = test ? t : f;
-
-template <typename T>
-concept integral = signed_integral<T> or unsigned_integral<T> or character<T>;
-
-template <typename T>
-concept default_constructible = requires { T(); };
-
-using uchar = unsigned char;
-using ushort = unsigned short;
-using uint = unsigned int;
-using ulong = unsigned long;
-using ullong = unsigned long long;
 
 template <auto v, typename T>
 struct switch_case_ {
@@ -145,6 +121,24 @@ struct __map_<K, P0, PN...> {
 
 template <typename K, typename... P>
 using map_ = typename __map_<K, P...>::type;
+
+using uchar = unsigned char;
+using ushort = unsigned short;
+using uint = unsigned int;
+using ulong = unsigned long;
+using ullong = unsigned long long;
+
+template <typename T>
+concept character = contains<T, char, wchar_t>;
+
+template <typename T>
+concept signed_integral = contains<T, short, int, long, long long>;
+
+template <typename T>
+concept unsigned_integral = contains<T, ushort, uint, ulong, ullong>;
+
+template <typename T>
+concept integral = signed_integral<T> or unsigned_integral<T> or character<T>;
 
 template <unsigned_integral U>
 using signed_eq = map_<U,
@@ -209,33 +203,7 @@ using u64 = uof<64>;
 using u128 = uof<128>;
 
 using byte_t = u8;
-
 using size_t = decltype(sizeof(int));
-
-template <typename T>
-concept byteable = requires(T t) {
-  { bytes(t) } -> same_as<byte_t[sizeof(size_t) + 1]>;
-};
-
-template <typename T>
-constexpr rm_ref<T>&& move(T&& t) {
-  return static_cast<rm_ref<T>&&>(t);
-}
-
-template <typename T>
-constexpr T&& relay(rm_ref<T>& t) noexcept {
-  return static_cast<T&&>(t);
-}
-
-template <typename T>
-constexpr T&& relay(rm_ref<T>&& t) noexcept {
-  return static_cast<T&&>(t);
-}
-
-template <typename T>
-void* operator new(size_t, T* ptr) {
-  return ptr;
-}
 
 template <typename T, typename U>
 concept has_equals_operator = requires(const T& t, const U& u) { t == u; };
@@ -248,32 +216,21 @@ concept predicate = requires(P p, T t) {
   { p(t) } -> same_as<bool>;
 };
 
-template <typename T>
-concept collection_context = requires {
-  typename T::type;
-  typename T::position;
+template <typename C>
+concept collection = requires {
+  typename C::type;
+  typename C::position;
+} and requires(C c, const C cc, typename C::type t, typename C::position p) {
+  { cc.has(p) } -> same_as<bool>;
+  { cc.at(p) } -> same_as_declined<typename C::type>;
+  { cc.empty() } -> same_as<bool>;
+  { cc.len() } -> same_as<size_t>;
+  { c.add(t, p) } -> same_as<bool>;
+  { c.modify(t, p) } -> same_as<bool>;
+  { c.remove(p) } -> same_as<bool>;
+  { c.clear() } -> same_as<void>;
+  { c.exchange(p, p) } -> same_as<bool>;
 };
-
-template <typename T1, typename T2>
-concept same_type = same_as<typename T1::type, typename T2::type>;
-
-template <typename C>
-concept collection =
-    collection_context<C> and
-    requires(C c, const C cc, typename C::type t, typename C::position p) {
-      { cc.has(p) } -> same_as<bool>;
-      { cc.at(p) } -> same_as_declined<typename C::type>;
-      { cc.empty() } -> same_as<bool>;
-      { cc.len() } -> same_as<size_t>;
-      { c.add(t, p) } -> same_as<bool>;
-      { c.modify(t, p) } -> same_as<bool>;
-      { c.remove(p) } -> same_as<bool>;
-      { c.clear() } -> same_as<void>;
-      { c.exchange(p, p) } -> same_as<bool>;
-    };
-
-template <typename C>
-concept char_collection = collection<C> and character<typename C::type>;
 
 template <typename I>
 concept iterator = requires(I i) {
@@ -296,63 +253,24 @@ constexpr auto oter(oterator auto o) {
   return o;
 }
 
-template <typename C>
-concept char_iterator = character<typename C::type> and iterator<C>;
-
-template <typename C>
-concept char_oterator = character<typename C::type> and oterator<C>;
-
-template <collection C>
-class index_based_iterator {
- public:
-  using type = typename C::type;
-
- private:
-  const C* _col = nullptr;
-  size_t _index;
-
- public:
-  constexpr index_based_iterator(const C& c) : _col(&c), _index(0) {}
-  constexpr bool has() { return _index != _col->len(); }
-  constexpr const type& next() { return _col->at(_index++); }
-};
-
-template <collection C>
-class index_based_riterator {
- public:
-  using type = typename C::type;
-
- private:
-  const C* _col = nullptr;
-  size_t _index;
-
- public:
-  constexpr index_based_riterator(const C& c) : _col(&c), _index(_col->len()) {}
-  constexpr bool has() { return _index != 0; }
-  constexpr const type& next() { return _col->at(--_index); }
-};
-
-template <collection C>
-class index_based_oterator {
- public:
-  using type = typename C::type;
-
- private:
-  C* _col = nullptr;
-
- public:
-  constexpr index_based_oterator(C& c) : _col(&c) {}
-  constexpr bool add(const type& t) { return _col->add(t); }
-  constexpr bool add(type&& t) { return _col->add(move(t)); }
-};
-
-constexpr size_t prand(size_t a, size_t b, size_t seed) {
-  seed = (a * seed + b) & max_of<unsigned>;
-  return static_cast<size_t>(seed);
+template <typename T>
+constexpr rm_ref<T>&& move(T&& t) {
+  return static_cast<rm_ref<T>&&>(t);
 }
 
-constexpr size_t rand(size_t seed) {
-  return prand(1103515245, 12345, seed);
+template <typename T>
+constexpr T&& relay(rm_ref<T>& t) noexcept {
+  return static_cast<T&&>(t);
+}
+
+template <typename T>
+constexpr T&& relay(rm_ref<T>&& t) noexcept {
+  return static_cast<T&&>(t);
+}
+
+template <typename T>
+void* operator new(size_t, T* ptr) {
+  return ptr;
 }
 
 #endif
