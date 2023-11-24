@@ -491,7 +491,8 @@ class basic_string_iterator {
  public:
   using type = C;
 
- private:
+  /* FIXME: to private*/
+ public:
   const C* _data = nullptr;
 
  public:
@@ -506,7 +507,6 @@ class basic_string_iterator {
   constexpr basic_string_iterator(const basic_fixed_string<C>& s)
       : _data(s.data()) {}
   constexpr basic_string_iterator(const basic_string<C>& s) : _data(s.data()) {}
-
   constexpr basic_string_iterator& operator=(const basic_string_iterator&) =
       default;
   constexpr basic_string_iterator& operator=(basic_string_iterator&&) = default;

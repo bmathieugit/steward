@@ -29,7 +29,7 @@ constexpr size_t count(I i, const typename I::type& t) {
 template <iterator I>
 constexpr size_t count(const I& i, predicate<typename I::type> auto&& pred) {
   size_t c = 0;
-
+  
   while (i.has()) {
     if (pred(i.next())) {
       c += 1;

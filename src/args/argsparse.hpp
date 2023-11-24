@@ -8,12 +8,15 @@
 
 namespace args {
 
+enum class option_type { string, integer, flag, none };
+
 struct option {
   string_iterator _name;
   char _shortname;
   bool _required;
   string_iterator _fallback;
   string_iterator _help;
+  option_type _type;
   string_iterator _value;
 };
 
@@ -31,6 +34,39 @@ class program {
     _location = iter(argv[0]);
 
     for (int i = 1; i < argc; ++i) {
+      if (_options.has(iter(argv[i]))) {
+        option& opt = _options.at(iter(argv[i]));
+
+        switch (opt._type) {
+          case option_type::flag:
+            opt._value = iter("0");
+            break;
+          case option_type::integer:
+            if (i < argc - 1) {
+              opt._value = iter(argv[++i]);
+            }
+
+            else {
+              return false;
+            }
+            break;
+          case option_type::string:
+            if (i < argc - 1) {
+              opt._value = iter(argv[++i]);
+            }
+
+            else {
+              return false;
+            }
+            break;
+          case option_type::none:
+            break;
+        }
+      }
+
+      else {
+        return false;
+      }
     }
 
     return true;
@@ -51,22 +87,17 @@ class program {
 
   constexpr bool add_option(string_iterator name,
                             char shortname,
+                            option_type type,
                             bool required,
                             string_iterator fallback,
                             string_iterator help) {
-    return _options.add(option{name, shortname, required, fallback, help},
+    return _options.add(option{name, shortname, required, fallback, help, type},
                         name);
   }
 
   constexpr string_iterator get_value(string_iterator name) {
-    auto i = iter(_options);
-
-    while (i.has()) {
-      const auto& opt = i.next();
-
-      if (equals(iter(opt._name), name)) {
-        return opt._fallback;
-      }
+    if (_options.has(name)) {
+      return _options.at(name)._value;
     }
 
     return "";

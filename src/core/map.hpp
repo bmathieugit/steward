@@ -57,6 +57,10 @@ class map {
     return get<2>(_data.at(to_data_position(k)));
   }
 
+  constexpr type& at(const position& k) {
+    return get<2>(_data.at(to_data_position(k)));
+  }
+  
   constexpr const auto& data() const { return _data; }
 
  public:
