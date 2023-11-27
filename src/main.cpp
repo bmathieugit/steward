@@ -1,5 +1,6 @@
 #include <args/argsparse.hpp>
 #include <core/file.hpp>
+#include <core/iterator.hpp>
 #include <core/string.hpp>
 
 int main(int argc, char** argv) {
@@ -15,7 +16,11 @@ int main(int argc, char** argv) {
   if (not p.parse(argc, argv)) {
     p.help(sout);
   }
-  
-  write(sout, p.get_value("--file"), '\n');
+
+  auto i = iter("hello");
+  // auto i2 = iter(" world !");
+  write(sout, intersperse(i, '!'));
+
+  // write(sout, p.get_value("--file"), '\n');
   return 0;
 }
