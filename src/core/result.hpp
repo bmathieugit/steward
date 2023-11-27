@@ -216,5 +216,109 @@ class result {
   constexpr const E&& err() const&& { return move(_data.template get<E>()); }
 };
 
+template <typename T>
+class maybe {
+ private:
+  alignas(T) char _data[sizeof(T)];
+  bool _has = false;
+
+ public:
+  constexpr ~maybe() {
+    if (_has) {
+      reinterpret_cast<T*>(_data)->~T();
+      _has = false;
+    }
+  }
+
+  constexpr maybe() = default;
+
+  constexpr maybe(const maybe& o) {
+    _has = o._has;
+
+    if (_has) {
+      new (_data) T(*reinterpret_cast<const T*>(o._data));
+    }
+  }
+
+  constexpr maybe(maybe&& o) {
+    _has = o._has;
+
+    if (_has) {
+      new (_data) T(move(*reinterpret_cast<T*>(o._data)));
+    }
+  }
+
+  constexpr maybe(const T& t) {
+    _has = true;
+    new (_data) T(t);
+  }
+
+  constexpr maybe(T&& t) {
+    _has = true;
+    new (_data) T(move(t));
+  }
+
+  constexpr maybe& operator=(const maybe& o) {
+    if (this != &o) {
+      if (_has) {
+        reinterpret_cast<T*>(_data)->~T();
+        _has = false;
+      }
+
+      _has = o._has;
+
+      if (_has) {
+        new (_data) T(*reinterpret_cast<const T*>(o._data));
+      }
+    }
+
+    return *this;
+  }
+
+  constexpr maybe& operator=(maybe&& o) {
+    if (this != &o) {
+      if (_has) {
+        reinterpret_cast<T*>(_data)->~T();
+        _has = false;
+      }
+
+      _has = o._has;
+
+      if (_has) {
+        new (_data) T(move(*reinterpret_cast<const T*>(o._data)));
+      }
+    }
+
+    return *this;
+  }
+
+  constexpr maybe& operator=(const T& t) {
+    if (_has) {
+      reinterpret_cast<T*>(_data)->~T();
+    }
+
+    new (_data) T(t);
+    _has = true;
+    return *this;
+  }
+
+  constexpr maybe& operator=(T&& t) {
+    if (_has) {
+      reinterpret_cast<T*>(_data)->~T();
+    }
+
+    new (_data) T(move(t));
+    _has = true;
+    return *this;
+  }
+
+  constexpr bool has() const { return _has; }
+  constexpr T& get() & { return *reinterpret_cast<T*>(_data); }
+  constexpr T&& get() && { return move(*reinterpret_cast<T*>(_data)); }
+  constexpr const T& get() const& { return *reinterpret_cast<const T*>(_data); }
+  constexpr const T&& get() const&& {
+    return move(*reinterpret_cast<const T*>(_data));
+  }
+};
 
 #endif

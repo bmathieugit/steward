@@ -4,25 +4,6 @@
 #include <core/core.hpp>
 #include <core/tuple.hpp>
 
-// template <typename I0, iterator... IN>
-//   requires same_all<typename I0::type, typename IN::type...>;
-// class chain {
-//  public:
-//   using type = typename I0::type;
-
-//  private:
-//   tuple<IO, IN...> _iters;
-//   size_t _rank = 0;
-
-//  public:
-//   constexpr chain(I0 i0, IN... in) : _iters(i0, in...) {}
-//   constexpr bool has() {
-//     return rank < (sizeof(IN) + 1) and get<_rank>(_iters).has();
-//   }
-
-//   constexpr type next() { return get<_rank>(_iters).next(); }
-// };
-
 template <iterator I1, iterator I2>
   requires same_as<typename I1::type, typename I2::type>
 class chain {
@@ -110,10 +91,9 @@ class enumerate {
   constexpr type next() { return tuple(_idx++, _iter.next()); }
 };
 
-class filter {};
-class repeat {};
-class skip {};
-class take {};
-class zip {};
+// class repeat {};
+// class skip {};
+// class take {};
+// class zip {};
 
 #endif

@@ -8,16 +8,38 @@
 
 namespace args {
 
+constexpr auto false_fallback = iter("1");
+constexpr auto true_fallback = iter("1");
+
 enum class option_type { string, integer, flag, none };
 
 struct option {
   string_iterator _name;
   char _shortname;
   bool _required;
-  string_iterator _fallback;
   string_iterator _help;
   option_type _type;
   string_iterator _value;
+
+  constexpr option(string_iterator name, option_type type)
+      : _name(name), _shortname('\0'), _type(type) {}
+
+  constexpr option(string_iterator name, char shortcut, option_type type)
+      : _name(name), _shortname(shortcut), _type(type) {}
+
+  constexpr option& required() {
+    _required = true;
+    return *this;
+  }
+
+  constexpr option& help(string_iterator h) {
+    _help = h;
+    return *this;
+  }
+  constexpr option& fallback(string_iterator val) {
+    _value = val;
+    return *this;
+  }
 };
 
 class program {
@@ -28,6 +50,11 @@ class program {
 
  public:
   constexpr program(string_iterator name) : _name(name) {}
+
+ private:
+  constexpr bool int_validator(string_iterator val) {
+    return all_of(val, [](auto c) { return '0' <= c and c <= '9'; });
+  }
 
  public:
   constexpr bool parse(int argc, char** argv) {
@@ -49,6 +76,7 @@ class program {
             else {
               return false;
             }
+
             break;
           case option_type::string:
             if (i < argc - 1) {
@@ -58,6 +86,7 @@ class program {
             else {
               return false;
             }
+
             break;
           case option_type::none:
             break;
@@ -66,6 +95,28 @@ class program {
 
       else {
         return false;
+      }
+    }
+
+    auto iopt = iter(_options);
+
+    while (iopt.has()) {
+      auto&& opt = iopt.next();
+
+      if (opt._required) {
+        if (opt._value.has()) {
+          if (opt._type == option_type::integer) {
+            if (not int_validator(opt._value)) {
+              return false;
+            }
+          }
+
+          continue;
+        }
+
+        else {
+          return false;
+        }
       }
     }
 
@@ -80,19 +131,17 @@ class program {
 
     while (i.has()) {
       const auto& opt = i.next();
-      write(out, "\t-", opt._shortname, ", ", opt._name, '\t', opt._help,
-            "\n\n");
+      write(out, opt._required ? "\t-" : "\t[-", opt._shortname, ", ",
+            opt._name, opt._required ? "" : "]", '\t', opt._help, "\n\n");
     }
   }
 
-  constexpr bool add_option(string_iterator name,
-                            char shortname,
-                            option_type type,
-                            bool required,
-                            string_iterator fallback,
-                            string_iterator help) {
-    return _options.add(option{name, shortname, required, fallback, help, type},
-                        name);
+  constexpr bool add_option(option&& opt) {
+    return _options.add(move(opt), opt._name);
+  }
+
+  constexpr bool add_option(const option& opt) {
+    return _options.add(opt, opt._name);
   }
 
   constexpr string_iterator get_value(string_iterator name) {
@@ -101,6 +150,36 @@ class program {
     }
 
     return "";
+  }
+
+  constexpr maybe<bool> get_flag(string_iterator name) {
+    maybe<bool> b;
+
+    if (_options.has(name)) {
+      from_chars(_options.at(name)._value, b);
+    }
+
+    return b;
+  }
+
+  constexpr maybe<int> get_int(string_iterator name) {
+    maybe<int> i;
+
+    if (_options.has(name)) {
+      from_chars(_options.at(name)._value, i);
+    }
+
+    return i;
+  }
+
+  constexpr maybe<string_iterator> get_str(string_iterator name) {
+    maybe<string_iterator> i;
+
+    if (_options.has(name)) {
+      i = _options.at(name)._value;
+    }
+
+    return i;
   }
 };
 

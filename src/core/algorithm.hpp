@@ -6,6 +6,7 @@
 template <iterator I>
 constexpr size_t count(I i) {
   size_t c = 0;
+
   while (i.has()) {
     i.next();
     c += 1;
@@ -29,7 +30,7 @@ constexpr size_t count(I i, const typename I::type& t) {
 template <iterator I>
 constexpr size_t count(const I& i, predicate<typename I::type> auto&& pred) {
   size_t c = 0;
-  
+
   while (i.has()) {
     if (pred(i.next())) {
       c += 1;
@@ -40,7 +41,7 @@ constexpr size_t count(const I& i, predicate<typename I::type> auto&& pred) {
 }
 
 template <iterator I>
-constexpr bool all_of(I i, predicate<typename I::type> auto& pred) {
+constexpr bool all_of(I i, predicate<typename I::type> auto&& pred) {
   while (i.has()) {
     if (not pred(i.next())) {
       return false;
@@ -51,7 +52,7 @@ constexpr bool all_of(I i, predicate<typename I::type> auto& pred) {
 }
 
 template <iterator I>
-constexpr bool any_of(I i, predicate<typename I::type> auto& pred) {
+constexpr bool any_of(I i, predicate<typename I::type> auto&& pred) {
   while (i.has()) {
     if (pred(i.next())) {
       return true;
@@ -62,7 +63,7 @@ constexpr bool any_of(I i, predicate<typename I::type> auto& pred) {
 }
 
 template <iterator I>
-constexpr bool none_of(I i, predicate<typename I::type> auto& pred) {
+constexpr bool none_of(I i, predicate<typename I::type> auto&& pred) {
   while (i.has()) {
     if (pred(i.next())) {
       return false;
