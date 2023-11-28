@@ -105,13 +105,9 @@ class raw_file {
 
     if (_fd == null_file) {
       _fd = fopen(fname, smode<m>);
-
-      if (_fd != null_file) {
-        return true;
-      }
     }
 
-    return false;
+    return _fd != null_file;
   }
 
   bool open(char_iterator auto fname)
@@ -130,7 +126,7 @@ class raw_file {
   bool read(T& t)
     requires read_mode<m>
   {
-    return _fd != null_file and fread(&t, sizeof(T), 1, _fd) == 1;
+    return opened() and fread(&t, sizeof(T), 1, _fd) == 1;
   }
 
   bool readall(oterator auto os)
@@ -158,7 +154,7 @@ class raw_file {
   bool write(const T& t)
     requires write_mode<m>
   {
-    return _fd != null_file and fwrite(&t, sizeof(T), 1, _fd) == 1;
+    return opened() and fwrite(&t, sizeof(T), 1, _fd) == 1;
   }
 
   bool writeall(iterator auto is)
@@ -177,7 +173,7 @@ class raw_file {
   size_t len() {
     size_t len = 0;
 
-    if (_fd != null_file) {
+    if (opened()) {
       auto pos = ftell(_fd);
       fseek(_fd, 0L, SEEK_END);
       len = ftell(_fd);

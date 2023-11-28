@@ -23,6 +23,10 @@ main: src/main.cpp building
 	${CXX} -o  building/main.app src/main.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/main.app
 
+pass: src/pass.cpp building
+	${CXX} -o  building/pass.app src/pass.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/pass.app
+
 test-string: test/test-string.cpp building
 	${CXX} -o  building/test-string.app test/test-string.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/test-string.app

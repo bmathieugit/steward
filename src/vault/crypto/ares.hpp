@@ -1,8 +1,6 @@
 #ifndef __stew_vault_crypto_ares_hpp__
 #define __stew_vault_crypto_ares_hpp__
 
-#include <core/char-istream.hpp>
-#include <core/char-ostream.hpp>
 #include <core/string.hpp>
 #include <vault/crypto/mash.hpp>
 
@@ -13,7 +11,7 @@ class ares {
   static_vector<static_vector<char, 64>, 64> _keys;
 
  public:
-  constexpr ares(char_input_stream auto key) {
+  constexpr ares(char_iterator auto key) {
     _keys.add(mash{}.digest(key));
 
     for (size_t i = 1; i < 64; ++i) {
@@ -28,10 +26,10 @@ class ares {
 
     while (im.has()) {
       auto&& krow = im.next();
-      auto ordi = crypted.ord();
+      auto ccrypted = iter(crypted);
 
-      while (ordi.has()) {
-        auto i = ordi.next();
+      while (ccrypted.has()) {
+        auto i = ccrypted.next();
         auto c = crypted.at(i);
         auto ckey = krow.at(i % 64);
         crypted.modify(c ^ ckey, i);
@@ -43,14 +41,14 @@ class ares {
 
   constexpr fixed_string decrypt(const char_collection auto& mess) const {
     fixed_string crypted(mess);
-    auto rim = ristream(_keys);
+    auto rim = riter(_keys);
 
     while (rim.has()) {
       auto&& krow = rim.next();
-      auto ordi = crypted.ord();
+      auto ccrypted = iter(crypted);
 
-      while (ordi.has()) {
-        auto i = ordi.next();
+      while (ccrypted.has()) {
+        auto i = ccrypted.next();
         auto c = crypted.at(i);
         auto ckey = krow.at(i % 64);
         crypted.modify(c ^ ckey, i);
