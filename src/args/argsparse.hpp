@@ -16,7 +16,7 @@ enum class option_type { string, integer, flag, none };
 struct option {
   string_iterator _name;
   char _shortname;
-  bool _required;
+  bool _required = false;
   string_iterator _help;
   option_type _type;
   string_iterator _value;
@@ -74,6 +74,7 @@ class program {
             }
 
             else {
+              write(sout, "error during parsing '", opt._name, "'\n");
               return false;
             }
 
@@ -84,6 +85,7 @@ class program {
             }
 
             else {
+              write(sout, "error during parsing '", opt._name, "'\n");
               return false;
             }
 
@@ -94,6 +96,8 @@ class program {
       }
 
       else {
+        write(sout, "error during parsing: argument '", iter(argv[i]),
+              "' does not exist !\n");
         return false;
       }
     }
@@ -107,6 +111,8 @@ class program {
         if (opt._value.has()) {
           if (opt._type == option_type::integer) {
             if (not int_validator(opt._value)) {
+              write(sout, "error during parsing '", opt._name,
+                    "': value not valid :'", opt._value, "'\n");
               return false;
             }
           }
@@ -115,6 +121,9 @@ class program {
         }
 
         else {
+          write(sout, "error during parsing '", opt._name,
+                "': missing value\n");
+
           return false;
         }
       }
@@ -142,7 +151,7 @@ class program {
 
   constexpr bool add_option(const option& opt) {
     return _options.add(opt, opt._name);
-  }
+  }z
 
   constexpr string_iterator get_value(string_iterator name) {
     if (_options.has(name)) {

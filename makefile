@@ -49,6 +49,9 @@ test-io: test/test-io.cpp building
 
 test: test-variant test-vector test-string test-io test-map  
 
+cloc: 
+	cloc src/
+
 stat:
 	wc -l building/*.s
 

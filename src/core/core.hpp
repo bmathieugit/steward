@@ -276,4 +276,67 @@ void* operator new(size_t, T* ptr) {
   return ptr;
 }
 
+template <collection C>
+constexpr bool has(const C& c, const typename C::position& p) {
+  return c.has(p);
+}
+
+template <collection C>
+constexpr auto at(const C& c, const typename C::position& p) -> decltype(auto) {
+  return c.at(p);
+}
+
+template <collection C>
+constexpr bool empty(const C& c) {
+  return c.empty();
+}
+
+template <collection C>
+constexpr size_t len(const C& c) {
+  return c.len();
+}
+
+template <collection C>
+constexpr bool add(C& c,
+                   const typename C::type& t,
+                   const typename C::position& p) {
+  return c.add(t, p);
+}
+
+template <collection C>
+constexpr bool add(C& c, typename C::type&& t, const typename C::position& p) {
+  return c.add(move(t), p);
+}
+
+template <collection C>
+constexpr bool modify(C& c,
+                      const typename C::type& t,
+                      const typename C::position& p) {
+  return c.modify(t, p);
+}
+
+template <collection C>
+constexpr bool modify(C& c,
+                      typename C::type&& t,
+                      const typename C::position& p) {
+  return c.modify(move(t), p);
+}
+
+template <collection C>
+constexpr bool remove(C& c, const typename C::position& p) {
+  return c.remove(p);
+}
+
+template <collection C>
+constexpr void clear(C& c) {
+  c.clear();
+}
+
+template <collection C>
+constexpr bool exchange(C& c,
+                        const typename C::position& p1,
+                        const typename C::position& p2) {
+  return c.exchange(p1, p2);
+}
+
 #endif

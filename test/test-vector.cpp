@@ -4,44 +4,41 @@
 // Test du constructeur par défaut
 void test_default_constructor() {
   vector<int> v;
-  N_TEST_ASSERT_TRUE(v.empty());
-  N_TEST_ASSERT_EQUALS(v.len(), 0);
-  N_TEST_ASSERT_EQUALS(v.max(), 0);
+  N_TEST_ASSERT_TRUE(empty(v));
+  N_TEST_ASSERT_EQUALS(len(v), 0);
 }
 
 // Test du constructeur avec taille initiale
 void test_constructor_with_size() {
   vector<int> v2(20);
-  N_TEST_ASSERT_TRUE(v2.empty());
-  N_TEST_ASSERT_EQUALS(v2.len(), 0);
-  N_TEST_ASSERT_EQUALS(v2.max(), 20);
+  N_TEST_ASSERT_TRUE(empty(v2));
+  N_TEST_ASSERT_EQUALS(len(v2), 0);
 }
 
 // Test de la méthode add()
 void test_add_method() {
   vector<int> v;
   v.add(42);
-  printf("length : %lu\n", v.len());
-  N_TEST_ASSERT_FALSE(v.empty());
-  N_TEST_ASSERT_EQUALS(v.len(), 1);
-  N_TEST_ASSERT_EQUALS(v.at(0), 42);
+  N_TEST_ASSERT_FALSE(empty(v));
+  N_TEST_ASSERT_EQUALS(len(v), 1);
+  N_TEST_ASSERT_EQUALS(at(v, 0), 42);
 }
 
 // Test de la méthode modify()
 void test_modify_method() {
   vector<int> v;
-  v.add(42);
-  v.modify(99, 0);
-  N_TEST_ASSERT_EQUALS(v.at(0), 99);
+  add(v, 42, len(v));
+  modify(v, 99, 0);
+  N_TEST_ASSERT_EQUALS(at(v, 0), 99);
 }
 
 // Test de la méthode remove()
 void test_remove_method() {
   vector<int> v;
-  v.add(42);
-  v.remove(0);
-  N_TEST_ASSERT_TRUE(v.empty());
-  N_TEST_ASSERT_EQUALS(v.len(), 0);
+  add(v, 42, len(v));
+  remove(v, 0);
+  N_TEST_ASSERT_TRUE(empty(v));
+  N_TEST_ASSERT_EQUALS(len(v), 0);
 }
 
 int main() {

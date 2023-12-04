@@ -4,6 +4,10 @@
 #include <vault/crypto/ares.hpp>
 #include <vault/crypto/mash.hpp>
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
 int main(int argc, char** argv) {
   args::program p("pass tool");
 
@@ -12,7 +16,7 @@ int main(int argc, char** argv) {
                    .help("master password to encrypt/decrypt database"));
   p.add_option(args::option("--database", 'd', args::option_type::string)
                    .required()
-                   .fallback("~/.passdb")
+                   .fallback("/home/local/.passdb")
                    .help("database file to read/write"));
   p.add_option(args::option("--key", 'k', args::option_type::string)
                    .required()
@@ -27,10 +31,11 @@ int main(int argc, char** argv) {
   }
 
   auto dbpath = p.get_str("--database").get();
-  file<uchar, mode::r> f(dbpath);
+
+  file<char, mode::r> f(dbpath);
 
   if (not f.opened()) {
-    write(serr, "error during opening file ", dbpath);
+    write(sout, "error during opening file '", dbpath, "'\n");
     return 1;
   }
 

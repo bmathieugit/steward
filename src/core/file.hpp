@@ -113,10 +113,7 @@ class raw_file {
   bool open(char_iterator auto fname)
     requires not_console_mode<m>
   {
-    string s(100);
-    copy(fname, s);
-    s.add('\0');
-    return open(s.data());
+    return open(string(fname).data());
   }
 
   bool opened() { return _fd != null_file; }
