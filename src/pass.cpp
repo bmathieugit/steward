@@ -43,4 +43,5 @@ int main(int argc, char** argv) {
   f.readall(oter(dbdata));
 
   write(sout, dbdata);
+  return 0;
 }

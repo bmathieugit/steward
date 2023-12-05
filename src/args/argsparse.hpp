@@ -151,7 +151,7 @@ class program {
 
   constexpr bool add_option(const option& opt) {
     return _options.add(opt, opt._name);
-  }z
+  }
 
   constexpr string_iterator get_value(string_iterator name) {
     if (_options.has(name)) {
