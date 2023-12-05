@@ -1,8 +1,8 @@
 #ifndef __stew_core_allocator_hpp__
 #define __stew_core_allocator_hpp__
 
+#include <string.h>
 #include <core/core.hpp>
-
 template <typename T>
 struct allocator {
   constexpr T* allocate(size_t n) const {
@@ -28,16 +28,28 @@ struct allocator {
     }
   }
 
+  constexpr void move(T* dst, const T* src, size_t n) const {
+    if (dst != nullptr and src != nullptr and dst != src) {
+      for (size_t i = 0; i < n; ++i) {
+        dst[i] = move(src[i]);
+      }
+    }
+  }
+
   constexpr void destroy(T* p) const noexcept {
-    if (p != nullptr) {
-      p->~T();
+    if constexpr (not trivial<T>) {
+      if (p != nullptr) {
+        p->~T();
+      }
     }
   }
 
   constexpr void destroy(T* p, size_t n) const noexcept {
-    if (p != nullptr) {
-      for (size_t i = 0; i < n; ++i) {
-        p[i].~T();
+    if constexpr (not trivial<T>) {
+      if (p != nullptr) {
+        for (size_t i = 0; i < n; ++i) {
+          p[i].~T();
+        }
       }
     }
   }

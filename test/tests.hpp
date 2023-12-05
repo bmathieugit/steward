@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 
+#define ___STRINGIZE_DETAIL(x) #x
+#define ___STRINGIZE(x) ___STRINGIZE_DETAIL(x)
+#define __SLINE__ ___STRINGIZE(__LINE__)
+
 #define N_TEST_ASSERT_TRUE(condition)    \
   if (!(condition)) {                    \
     throw "expected true : " #condition; \
@@ -13,9 +17,11 @@
     throw "expected false : " #condition; \
   }
 
-#define N_TEST_ASSERT_EQUALS(v0, v1)                                        \
-  if (!((v0) == (v1))) {                                                    \
-    throw "expected equal : expected value : " #v0 ", actual value : " #v1; \
+#define N_TEST_ASSERT_EQUALS(v0, v1)                     \
+  if (!((v0) == (v1))) {                                 \
+    throw __FILE__ "(l." __SLINE__                       \
+                   "): expected equal : expected value " \
+                   ": " #v0 ", actual value : " #v1;     \
   }
 
 #define N_TEST_SUITE(name) \

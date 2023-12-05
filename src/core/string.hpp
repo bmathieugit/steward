@@ -30,11 +30,14 @@ class basic_string {
   constexpr basic_string() = default;
 
   constexpr basic_string(size_t max)
-      : _max(max), _len(0), _data(_alloc.allocate(max + 1)) {}
+      : _max(max), _len(0), _data(_alloc.allocate(max + 1)) {
+    _data[_len] = 0;
+  }
 
   constexpr basic_string(const basic_string& v)
       : _max(v._max), _len(v._len), _data(_alloc.allocate(v._max + 1)) {
     _alloc.copy(_data, v._data, _len);
+    _data[_len] = 0;
   }
 
   constexpr basic_string(basic_string&& v)
@@ -50,6 +53,7 @@ class basic_string {
       _len = v._len;
       _data = _alloc.allocate(_max + 1);
       _alloc.copy(_data, v._data, _len);
+      _data[_len] = 0;
     }
 
     return *this;
@@ -136,6 +140,7 @@ class basic_string {
 
       _data[p] = relay<U>(u);
       ++_len;
+      _data[_len] = 0;
     }
   }
 
@@ -162,7 +167,13 @@ class basic_string {
       throw out_of_range();
     }
 
-    _data[p] = relay<U>(u);
+    C c = relay<U>(u);
+
+    _data[p] = c;
+
+    if (c == 0) {
+      _len = p;
+    }
   }
 
   constexpr void remove(size_t p) {
@@ -174,8 +185,8 @@ class basic_string {
       _data[i] = _data[i + 1];
     }
 
-    _data[_len - 1] = 0;
     _len -= 1;
+    _data[_len] = 0;
   }
 };
 

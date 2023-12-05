@@ -206,7 +206,6 @@ void test_equals() {
 
 #include <core/string.hpp>
 
-
 void test_string_size_constructor() {
   basic_string<char> s(10);
   N_TEST_ASSERT_EQUALS(s.max(), 10);
@@ -317,6 +316,21 @@ void test_string_remove() {
   N_TEST_ASSERT_EQUALS(s.at(0), 'b');
 }
 
+#include <string.h>
+
+void test_null_terminating_string() {
+  basic_string<char> s(3);
+  s.add('a');
+  s.add('b');
+  s.add('c');
+  N_TEST_ASSERT_EQUALS(s.len(), 3);
+  N_TEST_ASSERT_EQUALS(s.len(), strlen(s.data()));
+
+  s.modify(0, 1);
+  N_TEST_ASSERT_EQUALS(s.len(), 1);
+  N_TEST_ASSERT_EQUALS(s.len(), strlen(s.data()));
+}
+
 int main() {
   N_TEST_SUITE(vector test suite);
   N_TEST_RUN(test_vector_default_constructor);
@@ -332,6 +346,7 @@ int main() {
   N_TEST_RUN(test_vector_exchange);
   N_TEST_RUN(test_vector_modify);
   N_TEST_RUN(test_vector_remove);
+  
   N_TEST_RESULTS;
 
   N_TEST_SUITE(algorithms test suite);
@@ -365,6 +380,7 @@ int main() {
   N_TEST_RUN(test_string_exchange);
   N_TEST_RUN(test_string_modify);
   N_TEST_RUN(test_string_remove);
+  N_TEST_RUN(test_null_terminating_string);
 
   N_TEST_RESULTS;
 }

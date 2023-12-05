@@ -207,6 +207,36 @@ using unsigned_eq = map_<S,
                          map_pair_<long, ulong>,
                          map_pair_<long long, ullong>>;
 
+template <typename T>
+concept floating = contains<T, float, double, long double>;
+
+template <typename T>
+constexpr bool __trivial = false;
+
+template <integral T>
+constexpr bool __trivial<T> = true;
+
+template <character T>
+constexpr bool __trivial<T> = true;
+
+template <floating T>
+constexpr bool __trivial<T> = true;
+
+template <typename T>
+constexpr bool __trivial<T[]> = __trivial<T>;
+
+template <typename T, int N>
+constexpr bool __trivial<T[N]> = __trivial<T>;
+
+template <typename T>
+constexpr bool __trivial<T*> = __trivial<T>;
+
+template <typename T>
+constexpr bool __trivial<const T> = __trivial<T>;
+
+template <typename T>
+concept trivial = __trivial<T>;
+
 template <typename I>
 constexpr I max_of;
 
