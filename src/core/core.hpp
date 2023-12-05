@@ -2,6 +2,54 @@
 #define __n_utils_hpp__
 
 template <typename T>
+constexpr bool __is_reference = false;
+
+template <typename T>
+constexpr bool __is_reference<T&> = true;
+
+template <typename T>
+concept is_reference = __is_reference<T>;
+
+template <typename T>
+constexpr bool __is_const_reference = false;
+
+template <typename T>
+constexpr bool __is_const_reference<const T&> = true;
+
+template <typename T>
+concept is_const_reference = __is_const_reference<T>;
+
+template <typename T>
+constexpr bool __is_move_reference = false;
+
+template <typename T>
+constexpr bool __is_move_reference<T&&> = true;
+
+template <typename T>
+concept is_move_reference = __is_move_reference<T>;
+
+template <typename T>
+constexpr bool __is_const_move_reference = false;
+
+template <typename T>
+constexpr bool __is_const_move_reference<const T&&> = true;
+
+template <typename T>
+concept is_const_move_reference = __is_const_move_reference<T>;
+
+template <typename T>
+concept is_any_reference = is_reference<T> or is_const_reference<T> or
+                           is_move_reference<T> or is_const_move_reference<T>;
+
+template <typename T>
+concept is_readonly_reference =
+    is_const_reference<T> or is_const_move_reference<T>;
+
+// Est ce que un move reference est writeable ?
+template <typename T>
+concept is_readwrite_reference = is_reference<T> or is_move_reference<T>;
+
+template <typename T>
 struct __rm_ref {
   using type = T;
 };
@@ -214,47 +262,84 @@ concept has_equals_operator = requires(const T& t, const U& u) { t == u; };
 template <typename T, typename U>
 concept has_diffs_operator = requires(const T& t, const U& u) { t != u; };
 
-template <typename P, typename T>
-concept predicate = requires(P p, T t) {
-  { p(t) } -> same_as<bool>;
+template <typename U, typename T, typename O>
+concept unary = requires(U u, T t) {
+  { u(t) } -> same_as<O>;
 };
 
-template <typename C>
-concept collection = requires {
-  typename C::type;
-  typename C::position;
-} and requires(C c, const C cc, typename C::type t, typename C::position p) {
-  { cc.has(p) } -> same_as<bool>;
-  { cc.at(p) } -> same_as_declined<typename C::type>;
-  { cc.empty() } -> same_as<bool>;
-  { cc.len() } -> same_as<size_t>;
-  { c.add(t, p) } -> same_as<bool>;
-  { c.modify(t, p) } -> same_as<bool>;
-  { c.remove(p) } -> same_as<bool>;
-  { c.clear() } -> same_as<void>;
-  { c.exchange(p, p) } -> same_as<bool>;
+template <typename P, typename T>
+concept predicate = unary<P, T, bool>;
+
+template <typename I>
+concept __iterator_has_bool_equals_operator = requires(I i) {
+  { i == i } -> same_as<bool>;
 };
 
 template <typename I>
-concept iterator = requires(I i) {
-  typename I::type;
-  { i.has() } -> same_as<bool>;
-  { i.next() } -> same_as_declined<typename I::type>;
+concept __iterator_has_bool_diffs_operator = requires(I i) {
+  { i != i } -> same_as<bool>;
 };
 
-constexpr auto iter(iterator auto i) {
-  return i;
-}
+template <typename I>
+constexpr bool ___iterator_is_pointer_type = false;
 
-template <typename O>
-concept oterator = requires(O o, typename O::type c) {
-  typename O::type;
-  { o.add(c) } -> same_as<bool>;
+template <typename I>
+constexpr bool ___iterator_is_pointer_type<I*> = true;
+
+template <typename I>
+concept __iterator_is_pointer_type = ___iterator_is_pointer_type<I>;
+
+template <typename I>
+struct __iterator_type {
+  using type = typename I::type;
 };
 
-constexpr auto oter(oterator auto o) {
-  return o;
-}
+template <typename I>
+struct __iterator_type<I*> {
+  using type = I;
+};
+
+template <typename I>
+using iterator_type = typename __iterator_type<I>::type;
+
+template <typename I>
+concept __iterator_has_preincrement_operator = requires(I i) {
+  { ++i } -> same_as<I&>;
+};
+
+template <typename I>
+concept __iterator_has_postincrement_operator = requires(I i) {
+  { i++ } -> same_as<I>;
+};
+
+template <typename I, typename T>
+concept __iterator_has_dereference_operator = requires(I i) {
+  { *i } -> same_as_declined<T>;
+};
+
+template <typename I>
+concept iterator = __iterator_has_bool_diffs_operator<I> and
+                   __iterator_has_bool_equals_operator<I> and
+                   __iterator_has_preincrement_operator<I> and
+                   __iterator_has_postincrement_operator<I> and
+                   __iterator_has_dereference_operator<I, iterator_type<I>>;
+
+template <typename I, typename T>
+concept __iterator_can_assign_operator = requires(I i, T t) {
+  { *i = t };
+};
+
+template <typename I>
+concept oterator = __iterator_has_bool_diffs_operator<I> and
+                   __iterator_has_bool_equals_operator<I> and
+                   __iterator_has_preincrement_operator<I> and
+                   __iterator_has_postincrement_operator<I> and
+                   __iterator_can_assign_operator<I, iterator_type<I>>;
+
+template <typename T>
+concept distanciable = requires(T t) {
+  { t - t } -> same_as<size_t>;
+};
 
 template <typename T>
 constexpr rm_ref<T>&& move(T&& t) {
@@ -275,68 +360,4 @@ template <typename T>
 void* operator new(size_t, T* ptr) {
   return ptr;
 }
-
-template <collection C>
-constexpr bool has(const C& c, const typename C::position& p) {
-  return c.has(p);
-}
-
-template <collection C>
-constexpr auto at(const C& c, const typename C::position& p) -> decltype(auto) {
-  return c.at(p);
-}
-
-template <collection C>
-constexpr bool empty(const C& c) {
-  return c.empty();
-}
-
-template <collection C>
-constexpr size_t len(const C& c) {
-  return c.len();
-}
-
-template <collection C>
-constexpr bool add(C& c,
-                   const typename C::type& t,
-                   const typename C::position& p) {
-  return c.add(t, p);
-}
-
-template <collection C>
-constexpr bool add(C& c, typename C::type&& t, const typename C::position& p) {
-  return c.add(move(t), p);
-}
-
-template <collection C>
-constexpr bool modify(C& c,
-                      const typename C::type& t,
-                      const typename C::position& p) {
-  return c.modify(t, p);
-}
-
-template <collection C>
-constexpr bool modify(C& c,
-                      typename C::type&& t,
-                      const typename C::position& p) {
-  return c.modify(move(t), p);
-}
-
-template <collection C>
-constexpr bool remove(C& c, const typename C::position& p) {
-  return c.remove(p);
-}
-
-template <collection C>
-constexpr void clear(C& c) {
-  c.clear();
-}
-
-template <collection C>
-constexpr bool exchange(C& c,
-                        const typename C::position& p1,
-                        const typename C::position& p2) {
-  return c.exchange(p1, p2);
-}
-
 #endif

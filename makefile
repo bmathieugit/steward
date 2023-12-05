@@ -23,31 +23,9 @@ main: src/main.cpp building
 	${CXX} -o  building/main.app src/main.cpp ${CXXFLAGS} ${CXXINCS}
 	./building/main.app
 
-pass: src/pass.cpp building
-	${CXX} -o  building/pass.app src/pass.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/pass.app
-
-test-string: test/test-string.cpp building
-	${CXX} -o  building/test-string.app test/test-string.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/test-string.app
-
-test-map: test/test-map.cpp building
-	${CXX} -o  building/test-map.app test/test-map.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/test-map.app
-
-test-vector: test/test-vector.cpp building
-	${CXX} -o  building/test-vector.app test/test-vector.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/test-vector.app
-
-test-variant: test/test-variant.cpp building
-	${CXX} -o  building/test-variant.app test/test-variant.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/test-variant.app
-
-test-io: test/test-io.cpp building
-	${CXX} -o  building/test-io.app test/test-io.cpp ${CXXFLAGS} ${CXXINCS}
-	./building/test-io.app
-
-test: test-variant test-vector test-string test-io test-map  
+test: test/test.cpp building
+	${CXX} -o  building/test.app test/test.cpp ${CXXFLAGS} ${CXXINCS}
+	./building/test.app
 
 cloc: 
 	cloc src/

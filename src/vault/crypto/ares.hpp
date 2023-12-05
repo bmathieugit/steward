@@ -11,7 +11,7 @@ class ares {
   static_vector<static_vector<char, 64>, 64> _keys;
 
  public:
-  constexpr ares(char_iterator auto key) {
+  constexpr ares(basic_string_iterator<char> key) {
     _keys.add(mash{}.digest(key));
 
     for (size_t i = 1; i < 64; ++i) {

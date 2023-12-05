@@ -1,391 +1,41 @@
 #ifndef __n_vector_hpp__
 #define __n_vector_hpp__
 
-#include <core/algorithm.hpp>
 #include <core/allocator.hpp>
 #include <core/core.hpp>
 
-template <collection C>
-class index_based_iterator {
- public:
-  using type = typename C::type;
-
- private:
-  const C* _col = nullptr;
-  size_t _index;
-
- public:
-  constexpr index_based_iterator(const C& c) : _col(&c), _index(0) {}
-  constexpr bool has() { return _index != _col->len(); }
-  constexpr const type& next() { return _col->at(_index++); }
-};
-
-template <collection C>
-class index_based_riterator {
- public:
-  using type = typename C::type;
-
- private:
-  const C* _col = nullptr;
-  size_t _index;
-
- public:
-  constexpr index_based_riterator(const C& c) : _col(&c), _index(_col->len()) {}
-  constexpr bool has() { return _index != 0; }
-  constexpr const type& next() { return _col->at(--_index); }
-};
-
-template <collection C>
-class index_based_oterator {
- public:
-  using type = typename C::type;
-
- private:
-  C* _col = nullptr;
-
- public:
-  constexpr index_based_oterator(C& c) : _col(&c) {}
-  constexpr bool add(const type& t) { return _col->add(t); }
-  constexpr bool add(type&& t) { return _col->add(move(t)); }
-};
-
-template <typename T, size_t N>
-class static_vector {
- public:
-  using type = T;
-  using position = size_t;
-
- private:
-  T _data[N];
-  size_t _len = 0;
-
- public:
-  constexpr ~static_vector() = default;
-  constexpr static_vector() = default;
-  constexpr static_vector(const T (&data)[N]) {
-    for (size_t i = 0; i < N; ++i) {
-      add(data[i]);
-    }
-  }
-
- public:
-  constexpr auto len() const { return _len; }
-  constexpr auto empty() const { return _len == 0; }
-  constexpr auto max() const { return N; }
-  constexpr auto full() const { return _len == N; }
-
- public:
-  constexpr bool has(position p) const { return p < _len; }
-  constexpr T& at(position p) { return _data[p]; }
-  constexpr const T& at(position p) const { return _data[p]; }
-
-  constexpr void clear() {
-    for (size_t i = 0; i < _len; ++i) {
-      _data[i].~T();
-    }
-
-    _len = 0;
-  }
-
-  constexpr bool add(const type& t, position p = max_of<decltype(_len)>) {
-    p = p >= max_of<decltype(_len)> ? _len : p;
-
-    if (p <= _len and not full()) {
-      for (size_t i = _len; i > p; --i) {
-        _data[i] = move(_data[i - 1]);
-      }
-
-      _data[p] = t;
-      ++_len;
-      return true;
-    }
-
-    return false;
-  }
-
-  constexpr bool add(type&& t, position p = max_of<decltype(_len)>) {
-    p = p >= max_of<decltype(_len)> ? _len : p;
-
-    if (p <= _len and not full()) {
-      for (size_t i = _len; i > p; --i) {
-        _data[i] = move(_data[i - 1]);
-      }
-
-      _data[p] = move(t);
-      ++_len;
-      return true;
-    }
-
-    return false;
-  }
-
-  constexpr bool exchange(position p1, position p2) {
-    if (has(p1) and has(p2)) {
-      auto tmp1 = move(_data[p1]);
-      _data[p1] = move(_data[p2]);
-      _data[p2] = move(tmp1);
-
-      return true;
-    }
-
-    else {
-      return false;
-    }
-  }
-
-  constexpr bool modify(const type& t, position p) {
-    if (p >= _len) {
-      return false;
-    } else {
-      _data[p] = t;
-      return true;
-    }
-  }
-
-  constexpr bool modify(type&& t, position p) {
-    if (p >= _len) {
-      return false;
-    } else {
-      _data[p] = move(t);
-      return true;
-    }
-  }
-
-  constexpr bool remove(position p) {
-    if (p >= _len) {
-      return false;
-    } else {
-      for (size_t i = p; i < _len - 1; ++i) {
-        _data[i] = move(_data[i + 1]);
-      }
-
-      _data[_len - 1] = T();
-      _len -= 1;
-
-      return true;
-    }
-  }
-};
-
-template <typename T, size_t N>
-constexpr auto iter(const static_vector<T, N>& a) {
-  return index_based_iterator(a);
-}
-
-template <typename T, size_t N>
-constexpr auto riter(const static_vector<T, N>& a) {
-  return index_based_riterator(a);
-}
-
-template <typename T, size_t N>
-constexpr auto oter(static_vector<T, N>& a) {
-  return index_based_oterator(a);
-};
-
-template <typename T>
-class fixed_vector {
- public:
-  using type = T;
-  using position = size_t;
-
- private:
-  allocator<T> _alloc;
-  size_t _max = 0;
-  size_t _len = 0;
-  T* _data = nullptr;
-
- public:
-  constexpr ~fixed_vector() {
-    _alloc.destroy(_data, _len);
-    _alloc.deallocate(_data);
-    _data = nullptr;
-    _max = 0;
-    _len = 0;
-  }
-
-  constexpr fixed_vector() = default;
-
-  constexpr fixed_vector(size_t max)
-      : _max(max), _len(0), _data(_alloc.allocate(_max)) {}
-
-  constexpr fixed_vector(const fixed_vector& v) : fixed_vector(v._max) {
-    copy(index_based_iterator(v), index_based_oterator(*this));
-  }
-
-  constexpr fixed_vector(fixed_vector&& v)
-      : _max(v._max), _len(v._len), _data(v._data) {
-    v._max = 0;
-    v._len = 0;
-    v._data = nullptr;
-  }
-
-  constexpr fixed_vector& operator=(const fixed_vector& v) {
-    if (this != &v) {
-      _alloc.destroy(_data, _len);
-      _alloc.deallocate(_data);
-      _data = nullptr;
-      _len = 0;
-      _max = 0;
-
-      if (v._len != 0) {
-        _data = _alloc.allocate(v._len);
-        _max = v._max;
-      }
-
-      copy(index_based_iterator(v), index_based_oterator(*this));
-    }
-
-    return *this;
-  }
-
-  constexpr fixed_vector& operator=(fixed_vector&& v) {
-    if (this != &v) {
-      auto td = _data;
-      auto tm = _max;
-      auto tl = _len;
-
-      _data = v._data;
-      _max = v._max;
-      _len = v._len;
-
-      v._data = td;
-      v._max = tm;
-      v._len = tl;
-    }
-
-    return *this;
-  }
-
- public:
-  constexpr auto len() const { return _len; }
-  constexpr auto empty() const { return _len == 0; }
-  constexpr auto max() const { return _max; }
-  constexpr auto full() const { return _len == _max; }
-
- public:
-  constexpr bool has(position p) const { return p < _len; }
-  constexpr T& at(position p) { return _data[p]; }
-  constexpr const T& at(position p) const { return _data[p]; }
-
-  constexpr void clear() {
-    _alloc.destroy(_data, _len);
-    _len = 0;
-  }
-
-  constexpr bool add(const type& t, position p = max_of<decltype(_len)>) {
-    p = p >= max_of<decltype(_len)> ? _len : p;
-
-    if (p <= _len and not full()) {
-      for (size_t i = _len; i > p; --i) {
-        _data[i] = move(_data[i - 1]);
-      }
-
-      _data[p] = t;
-      ++_len;
-      return true;
-    }
-
-    return false;
-  }
-
-  constexpr bool add(type&& t, position p = max_of<decltype(_len)>) {
-    p = p >= max_of<decltype(_len)> ? _len : p;
-
-    if (p <= _len and not full()) {
-      for (size_t i = _len; i > p; --i) {
-        _data[i] = move(_data[i - 1]);
-      }
-
-      _data[p] = move(t);
-      ++_len;
-      return true;
-    }
-
-    return false;
-  }
-
-  constexpr bool exchange(position p1, position p2) {
-    if (has(p1) and has(p2)) {
-      auto tmp1 = move(_data[p1]);
-      _data[p1] = move(_data[p2]);
-      _data[p2] = move(tmp1);
-      return true;
-    }
-
-    else {
-      return false;
-    }
-  }
-
-  constexpr bool modify(const T& t, position p) {
-    if (p >= _len) {
-      return false;
-    } else {
-      _data[p] = t;
-      return true;
-    }
-  }
-
-  constexpr bool modify(T&& t, position p) {
-    if (p >= _len) {
-      return false;
-    } else {
-      _data[p] = move(t);
-      return true;
-    }
-  }
-
-  constexpr bool remove(position p) {
-    if (p >= _len) {
-      return false;
-    } else {
-      for (size_t i = p; i < _len - 1; ++i) {
-        _data[i] = _data[i + 1];
-      }
-
-      _data[_len - 1].~T();
-      _len -= 1;
-
-      return true;
-    }
-  }
-};
-
-template <typename T>
-constexpr auto iter(const fixed_vector<T>& v) {
-  return index_based_iterator(v);
-}
-
-template <typename T>
-constexpr auto riter(const fixed_vector<T>& v) {
-  return index_based_riterator(v);
-}
-
-template <typename T>
-constexpr auto oter(fixed_vector<T>& v) {
-  return index_based_oterator(v);
-}
+struct out_of_range {};
 
 template <typename T>
 class vector {
  public:
   using type = T;
-  using position = size_t;
+  using reference = T&;
+  using const_reference = const T&;
+  using move_reference = T&&;
+  using pointer = T*;
+  using const_pointer = const T*;
 
  private:
   allocator<T> _alloc;
   size_t _max = 0;
   size_t _len = 0;
-  T* _data = nullptr;
+  pointer _data = nullptr;
 
  public:
-  constexpr ~vector() = default;
+  constexpr ~vector() {
+    _alloc.destroy(_data, _len);
+    _alloc.deallocate(_data);
+  }
+
   constexpr vector() = default;
+
   constexpr vector(size_t max)
       : _max(max), _len(0), _data(_alloc.allocate(max)) {}
 
-  constexpr vector(const vector& v) : vector(v._max) {
-    copy(index_based_iterator(v), index_based_oterator(*this));
+  constexpr vector(const vector& v)
+      : _max(v._max), _len(v._len), _data(_alloc.allocate(v._max)) {
+    _alloc.copy(_data, v._data, _len);
   }
 
   constexpr vector(vector&& v) : _max(v._max), _len(v._len), _data(v._data) {
@@ -394,25 +44,12 @@ class vector {
     v._data = nullptr;
   }
 
-  template <iterator I>
-  constexpr vector(I i) : vector() {
-    copy(i, index_based_oterator(*this));
-  }
-
   constexpr vector& operator=(const vector& v) {
     if (this != &v) {
-      _alloc.destroy(_data, _len);
-      _alloc.deallocate(_data);
-      _data = nullptr;
-      _len = 0;
-      _max = 0;
-
-      if (v._len != 0) {
-        _data = _alloc.allocate(v._len);
-        _max = v._max;
-      }
-
-      copy(index_based_iterator(v), index_based_oterator(*this));
+      _max = v._max;
+      _len = v._len;
+      _data = _alloc.allocate(_max);
+      _alloc.copy(_data, v._data, _len);
     }
 
     return *this;
@@ -420,51 +57,62 @@ class vector {
 
   constexpr vector& operator=(vector&& v) {
     if (this != &v) {
-      auto td = _data;
-      auto tm = _max;
-      auto tl = _len;
+      auto old_max = _max;
+      auto old_len = _len;
+      auto old_data = _data;
 
-      _data = v._data;
       _max = v._max;
       _len = v._len;
+      _data = v._data;
 
-      v._data = td;
-      v._max = tm;
-      v._len = tl;
+      v._max = old_max;
+      v._len = old_len;
+      v._data = old_data;
     }
 
     return *this;
   }
 
-  template <iterator I>
-  constexpr vector& operator=(I i) {
-    clear();
-    copy(i, index_based_oterator(*this));
-    return *this;
-  }
-
- public:
-  constexpr auto data() { return _data; }
-  constexpr auto data() const { return _data; }
-
- public:
   constexpr auto len() const { return _len; }
+
   constexpr auto empty() const { return _len == 0; }
+
   constexpr auto max() const { return _max; }
+
   constexpr auto full() const { return _len == _max; }
 
- public:
-  constexpr bool has(position p) const { return p < _len; }
-  constexpr T& at(position p) { return _data[p]; }
-  constexpr const T& at(position p) const { return _data[p]; }
+  constexpr bool has(size_t p) const { return p < _len; }
 
   constexpr void clear() {
     _alloc.destroy(_data, _len);
     _len = 0;
   }
 
-  constexpr bool add(const type& t, position p = max_of<size_t>) {
-    p = p >= max_of<size_t> ? _len : p;
+  constexpr pointer data() { return _data; }
+
+  constexpr const_pointer data() const { return _data; }
+
+  constexpr reference at(size_t p) {
+    if (p < _len) {
+      return _data[p];
+    } else {
+      throw out_of_range();
+    }
+  }
+
+  constexpr const_reference at(size_t p) const {
+    if (p < _len) {
+      return _data[p];
+    } else {
+      throw out_of_range();
+    }
+  }
+
+  template <convertible_to<T> U>
+  constexpr void add(U&& u, size_t p) {
+    if (p > _len) {
+      throw out_of_range();
+    }
 
     if (full()) {
       _max = _max * 2 + 10;
@@ -474,7 +122,7 @@ class vector {
         dtmp[i] = move(_data[i]);
       }
 
-      _data = move(dtmp);
+      _data = dtmp;
     }
 
     if (not full()) {
@@ -482,101 +130,66 @@ class vector {
         _data[i] = move(_data[i - 1]);
       }
 
-      _data[p] = t;
+      _data[p] = relay<U>(u);
       ++_len;
-      return true;
     }
-
-    return false;
   }
 
-  constexpr bool add(type&& t, position p = max_of<size_t>) {
-    p = p >= max_of<size_t> ? _len : p;
-
-    if (full()) {
-      _max = _max * 2 + 10;
-      auto dtmp = _alloc.allocate(_max);
-
-      for (size_t i = 0; i < _len; ++i) {
-        dtmp[i] = move(_data[i]);
-      }
-
-      _data = move(dtmp);
-    }
-
-    if (not full()) {
-      for (size_t i = _len; i > p; --i) {
-        _data[i] = move(_data[i - 1]);
-      }
-
-      _data[p] = move(t);
-      ++_len;
-      return true;
-    }
-
-    return false;
+  template <convertible_to<T> U>
+  constexpr void add(U&& u) {
+    add(relay<U>(u), _len);
   }
 
-  constexpr bool exchange(position p1, position p2) {
-    if (has(p1) and has(p2)) {
+  constexpr void exchange(size_t p1, size_t p2) {
+    if (p1 >= _len or p2 >= _len) {
+      throw out_of_range();
+    }
+
+    if (p1 != p2) {
       auto tmp1 = move(_data[p1]);
       _data[p1] = move(_data[p2]);
       _data[p2] = move(tmp1);
-      return true;
-    }
-
-    else {
-      return false;
     }
   }
 
-  constexpr bool modify(const T& t, position p) {
+  template <convertible_to<T> U>
+  constexpr void modify(U&& u, size_t p) {
     if (p >= _len) {
-      return false;
-    } else {
-      _data[p] = t;
-      return true;
+      throw out_of_range();
     }
+
+    _data[p] = relay<U>(u);
   }
 
-  constexpr bool modify(T&& t, position p) {
+  constexpr void remove(size_t p) {
     if (p >= _len) {
-      return false;
-    } else {
-      _data[p] = move(t);
-      return true;
+      throw out_of_range();
     }
-  }
 
-  constexpr bool remove(position p) {
-    if (p >= _len) {
-      return false;
-    } else {
-      for (size_t i = p; i < _len - 1; ++i) {
-        _data[i] = _data[i + 1];
-      }
-
-      _data[_len - 1].~T();
-      _len -= 1;
-
-      return true;
+    for (size_t i = p; i < _len - 1; ++i) {
+      _data[i] = _data[i + 1];
     }
+
+    _data[_len - 1].~T();
+    _len -= 1;
   }
 };
 
-template <typename T>
-constexpr auto iter(const vector<T>& v) {
-  return index_based_iterator(v);
+template <typename V>
+concept vector_parameter =
+    contains<V, const vector<typename V::type>, vector<typename V::type>>;
+
+template <vector_parameter V1, vector_parameter V2>
+constexpr auto operator<=>(V1& v1, V2& v2) {
+  return v1.len() <=> v2.len();
 }
 
-template <typename T>
-constexpr auto riter(const vector<T>& v) {
-  return index_based_riterator(v);
+constexpr auto begin(vector_parameter auto& v) {
+  return v.data();
 }
 
-template <typename T>
-constexpr auto oter(vector<T>& v) {
-  return index_based_oterator(v);
+constexpr auto end(vector_parameter auto& v) {
+  return v.data() + v.len();
 }
 
 #endif

@@ -1,6 +1,8 @@
 #ifndef __stew_core_allocator_hpp__
 #define __stew_core_allocator_hpp__
 
+#include <core/core.hpp>
+
 template <typename T>
 struct allocator {
   constexpr T* allocate(size_t n) const {
@@ -16,6 +18,14 @@ struct allocator {
   template <typename... A>
   constexpr void construct(T* p, A&&... args) const {
     new (p) T(relay<A>(args)...);
+  }
+
+  constexpr void copy(T* dst, const T* src, size_t n) const {
+    if (dst != nullptr and src != nullptr and dst != src) {
+      for (size_t i = 0; i < n; ++i) {
+        dst[i] = src[i];
+      }
+    }
   }
 
   constexpr void destroy(T* p) const noexcept {

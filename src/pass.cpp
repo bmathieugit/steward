@@ -42,6 +42,9 @@ int main(int argc, char** argv) {
   fixed_string dbdata(f.len());
   f.readall(oter(dbdata));
 
+  vault::crypto::ares ares("key");
+  auto decrypted = ares.decrypt(dbdata);
+
   write(sout, dbdata);
   return 0;
 }
