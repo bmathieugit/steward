@@ -3,6 +3,7 @@
 
 #include <core/allocator.hpp>
 #include <core/core.hpp>
+#include <core/span.hpp>
 #include <core/vector.hpp>
 
 template <character C>
@@ -214,7 +215,7 @@ constexpr auto end(basic_string<C>& s) {
 }
 
 template <character C>
-class basic_string_view {
+class basic_string_view : public span<const C> {
  public:
   using type = C;
   using reference = C&;
@@ -223,70 +224,35 @@ class basic_string_view {
   using pointer = C*;
   using const_pointer = const C*;
 
- private:
-  const_pointer _begin = nullptr;
-  const_pointer _end = nullptr;
-
  public:
   constexpr basic_string_view() = default;
   constexpr basic_string_view(const_pointer begin, const_pointer end)
-      : _begin(begin), _end(end) {}
+      : span<const C>(begin, end) {}
 
   constexpr basic_string_view(const_pointer begin, size_t len)
-      : _begin(begin), _end(begin + len) {}
+      : span<const C>(begin, len) {}
 
-  constexpr basic_string_view(const_pointer begin) : _begin(begin) {
-    while (*begin != '\0') {
-      ++begin;
-    }
-
-    _end = begin;
-  }
+  constexpr basic_string_view(const_pointer begin)
+      : span<const C>(begin, strlen(begin)) {}
 
   constexpr basic_string_view(const basic_string<C>& s)
-      : _begin(begin(s)), _end(end(s)) {}
+      : span<const C>(begin(s), s.len()) {}
 
   constexpr basic_string_view(const basic_string_view&) = default;
 
   constexpr basic_string_view(basic_string_view&&) = default;
 
   constexpr basic_string_view& operator=(const_pointer begin) {
-    _begin = begin;
-
-    while (*begin != '\0') {
-      ++begin;
-    }
-
-    _end = begin;
-
-    return *this;
+    return (*this = basic_string_view(begin, strlen(begin)));
   }
 
   constexpr basic_string_view& operator=(const basic_string<C>& s) {
-    _begin = begin(s);
-    _end = end(s);
-    return *this;
+    return (*this = basic_string_view(begin(s), s.len()));
   }
 
   constexpr basic_string_view& operator=(const basic_string_view&) = default;
 
   constexpr basic_string_view& operator=(basic_string_view&&) = default;
-
-  constexpr size_t len() const { return _end - _begin; }
-
-  constexpr auto empty() const { return len() == 0; }
-
-  constexpr bool has(size_t p) const { return p < len(); }
-
-  constexpr const_pointer data() const { return _begin; }
-
-  constexpr const_reference at(size_t p) const {
-    if (p < len()) {
-      return _begin[p];
-    } else {
-      throw out_of_range();
-    }
-  }
 };
 
 template <character C>
