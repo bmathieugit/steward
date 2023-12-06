@@ -213,103 +213,104 @@ constexpr auto end(basic_string<C>& s) {
   return s.data() + s.len();
 }
 
-// template <character C>
-// class basic_string_view {
-//  public:
-//   using type = C;
-//   using reference = C&;
-//   using const_reference = const C&;
-//   using move_reference = C&&;
-//   using pointer = C*;
-//   using const_pointer = const C*;
+template <character C>
+class basic_string_view {
+ public:
+  using type = C;
+  using reference = C&;
+  using const_reference = const C&;
+  using move_reference = C&&;
+  using pointer = C*;
+  using const_pointer = const C*;
 
-//  private:
-//   pointer _begin = nullptr;
-//   pointer _end = nullptr;
+ private:
+  const_pointer _begin = nullptr;
+  const_pointer _end = nullptr;
 
-//  public:
-//   constexpr basic_string_view(const_pointer begin, const_pointer end)
-//       : _begin(begin), _end(end) {}
+ public:
+  constexpr basic_string_view() = default;
+  constexpr basic_string_view(const_pointer begin, const_pointer end)
+      : _begin(begin), _end(end) {}
 
-//   constexpr basic_string_view(const_pointer begin, size_t len)
-//       : _begin(begin), _end(begin + len) {}
+  constexpr basic_string_view(const_pointer begin, size_t len)
+      : _begin(begin), _end(begin + len) {}
 
-//   constexpr basic_string_view(const_pointer begin) : _begin(_begin) {
-//     while (*begin != '\0') {
-//       ++begin;
-//     }
+  constexpr basic_string_view(const_pointer begin) : _begin(begin) {
+    while (*begin != '\0') {
+      ++begin;
+    }
 
-//     _end = begin;
-//   }
+    _end = begin;
+  }
 
-//   constexpr basic_string_view(const basic_string<C>& s)
-//       : _begin(begin(s)), _end(end(s)) {}
+  constexpr basic_string_view(const basic_string<C>& s)
+      : _begin(begin(s)), _end(end(s)) {}
 
-//   constexpr basic_string_view(const basic_string_view&) = default;
+  constexpr basic_string_view(const basic_string_view&) = default;
 
-//   constexpr basic_string_view(basic_string_view&&) = default;
+  constexpr basic_string_view(basic_string_view&&) = default;
 
-//   constexpr basic_string_view& operator=(const_pointer begin) {
-//     _begin = begin;
+  constexpr basic_string_view& operator=(const_pointer begin) {
+    _begin = begin;
 
-//     while (*begin != '\0') {
-//       ++begin;
-//     }
+    while (*begin != '\0') {
+      ++begin;
+    }
 
-//     _end = begin;
+    _end = begin;
 
-//     return *this;
-//   }
+    return *this;
+  }
 
-//   constexpr basic_string_view& operator=(const basic_string_view& s) {
-//     _begin = begin(s);
-//     _end = end(s);
-//     return *this;
-//   }
+  constexpr basic_string_view& operator=(const basic_string<C>& s) {
+    _begin = begin(s);
+    _end = end(s);
+    return *this;
+  }
 
-//   constexpr basic_string_view& operator=(const basic_string_view&) = default;
+  constexpr basic_string_view& operator=(const basic_string_view&) = default;
 
-//   constexpr basic_string_view& operator=(basic_string_view&&) = default;
+  constexpr basic_string_view& operator=(basic_string_view&&) = default;
 
-//   constexpr auto len() const { return _end - _begin; }
+  constexpr size_t len() const { return _end - _begin; }
 
-//   constexpr auto empty() const { return len() == 0; }
+  constexpr auto empty() const { return len() == 0; }
 
-//   constexpr bool has(size_t p) const { return p < len(); }
+  constexpr bool has(size_t p) const { return p < len(); }
 
-//   constexpr const_pointer data() const { return _begin; }
+  constexpr const_pointer data() const { return _begin; }
 
-//   constexpr const_reference at(size_t p) const {
-//     if (p < _len) {
-//       / return _begin[p];
-//     } else {
-//       throw out_of_range();
-//     }
-//   }
-// };
+  constexpr const_reference at(size_t p) const {
+    if (p < len()) {
+      return _begin[p];
+    } else {
+      throw out_of_range();
+    }
+  }
+};
 
-// template <character C>
-// constexpr auto begin(const basic_string_view<C>& s) {
-//   return s.data();
-// }
+template <character C>
+constexpr auto begin(const basic_string_view<C>& s) {
+  return s.data();
+}
 
-// template <character C>
-// constexpr auto end(const basic_string_view<C>& s) {
-//   return s.data() + s.len();
-// }
+template <character C>
+constexpr auto end(const basic_string_view<C>& s) {
+  return s.data() + s.len();
+}
 
-// template <character C>
-// constexpr auto begin(basic_string_view<C>& s) {
-//   return s.data();
-// }
+template <character C>
+constexpr auto begin(basic_string_view<C>& s) {
+  return s.data();
+}
 
-// template <character C>
-// constexpr auto end(basic_string_view<C>& s) {
-//   return s.data() + s.len();
-// }
+template <character C>
+constexpr auto end(basic_string_view<C>& s) {
+  return s.data() + s.len();
+}
 
-// using string_view = basic_string_view<char>;
-// using wstring_view = basic_string_view<wchar_t>;
+using string_view = basic_string_view<char>;
+using wstring_view = basic_string_view<wchar_t>;
 
 // template <typename CI>
 // concept char_iterator = requires(CI ci) { character<decltype(*ci)>; };

@@ -1,3 +1,8 @@
+#include <string.h>
+
+#include <core/algorithm.hpp>
+#include <core/span.hpp>
+#include <core/string.hpp>
 #include <core/vector.hpp>
 #include <initializer_list>
 #include <tests.hpp>
@@ -112,8 +117,6 @@ void test_vector_remove() {
   N_TEST_ASSERT_EQUALS(v.at(0), 2);
 }
 
-#include <core/algorithm.hpp>
-
 void test_count_iterators() {
   vector<int> v;
   for (int i = 0; i < 5; ++i)
@@ -203,8 +206,6 @@ void test_equals() {
   bool result = equals(begin(v1), end(v1), begin(v2), end(v2));
   N_TEST_ASSERT_TRUE(result);
 }
-
-#include <core/string.hpp>
 
 void test_string_size_constructor() {
   basic_string<char> s(10);
@@ -316,8 +317,6 @@ void test_string_remove() {
   N_TEST_ASSERT_EQUALS(s.at(0), 'b');
 }
 
-#include <string.h>
-
 void test_null_terminating_string() {
   basic_string<char> s(3);
   s.add('a');
@@ -329,6 +328,96 @@ void test_null_terminating_string() {
   s.modify(0, 1);
   N_TEST_ASSERT_EQUALS(s.len(), 1);
   N_TEST_ASSERT_EQUALS(s.len(), strlen(s.data()));
+}
+
+void test_string_view_constructors() {
+  const char* str = "hello";
+  basic_string_view<char> sv1(str, str + 5);
+  N_TEST_ASSERT_EQUALS(sv1.len(), 5);
+
+  basic_string_view<char> sv2(str, 5);
+  N_TEST_ASSERT_EQUALS(sv2.len(), 5);
+
+  basic_string_view<char> sv3(str);
+  N_TEST_ASSERT_EQUALS(sv3.len(), 5);
+}
+
+void test_string_view_assignment() {
+  const char* str = "hello";
+  basic_string_view<char> sv;
+  sv = str;
+  N_TEST_ASSERT_EQUALS(sv.len(), 5);
+
+  basic_string<char> s;
+  sv = s;
+  N_TEST_ASSERT_EQUALS(sv.len(), 0);
+}
+
+void test_string_view_methods() {
+  basic_string_view<char> sv("hello", 5);
+  N_TEST_ASSERT_FALSE(sv.empty());
+  N_TEST_ASSERT_TRUE(sv.has(4));
+  N_TEST_ASSERT_FALSE(sv.has(5));
+  // N_TEST_ASSERT_TRUE(equals(sv.data(), basic_string_view<char>("hello")));
+
+  N_TEST_ASSERT_EQUALS(sv.at(0), 'h');
+  try {
+    sv.at(5);
+    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+  } catch (out_of_range&) {
+    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+  }
+}
+
+void test_span_constructors() {
+  int arr[] = {1, 2, 3, 4, 5};
+  span<int> sp1(arr, arr + 5);
+  N_TEST_ASSERT_EQUALS(sp1.len(), 5);
+
+  span<int> sp2(arr, 5);
+  N_TEST_ASSERT_EQUALS(sp2.len(), 5);
+}
+
+void test_span_assignment() {
+  int arr[] = {1, 2, 3, 4, 5};
+  span<int> sp1(arr, 5);
+  span<int> sp2 = sp1;
+  N_TEST_ASSERT_EQUALS(sp2.len(), 5);
+
+  span<int> sp3;
+  sp3 = move(sp1);
+  N_TEST_ASSERT_EQUALS(sp3.len(), 5);
+}
+
+void test_span_methods() {
+  int arr[] = {1, 2, 3, 4, 5};
+  span<int> sp(arr, 5);
+  N_TEST_ASSERT_FALSE(sp.empty());
+  N_TEST_ASSERT_TRUE(sp.has(4));
+  N_TEST_ASSERT_FALSE(sp.has(5));
+  N_TEST_ASSERT_EQUALS(sp.data(), arr);
+
+  N_TEST_ASSERT_EQUALS(sp.at(0), 1);
+  try {
+    sp.at(5);
+    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+  } catch (out_of_range&) {
+    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+  }
+}
+
+void test_span_exchange_modify() {
+  int arr[] = {1, 2, 3};
+  span<int> sp(arr, 3);
+
+  // Test de exchange
+  sp.exchange(0, 2);
+  N_TEST_ASSERT_EQUALS(sp.at(0), 3);
+  N_TEST_ASSERT_EQUALS(sp.at(2), 1);
+
+  // Test de modify
+  sp.modify(4, 1);
+  N_TEST_ASSERT_EQUALS(sp.at(1), 4);
 }
 
 int main() {
@@ -346,7 +435,7 @@ int main() {
   N_TEST_RUN(test_vector_exchange);
   N_TEST_RUN(test_vector_modify);
   N_TEST_RUN(test_vector_remove);
-  
+
   N_TEST_RESULTS;
 
   N_TEST_SUITE(algorithms test suite);
@@ -381,6 +470,23 @@ int main() {
   N_TEST_RUN(test_string_modify);
   N_TEST_RUN(test_string_remove);
   N_TEST_RUN(test_null_terminating_string);
+
+  N_TEST_RESULTS;
+
+  N_TEST_SUITE(string_view_tests);
+
+  N_TEST_RUN(test_string_view_constructors);
+  N_TEST_RUN(test_string_view_assignment);
+  N_TEST_RUN(test_string_view_methods);
+
+  N_TEST_RESULTS;
+
+  N_TEST_SUITE(span_tests);
+
+  N_TEST_RUN(test_span_constructors);
+  N_TEST_RUN(test_span_assignment);
+  N_TEST_RUN(test_span_methods);
+  N_TEST_RUN(test_span_exchange_modify);
 
   N_TEST_RESULTS;
 }

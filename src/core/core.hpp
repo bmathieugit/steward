@@ -2,6 +2,15 @@
 #define __n_utils_hpp__
 
 template <typename T>
+constexpr bool __non_const = true;
+
+template <typename T>
+constexpr bool __non_const<const T> = false;
+
+template <typename T>
+concept non_const = __non_const<T>;
+
+template <typename T>
 constexpr bool __is_reference = false;
 
 template <typename T>
