@@ -546,4 +546,11 @@ int main() {
   N_TEST_RUN(test_array_modify);
 
   N_TEST_RESULTS;
+
+
+  string s;
+
+  to_chars(s, 'c');
+
+ 	printf(" \n\n %s \n\n", s.data()); 
 }

@@ -66,4 +66,24 @@ struct array {
   }
 };
 
+template <typename T, size_t N>
+constexpr auto begin(array<T, N>& a) {
+  return a.data();
+}
+
+template <typename T, size_t N>
+constexpr auto end(array<T, N>& a) {
+  return a.data() + a.len();
+}
+
+template <typename T, size_t N>
+constexpr auto begin(const array<T, N>& a) {
+  return a.data();
+}
+
+template <typename T, size_t N>
+constexpr auto end(const array<T, N>& a) {
+  return a.data() + a.len();
+}
+
 #endif

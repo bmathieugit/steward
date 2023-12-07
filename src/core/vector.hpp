@@ -178,11 +178,6 @@ template <typename V>
 concept vector_parameter =
     contains<V, const vector<typename V::type>, vector<typename V::type>>;
 
-template <vector_parameter V1, vector_parameter V2>
-constexpr auto operator<=>(V1& v1, V2& v2) {
-  return v1.len() <=> v2.len();
-}
-
 constexpr auto begin(vector_parameter auto& v) {
   return v.data();
 }

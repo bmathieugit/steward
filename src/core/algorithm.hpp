@@ -143,4 +143,12 @@ constexpr O move(I b, I e, O o) {
   return o;
 }
 
+template<iterator I>
+constexpr void foreach(I b, I e, unary<iterator_type<I>, void> auto& u) {
+  while (b != e) {
+    u(*b);
+    ++b;
+  }
+}
+
 #endif

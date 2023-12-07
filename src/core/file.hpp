@@ -67,7 +67,7 @@ class raw_file {
     open(fname);
   }
 
-  raw_file(char_iterator auto fname)
+  raw_file(string_view auto fname)
     requires not_console_mode<m>
   {
     open(fname);
@@ -110,10 +110,10 @@ class raw_file {
     return _fd != null_file;
   }
 
-  bool open(char_iterator auto fname)
+  bool open(string_view fname)
     requires not_console_mode<m>
   {
-    return open(string(fname).data());
+    return open(fname.data());
   }
 
   bool opened() { return _fd != null_file; }

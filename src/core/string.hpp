@@ -278,17 +278,17 @@ constexpr auto end(basic_string_view<C>& s) {
 using string_view = basic_string_view<char>;
 using wstring_view = basic_string_view<wchar_t>;
 
-// template <typename CI>
-// concept char_iterator = requires(CI ci) { character<decltype(*ci)>; };
+//template <typename CI>
+//concept char_iterator = requires(CI ci) { character<decltype(*ci)>; };
 
-// template <char_iterator S, character C>
-// constexpr S& from_chars(S& s, maybe<C>& c) {
-//   if (s.has()) {
-//     c = s.next();
-//   }
+//template <char_iterator S, character C>
+//constexpr S& from_chars(S& s, maybe<C>& c) {
+//  if (s.has()) {
+//    c = s.next();
+//  }
 
-//   return s;
-// }
+//  return s;
+//}
 
 // template <char_iterator S, unsigned_integral I>
 // constexpr S& from_chars(S& s, maybe<I>& i) {
@@ -377,20 +377,22 @@ using wstring_view = basic_string_view<wchar_t>;
 //   return s;
 // }
 
-// template <oterator O, character C>
-// constexpr O& to_chars(O& o, C c) {
-//   o.add(c);
-//   return o;
-// }
+template<typename O, typename T>
+concept ostream = requires(O o, T t) {
+  o.add(t) ;
+};	
 
-// template <char_oterator O, char_iterator I>
-// constexpr O& to_chars(O& o, I i) {
-//   while (i.has()) {
-//     o.add(i.next());
-//   }
+template <character C, ostream<C> O>
+constexpr O& to_chars(O& o, C c) {
+  o.add(c);
+  return o;
+}
 
-//   return o;
-// }
+template <character C, ostream<C> O>
+constexpr O& to_chars(O& o, basic_string_view<C> s) {
+  foreach(begin(s), end(s), [&o] (C c) { o.add(c); });
+  return o;
+}
 
 // template <char_oterator S, collection C>
 // constexpr S& to_chars(S& o, const C& c) {
