@@ -1,6 +1,8 @@
 #include <string.h>
 
 #include <core/algorithm.hpp>
+#include <core/array.hpp>
+#include <core/exception.hpp>
 #include <core/span.hpp>
 #include <core/string.hpp>
 #include <core/vector.hpp>
@@ -401,7 +403,7 @@ void test_span_methods() {
   try {
     sp.at(5);
     N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
-  } catch (out_of_range&) {
+  } catch (out_of_range& e) {
     N_TEST_ASSERT_TRUE(true);  // Exception attendue
   }
 }
@@ -418,6 +420,50 @@ void test_span_exchange_modify() {
   // Test de modify
   sp.modify(4, 1);
   N_TEST_ASSERT_EQUALS(sp.at(1), 4);
+}
+
+void test_array_len_max() {
+  array<int, 5> arr;
+  N_TEST_ASSERT_EQUALS(arr.len(), 5);
+  N_TEST_ASSERT_EQUALS(arr.max(), 5);
+}
+
+void test_array_has() {
+  array<int, 5> arr;
+  N_TEST_ASSERT_TRUE(arr.has(4));
+  N_TEST_ASSERT_FALSE(arr.has(5));
+}
+
+void test_array_data() {
+  array<int, 5> arr;
+  N_TEST_ASSERT_EQUALS(arr.data(), &arr.at(0));
+}
+
+void test_array_at() {
+  array<int, 5> arr;
+  arr.at(0) = 1;
+  N_TEST_ASSERT_EQUALS(arr.at(0), 1);
+  try {
+    arr.at(5);
+    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+  } catch (out_of_range&) {
+    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+  }
+}
+
+void test_array_exchange() {
+  array<int, 5> arr;
+  arr.at(0) = 1;
+  arr.at(1) = 2;
+  arr.exchange(0, 1);
+  N_TEST_ASSERT_EQUALS(arr.at(0), 2);
+  N_TEST_ASSERT_EQUALS(arr.at(1), 1);
+}
+
+void test_array_modify() {
+  array<int, 5> arr;
+  arr.modify(3, 0);
+  N_TEST_ASSERT_EQUALS(arr.at(0), 3);
 }
 
 int main() {
@@ -487,6 +533,17 @@ int main() {
   N_TEST_RUN(test_span_assignment);
   N_TEST_RUN(test_span_methods);
   N_TEST_RUN(test_span_exchange_modify);
+
+  N_TEST_RESULTS;
+
+  N_TEST_SUITE(array_tests);
+
+  N_TEST_RUN(test_array_len_max);
+  N_TEST_RUN(test_array_has);
+  N_TEST_RUN(test_array_data);
+  N_TEST_RUN(test_array_at);
+  N_TEST_RUN(test_array_exchange);
+  N_TEST_RUN(test_array_modify);
 
   N_TEST_RESULTS;
 }

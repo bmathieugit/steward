@@ -31,7 +31,6 @@
     printf("\nSUITE [%s]\n", #name);
 
 #define N_TEST_RUN(t)                                \
-  printf("\nTEST [%s]\n", #t);                       \
   try {                                              \
     t();                                             \
     ++success;                                       \

@@ -3,8 +3,7 @@
 
 #include <core/allocator.hpp>
 #include <core/core.hpp>
-
-struct out_of_range {};
+#include <core/exception.hpp>
 
 template <typename T>
 class vector {

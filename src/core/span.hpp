@@ -2,7 +2,7 @@
 #define __steward_core_span_hpp__
 
 #include <core/core.hpp>
-#include <core/vector.hpp>
+#include <core/exception.hpp>
 
 template <typename T>
 class span {
