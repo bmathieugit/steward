@@ -3,25 +3,26 @@
 #include <core/algorithm.hpp>
 #include <core/array.hpp>
 #include <core/exception.hpp>
+#include <core/file.hpp>
 #include <core/span.hpp>
 #include <core/string.hpp>
 #include <core/vector.hpp>
 #include <initializer_list>
 #include <tests.hpp>
 
-void test_vector_default_constructor() {
+constexpr void test_vector_default_constructor() {
   vector<int> v;
   N_TEST_ASSERT_TRUE(v.empty());
   N_TEST_ASSERT_EQUALS(v.len(), 0);
 }
 
-void test_vector_size_constructor() {
+constexpr void test_vector_size_constructor() {
   vector<int> v(5);
   N_TEST_ASSERT_EQUALS(v.max(), 5);
   N_TEST_ASSERT_TRUE(v.empty());
 }
 
-void test_vector_copy_constructor() {
+constexpr void test_vector_copy_constructor() {
   vector<int> v1(5);
   v1.add(1);
   vector<int> v2(v1);
@@ -29,7 +30,7 @@ void test_vector_copy_constructor() {
   N_TEST_ASSERT_EQUALS(v2.at(0), 1);
 }
 
-void test_vector_move_constructor() {
+constexpr void test_vector_move_constructor() {
   vector<int> v1(5);
   v1.add(1);
   vector<int> v2(move(v1));
@@ -37,7 +38,7 @@ void test_vector_move_constructor() {
   N_TEST_ASSERT_TRUE(v1.empty());
 }
 
-void test_vector_copy_assignment() {
+constexpr void test_vector_copy_assignment() {
   vector<int> v1(5);
   v1.add(1);
   vector<int> v2;
@@ -45,7 +46,7 @@ void test_vector_copy_assignment() {
   N_TEST_ASSERT_EQUALS(v2.len(), v1.len());
 }
 
-void test_vector_move_assignment() {
+constexpr void test_vector_move_assignment() {
   vector<int> v1(5);
   v1.add(1);
   vector<int> v2;
@@ -54,7 +55,7 @@ void test_vector_move_assignment() {
   N_TEST_ASSERT_TRUE(v1.empty());
 }
 
-void test_vector_properties() {
+constexpr void test_vector_properties() {
   vector<int> v(5);
   N_TEST_ASSERT_TRUE(v.empty());
   N_TEST_ASSERT_FALSE(v.full());
@@ -64,7 +65,7 @@ void test_vector_properties() {
   N_TEST_ASSERT_TRUE(v.has(0));
 }
 
-void test_vector_clear() {
+constexpr void test_vector_clear() {
   vector<int> v(5);
   v.add(1);
   v.clear();
@@ -83,7 +84,7 @@ void test_vector_at() {
   }
 }
 
-void test_vector_add() {
+constexpr void test_vector_add() {
   vector<int> v(2);
   v.add(1);
   v.add(2);
@@ -94,7 +95,7 @@ void test_vector_add() {
   N_TEST_ASSERT_EQUALS(v.at(2), 2);
 }
 
-void test_vector_exchange() {
+constexpr void test_vector_exchange() {
   vector<int> v(3);
   v.add(1);
   v.add(2);
@@ -103,14 +104,14 @@ void test_vector_exchange() {
   N_TEST_ASSERT_EQUALS(v.at(1), 1);
 }
 
-void test_vector_modify() {
+constexpr void test_vector_modify() {
   vector<int> v(2);
   v.add(1);
   v.modify(2, 0);  // Modifier l'élément à la position 0
   N_TEST_ASSERT_EQUALS(v.at(0), 2);
 }
 
-void test_vector_remove() {
+constexpr void test_vector_remove() {
   vector<int> v(3);
   v.add(1);
   v.add(2);
@@ -119,7 +120,7 @@ void test_vector_remove() {
   N_TEST_ASSERT_EQUALS(v.at(0), 2);
 }
 
-void test_count_iterators() {
+constexpr void test_count_iterators() {
   vector<int> v;
   for (int i = 0; i < 5; ++i)
     v.add(i);
@@ -127,7 +128,7 @@ void test_count_iterators() {
   N_TEST_ASSERT_EQUALS(cnt, 5);
 }
 
-void test_count_value() {
+constexpr void test_count_value() {
   vector<int> v;
   for (int i : {1, 2, 1, 4, 1})
     v.add(i);
@@ -135,7 +136,7 @@ void test_count_value() {
   N_TEST_ASSERT_EQUALS(cnt, 3);
 }
 
-void test_count_predicate() {
+constexpr void test_count_predicate() {
   vector<int> v;
   for (int i = 1; i <= 5; ++i)
     v.add(i);
@@ -143,37 +144,37 @@ void test_count_predicate() {
   N_TEST_ASSERT_EQUALS(cnt, 2);
 }
 
-void test_find_value() {
+constexpr void test_find_value() {
   vector<int> v;
   for (int i = 1; i <= 5; ++i)
     v.add(i);
   auto it = find(begin(v), end(v), 3);
-  N_TEST_ASSERT_TRUE(it != end(v) && *it == 3);
+  N_TEST_ASSERT_TRUE(it != end(v) and *it == 3);
 }
 
-void test_find_predicate() {
+constexpr void test_find_predicate() {
   vector<int> v;
   for (int i = 1; i <= 5; ++i)
     v.add(i);
   auto it = find(begin(v), end(v), [](int i) { return i > 3; });
-  N_TEST_ASSERT_TRUE(it != end(v) && *it == 4);
+  N_TEST_ASSERT_TRUE(it != end(v) and *it == 4);
 }
 
-void test_find_not() {
+constexpr void test_find_not() {
   vector<int> v;
   for (int i : {2, 4, 6, 7, 8})
     v.add(i);
   auto it = find_not(begin(v), end(v), [](int i) { return i % 2 == 0; });
-  N_TEST_ASSERT_TRUE(it != end(v) && *it == 7);
+  N_TEST_ASSERT_TRUE(it != end(v) and *it == 7);
 }
-void test_all_of() {
+constexpr void test_all_of() {
   vector<int> v;
   for (int i : {2, 4, 6, 8})
     v.add(i);
   bool result = all_of(begin(v), end(v), [](int i) { return i % 2 == 0; });
   N_TEST_ASSERT_TRUE(result);
 }
-void test_any_of() {
+constexpr void test_any_of() {
   vector<int> v;
   for (int i : {1, 3, 5, 6})
     v.add(i);
@@ -181,7 +182,7 @@ void test_any_of() {
   N_TEST_ASSERT_TRUE(result);
 }
 
-void test_none_of() {
+constexpr void test_none_of() {
   vector<int> v;
   for (int i : {1, 3, 5, 7})
     v.add(i);
@@ -189,7 +190,7 @@ void test_none_of() {
   N_TEST_ASSERT_TRUE(result);
 }
 
-void test_starts_with() {
+constexpr void test_starts_with() {
   vector<int> v1, v2;
   for (int i : {1, 2, 3})
     v1.add(i);
@@ -199,7 +200,7 @@ void test_starts_with() {
   N_TEST_ASSERT_TRUE(result);
 }
 
-void test_equals() {
+constexpr void test_equals() {
   vector<int> v1, v2;
   for (int i : {1, 2, 3})
     v1.add(i);
@@ -209,19 +210,19 @@ void test_equals() {
   N_TEST_ASSERT_TRUE(result);
 }
 
-void test_string_size_constructor() {
+constexpr void test_string_size_constructor() {
   basic_string<char> s(10);
   N_TEST_ASSERT_EQUALS(s.max(), 10);
   N_TEST_ASSERT_TRUE(s.empty());
 }
 
-void test_string_default_constructor() {
+constexpr void test_string_default_constructor() {
   basic_string<char> s;
   N_TEST_ASSERT_TRUE(s.empty());
   N_TEST_ASSERT_EQUALS(s.len(), 0);
 }
 
-void test_string_copy_constructor() {
+constexpr void test_string_copy_constructor() {
   basic_string<char> s1(10);
   s1.add('a');
   basic_string<char> s2(s1);
@@ -229,7 +230,7 @@ void test_string_copy_constructor() {
   N_TEST_ASSERT_EQUALS(s2.at(0), 'a');
 }
 
-void test_string_move_constructor() {
+constexpr void test_string_move_constructor() {
   basic_string<char> s1(10);
   s1.add('a');
   basic_string<char> s2(move(s1));
@@ -237,7 +238,7 @@ void test_string_move_constructor() {
   N_TEST_ASSERT_TRUE(s1.empty());
 }
 
-void test_string_copy_assignment() {
+constexpr void test_string_copy_assignment() {
   basic_string<char> s1(10);
   s1.add('a');
   basic_string<char> s2;
@@ -245,7 +246,7 @@ void test_string_copy_assignment() {
   N_TEST_ASSERT_EQUALS(s2.len(), s1.len());
 }
 
-void test_string_move_assignment() {
+constexpr void test_string_move_assignment() {
   basic_string<char> s1(10);
   s1.add('a');
   basic_string<char> s2;
@@ -254,7 +255,7 @@ void test_string_move_assignment() {
   N_TEST_ASSERT_TRUE(s1.empty());
 }
 
-void test_string_properties() {
+constexpr void test_string_properties() {
   basic_string<char> s(10);
   N_TEST_ASSERT_TRUE(s.empty());
   N_TEST_ASSERT_FALSE(s.full());
@@ -264,7 +265,7 @@ void test_string_properties() {
   N_TEST_ASSERT_TRUE(s.has(0));
 }
 
-void test_string_clear() {
+constexpr void test_string_clear() {
   basic_string<char> s(10);
   s.add('a');
   s.clear();
@@ -283,7 +284,7 @@ void test_string_at() {
   }
 }
 
-void test_string_add() {
+constexpr void test_string_add() {
   basic_string<char> s(2);
   s.add('a');
   s.add('b');
@@ -294,7 +295,7 @@ void test_string_add() {
   N_TEST_ASSERT_EQUALS(s.at(2), 'b');
 }
 
-void test_string_exchange() {
+constexpr void test_string_exchange() {
   basic_string<char> s(3);
   s.add('a');
   s.add('b');
@@ -303,14 +304,14 @@ void test_string_exchange() {
   N_TEST_ASSERT_EQUALS(s.at(1), 'a');
 }
 
-void test_string_modify() {
+constexpr void test_string_modify() {
   basic_string<char> s(2);
   s.add('a');
   s.modify('b', 0);  // Modifier l'élément à la position 0
   N_TEST_ASSERT_EQUALS(s.at(0), 'b');
 }
 
-void test_string_remove() {
+constexpr void test_string_remove() {
   basic_string<char> s(3);
   s.add('a');
   s.add('b');
@@ -319,7 +320,7 @@ void test_string_remove() {
   N_TEST_ASSERT_EQUALS(s.at(0), 'b');
 }
 
-void test_null_terminating_string() {
+constexpr void test_null_terminating_string() {
   basic_string<char> s(3);
   s.add('a');
   s.add('b');
@@ -332,7 +333,7 @@ void test_null_terminating_string() {
   N_TEST_ASSERT_EQUALS(s.len(), strlen(s.data()));
 }
 
-void test_string_view_constructors() {
+constexpr void test_string_view_constructors() {
   const char* str = "hello";
   basic_string_view<char> sv1(str, str + 5);
   N_TEST_ASSERT_EQUALS(sv1.len(), 5);
@@ -344,7 +345,7 @@ void test_string_view_constructors() {
   N_TEST_ASSERT_EQUALS(sv3.len(), 5);
 }
 
-void test_string_view_assignment() {
+constexpr void test_string_view_assignment() {
   const char* str = "hello";
   basic_string_view<char> sv;
   sv = str;
@@ -371,7 +372,7 @@ void test_string_view_methods() {
   }
 }
 
-void test_span_constructors() {
+constexpr void test_span_constructors() {
   int arr[] = {1, 2, 3, 4, 5};
   span<int> sp1(arr, arr + 5);
   N_TEST_ASSERT_EQUALS(sp1.len(), 5);
@@ -380,7 +381,7 @@ void test_span_constructors() {
   N_TEST_ASSERT_EQUALS(sp2.len(), 5);
 }
 
-void test_span_assignment() {
+constexpr void test_span_assignment() {
   int arr[] = {1, 2, 3, 4, 5};
   span<int> sp1(arr, 5);
   span<int> sp2 = sp1;
@@ -408,7 +409,7 @@ void test_span_methods() {
   }
 }
 
-void test_span_exchange_modify() {
+constexpr void test_span_exchange_modify() {
   int arr[] = {1, 2, 3};
   span<int> sp(arr, 3);
 
@@ -422,19 +423,19 @@ void test_span_exchange_modify() {
   N_TEST_ASSERT_EQUALS(sp.at(1), 4);
 }
 
-void test_array_len_max() {
+constexpr void test_array_len_max() {
   array<int, 5> arr;
   N_TEST_ASSERT_EQUALS(arr.len(), 5);
   N_TEST_ASSERT_EQUALS(arr.max(), 5);
 }
 
-void test_array_has() {
+constexpr void test_array_has() {
   array<int, 5> arr;
   N_TEST_ASSERT_TRUE(arr.has(4));
   N_TEST_ASSERT_FALSE(arr.has(5));
 }
 
-void test_array_data() {
+constexpr void test_array_data() {
   array<int, 5> arr;
   N_TEST_ASSERT_EQUALS(arr.data(), &arr.at(0));
 }
@@ -451,7 +452,7 @@ void test_array_at() {
   }
 }
 
-void test_array_exchange() {
+constexpr void test_array_exchange() {
   array<int, 5> arr;
   arr.at(0) = 1;
   arr.at(1) = 2;
@@ -460,10 +461,133 @@ void test_array_exchange() {
   N_TEST_ASSERT_EQUALS(arr.at(1), 1);
 }
 
-void test_array_modify() {
+constexpr void test_array_modify() {
   array<int, 5> arr;
   arr.modify(3, 0);
   N_TEST_ASSERT_EQUALS(arr.at(0), 3);
+}
+
+constexpr void test_string_istream_next() {
+  const char* str = "hello";
+  string_istream si(str);
+  N_TEST_ASSERT_EQUALS(si.next(), 'h');
+  N_TEST_ASSERT_EQUALS(si.next(), 'e');
+}
+
+constexpr void test_string_istream_has() {
+  const char* str = "hi";
+  string_istream si(str);
+  N_TEST_ASSERT_TRUE(si.has());   // Avant la lecture
+  si.next();                      // Lecture de 'h'
+  si.next();                      // Lecture de 'i'
+  N_TEST_ASSERT_FALSE(si.has());  // Après la lecture
+}
+
+constexpr bool operator==(string_view s1, string_view s2) {
+  return equals(begin(s1), end(s1), begin(s2), end(s2));
+}
+
+constexpr void test_string_ostream_add() {
+  string_ostream so;
+  so.add('h');
+  so.add('i');
+  N_TEST_ASSERT_EQUALS(so.str(), "hi");
+}
+
+constexpr void test_string_ostream_str() {
+  string_ostream so;
+  so.add('h');
+  so.add('i');
+  auto s = so.str();
+  N_TEST_ASSERT_EQUALS(s, "hi");
+}
+
+constexpr void test_string_stream_next_has() {
+  string_stream ss("hello");
+  N_TEST_ASSERT_TRUE(ss.has());
+  N_TEST_ASSERT_EQUALS(ss.next(), 'h');
+  N_TEST_ASSERT_EQUALS(ss.next(), 'e');
+  // Continuez jusqu'à ce que ss.has() soit false
+}
+
+constexpr void test_string_stream_add_str() {
+  string_stream ss;
+  ss.add('h');
+  ss.add('i');
+  auto s = ss.str();
+  N_TEST_ASSERT_EQUALS(s, "hi");
+}
+
+void test_from_chars_istream_ostream() {
+  string_stream ss("hello");
+  string_ostream so;
+  from_chars(ss, so);
+  N_TEST_ASSERT_EQUALS(so.str(), "hello");
+}
+
+void test_from_chars_istream_maybe_char() {
+  string_stream ss("a");
+  maybe<char> c;
+  from_chars(ss, c);
+  N_TEST_ASSERT_TRUE(c.has() and c.get() == 'a');
+}
+
+void test_from_chars_istream_maybe_uint() {
+  string_stream ss("123");
+  maybe<unsigned int> i;
+  from_chars(ss, i);
+  N_TEST_ASSERT_TRUE(i.has() and i.get() == 123);
+}
+
+void test_from_chars_istream_maybe_int() {
+  string_stream ss("-123");
+  maybe<int> i;
+  from_chars(ss, i);
+  N_TEST_ASSERT_TRUE(i.has() and i.get() == -123);
+}
+
+void test_from_chars_istream_maybe_bool() {
+  string_stream ss("1");
+  maybe<bool> b;
+  from_chars(ss, b);
+  N_TEST_ASSERT_TRUE(b.has() and b.get() == false);
+}
+
+void test_to_chars_ostream_istream() {
+  string_stream ss("hello");
+  string_ostream so;
+  to_chars(so, ss);
+  N_TEST_ASSERT_EQUALS(so.str(), "hello");
+}
+
+void test_to_chars_ostream_char() {
+  string_ostream so;
+  to_chars(so, 'a');
+  N_TEST_ASSERT_EQUALS(so.str(), "a");
+}
+
+void test_to_chars_ostream_int() {
+  string_ostream so;
+  to_chars(so, -123);
+  auto s = so.str();
+
+  printf("\n");
+
+  printf(" len : %lu, len2 : %lu\n", string_view(s).len(),
+         string_view("-123").len());
+  N_TEST_ASSERT_EQUALS(s, "-123");
+}
+
+void test_to_chars_ostream_uint() {
+  string_ostream so;
+  to_chars(so, 123u);
+  N_TEST_ASSERT_EQUALS(so.str(), "123");
+}
+
+void test_to_chars_ostream_bool() {
+  string_ostream so;
+  to_chars(so, true);
+  N_TEST_ASSERT_EQUALS(so.str(), "true");
 }
 
 int main() {
@@ -547,10 +671,32 @@ int main() {
 
   N_TEST_RESULTS;
 
+  N_TEST_SUITE(string_stream_tests);
 
-  string s;
+  N_TEST_RUN(test_string_istream_next);
+  N_TEST_RUN(test_string_istream_has);
+  N_TEST_RUN(test_string_ostream_add);
+  N_TEST_RUN(test_string_ostream_str);
+  N_TEST_RUN(test_string_stream_next_has);
+  N_TEST_RUN(test_string_stream_add_str);
 
-  to_chars(s, 'c');
+  N_TEST_RESULTS;
 
- 	printf(" \n\n %s \n\n", s.data()); 
+  N_TEST_SUITE(char_conversion_tests);
+
+  N_TEST_RUN(test_from_chars_istream_ostream);
+  N_TEST_RUN(test_from_chars_istream_maybe_char);
+  N_TEST_RUN(test_from_chars_istream_maybe_uint);
+  N_TEST_RUN(test_from_chars_istream_maybe_int);
+  N_TEST_RUN(test_from_chars_istream_maybe_bool);
+
+  N_TEST_RUN(test_to_chars_ostream_istream);
+  N_TEST_RUN(test_to_chars_ostream_char);
+  N_TEST_RUN(test_to_chars_ostream_int);
+  N_TEST_RUN(test_to_chars_ostream_uint);
+  N_TEST_RUN(test_to_chars_ostream_bool);
+
+  N_TEST_RESULTS;
 }
+
+#include <string>

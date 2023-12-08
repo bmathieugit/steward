@@ -380,6 +380,16 @@ concept distanciable = requires(T t) {
   { t - t } -> same_as<size_t>;
 };
 
+template <typename I>
+concept istream = requires(I i) {
+  typename I::type;
+  { i.next() } -> same_as<typename I::type>;
+  { i.has() } -> same_as<bool>;
+};
+
+template <typename O>
+concept ostream = requires(O o, typename O::type t) { o.add(t); };
+
 template <typename T>
 constexpr rm_ref<T>&& move(T&& t) {
   return static_cast<rm_ref<T>&&>(t);
