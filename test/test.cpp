@@ -6,6 +6,7 @@
 #include <core/file.hpp>
 #include <core/hash.hpp>
 #include <core/span.hpp>
+#include <core/stream.hpp>
 #include <core/string.hpp>
 #include <core/vector.hpp>
 #include <initializer_list>
@@ -738,6 +739,10 @@ int main() {
   N_TEST_RUN(test_to_hash_istream);
 
   N_TEST_RESULTS;
+
+  string s("coucou");
+  iterable_istream iss(s);
+  write(sout, iss);
 }
 
 #include <string>

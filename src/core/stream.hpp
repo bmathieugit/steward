@@ -37,6 +37,22 @@ class oterator_ostream {
   }
 };
 
+template <iterable I>
+class iterable_istream : public iterator_istream<decltype(begin(fake<I>()))> {
+ public:
+  using type = typename iterator_istream<decltype(begin(fake<I>()))>::type;
+  constexpr iterable_istream(I& i)
+      : iterator_istream<decltype(begin(fake<I>()))>(begin(i), end(i)) {}
+};
+
+template <oterable O>
+class oterable_ostream : public oterator_ostream<decltype(begin(fake<O>()))> {
+ public:
+  using type = typename oterator_ostream<decltype(begin(fake<O>()))>::type;
+  constexpr oterable_ostream(O& o)
+      : oterator_ostream<decltype(begin(fake<O>()))>(begin(o), end(o)) {}
+};
+
 // #include <core/tuple.hpp>
 
 // template <iterator I1, iterator I2>

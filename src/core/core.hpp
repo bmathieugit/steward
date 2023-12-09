@@ -393,6 +393,18 @@ concept distanciable = requires(T t) {
   { t - t } -> same_as<size_t>;
 };
 
+template <typename T>
+concept iterable = requires(T t) {
+  { begin(t) } -> iterator;
+  { end(t) } -> iterator;
+};
+
+template <typename T>
+concept oterable = requires(T t) {
+  { begin(t) } -> oterator;
+  { end(t) } -> oterator;
+};
+
 template <typename I>
 concept istream = requires(I i) {
   typename I::type;
@@ -422,4 +434,8 @@ template <typename T>
 void* operator new(size_t, T* ptr) {
   return ptr;
 }
+
+template <typename T>
+constexpr T fake();
+
 #endif

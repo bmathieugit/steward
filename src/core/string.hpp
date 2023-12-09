@@ -7,6 +7,9 @@
 #include <core/span.hpp>
 
 template <character C>
+class basic_string_view;
+
+template <character C>
 class basic_string {
  public:
   using type = C;
@@ -50,6 +53,9 @@ class basic_string {
       this->add(*(b++));
     }
   }
+
+  constexpr basic_string(basic_string_view<C> s)
+      : basic_string(begin(s), end(s)) {}
 
   constexpr basic_string(const basic_string& v)
       : _max(v._max), _len(v._len), _data(_alloc.allocate(v._max + 1)) {
@@ -531,7 +537,7 @@ constexpr O& to_chars(O& o, I i) {
   }
 
   auto b2 = begin(tbuff);
-  
+
   while (b > b2) {
     auto c = *(--b);
     o.add(c);
@@ -575,8 +581,8 @@ constexpr void read(I i, maybe<C>&... mt) {
 }
 
 template <ostream O, typename... C>
-constexpr void write(O o, const C&... t) {
-  (to_chars(o, t), ...);
+constexpr void write(O o, C&&... t) {
+  (to_chars(o, relay<C>(t)), ...);
 }
 
 #endif
