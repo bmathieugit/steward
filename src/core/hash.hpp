@@ -45,18 +45,13 @@ constexpr uof<N> to_hash(const I i, uof<N> h = fnvoffset<N>) {
   return to_hash<N>(static_cast<const byte_t[sizeof(I)]>(i), h);
 }
 
-template <size_t N, iterator I>
+template <size_t N, istream I>
 constexpr uof<N> to_hash(I i, uof<N> h = fnvoffset<N>) {
   while (i.has()) {
     h = to_hash<N>(i.next(), h);
   }
 
   return h;
-}
-
-template <size_t N, collection C>
-constexpr uof<N> to_hash(const C& c, uof<N> h = fnvoffset<N>) {
-  return to_hash<N>(iter(c), h);
 }
 
 #endif

@@ -368,12 +368,25 @@ concept __iterator_can_assign_operator = requires(I i, T t) {
   { *i = t };
 };
 
-template <typename I>
-concept oterator = __iterator_has_bool_diffs_operator<I> and
-                   __iterator_has_bool_equals_operator<I> and
-                   __iterator_has_preincrement_operator<I> and
-                   __iterator_has_postincrement_operator<I> and
-                   __iterator_can_assign_operator<I, iterator_type<I>>;
+template <typename O>
+struct __oterator_type {
+  using type = typename O::type;
+};
+
+template <typename O>
+struct __oterator_type<O*> {
+  using type = O;
+};
+
+template <typename O>
+using oterator_type = typename __oterator_type<O>::type;
+
+template <typename O>
+concept oterator = __iterator_has_bool_diffs_operator<O> and
+                   __iterator_has_bool_equals_operator<O> and
+                   __iterator_has_preincrement_operator<O> and
+                   __iterator_has_postincrement_operator<O> and
+                   __iterator_can_assign_operator<O, iterator_type<O>>;
 
 template <typename T>
 concept distanciable = requires(T t) {
@@ -383,7 +396,7 @@ concept distanciable = requires(T t) {
 template <typename I>
 concept istream = requires(I i) {
   typename I::type;
-  { i.next() } -> same_as<typename I::type>;
+  { i.next() } -> same_as_declined<typename I::type>;
   { i.has() } -> same_as<bool>;
 };
 

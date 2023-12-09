@@ -28,11 +28,11 @@
   {                        \
     int success = 0;       \
     int failure = 0;       \
-    printf("\nSUITE [%s]\n\n", #name);
+    printf("\nSUITE [\033[1m%s\033[0m]\n\n", #name);
 
 #define N_TEST_RUN(t)                                    \
   try {                                                  \
-    printf("TEST [%s]\n\n", #t);                         \
+    printf("TEST [\033[1m%s\033[0m]\n\n", #t);                         \
     t();                                                 \
     ++success;                                           \
     printf("---> Result : \033[1;32mPASSED\033[0m\n\n"); \

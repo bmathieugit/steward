@@ -4,6 +4,7 @@
 #include <core/array.hpp>
 #include <core/exception.hpp>
 #include <core/file.hpp>
+#include <core/hash.hpp>
 #include <core/span.hpp>
 #include <core/string.hpp>
 #include <core/vector.hpp>
@@ -590,8 +591,39 @@ void test_to_chars_ostream_bool() {
   N_TEST_ASSERT_EQUALS(so.str(), "true");
 }
 
+void test_to_hash_byte() {
+  byte_t b = 'a';
+  auto hash = to_hash<32>(b);
+  N_TEST_ASSERT_EQUALS(hash, 3826002220);
+}
+
+void test_to_hash_byte_array() {
+  const byte_t bs[] = {'a', 'b', 'c'};
+  auto hash = to_hash<32>(bs);
+  N_TEST_ASSERT_EQUALS(hash, 440920331);
+}
+
+void test_to_hash_wchar_t() {
+  wchar_t c = L'a';
+  auto hash = to_hash<32>(c);
+  N_TEST_ASSERT_EQUALS(hash, 4125217764);
+}
+
+void test_to_hash_integral() {
+  int i = 123;
+  auto hash = to_hash<32>(i);
+  N_TEST_ASSERT_EQUALS(hash, 442514334);
+}
+
+void test_to_hash_istream() {
+  string_stream ss("test");
+  auto hash = to_hash<32>(ss);
+  N_TEST_ASSERT_EQUALS(hash, 2949673445);
+}
+
 int main() {
   N_TEST_SUITE(vector test suite);
+
   N_TEST_RUN(test_vector_default_constructor);
   N_TEST_RUN(test_vector_size_constructor);
   N_TEST_RUN(test_vector_copy_constructor);
@@ -689,12 +721,21 @@ int main() {
   N_TEST_RUN(test_from_chars_istream_maybe_uint);
   N_TEST_RUN(test_from_chars_istream_maybe_int);
   N_TEST_RUN(test_from_chars_istream_maybe_bool);
-
   N_TEST_RUN(test_to_chars_ostream_istream);
   N_TEST_RUN(test_to_chars_ostream_char);
   N_TEST_RUN(test_to_chars_ostream_int);
   N_TEST_RUN(test_to_chars_ostream_uint);
   N_TEST_RUN(test_to_chars_ostream_bool);
+
+  N_TEST_RESULTS;
+
+  N_TEST_SUITE(fnv_hash_tests);
+
+  N_TEST_RUN(test_to_hash_byte);
+  N_TEST_RUN(test_to_hash_byte_array);
+  N_TEST_RUN(test_to_hash_wchar_t);
+  N_TEST_RUN(test_to_hash_integral);
+  N_TEST_RUN(test_to_hash_istream);
 
   N_TEST_RESULTS;
 }
