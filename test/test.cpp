@@ -5,6 +5,7 @@
 #include <core/exception.hpp>
 #include <core/file.hpp>
 #include <core/hash.hpp>
+#include <core/list.hpp>
 #include <core/span.hpp>
 #include <core/stream.hpp>
 #include <core/string.hpp>
@@ -622,6 +623,61 @@ void test_to_hash_istream() {
   N_TEST_ASSERT_EQUALS(hash, 2949673445);
 }
 
+void test_list_constructors_assignments() {
+  list<int> l1(10);
+  N_TEST_ASSERT_EQUALS(l1.max(), 10);
+
+  list<int> l2(l1);
+  N_TEST_ASSERT_EQUALS(l2.max(), 10);
+
+  list<int> l3;
+  l3 = l2;
+  N_TEST_ASSERT_EQUALS(l3.max(), 10);
+}
+
+void test_list_properties() {
+  list<int> l(5);
+  N_TEST_ASSERT_TRUE(l.empty());
+  N_TEST_ASSERT_EQUALS(l.max(), 5);
+  N_TEST_ASSERT_FALSE(l.full());
+  N_TEST_ASSERT_FALSE(l.has(0));
+}
+
+void test_list_clear() {
+  list<int> l(5);
+  l.add(1);
+  l.clear();
+  N_TEST_ASSERT_TRUE(l.empty());
+}
+
+void test_list_at() {
+  list<int> l(5);
+  l.add(1);
+  N_TEST_ASSERT_EQUALS(l.at(0), 1);
+  try {
+    l.at(1);
+    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+  } catch (out_of_range&) {
+    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+  }
+}
+
+void test_list_modifications() {
+  list<int> l(5);
+  l.add(1);
+  l.add(2);
+  l.modify(3, 1);
+  N_TEST_ASSERT_EQUALS(l.at(1), 3);
+
+  l.exchange(0, 1);
+  N_TEST_ASSERT_EQUALS(l.at(0), 3);
+  N_TEST_ASSERT_EQUALS(l.at(1), 1);
+
+  l.remove(0);
+  N_TEST_ASSERT_EQUALS(l.at(0), 1);
+  N_TEST_ASSERT_EQUALS(l.len(), 1);
+}
+
 int main() {
   N_TEST_SUITE(vector test suite);
 
@@ -738,11 +794,17 @@ int main() {
   N_TEST_RUN(test_to_hash_integral);
   N_TEST_RUN(test_to_hash_istream);
 
-  N_TEST_RESULTS;
+  N_TEST_RESULTS
 
-  string s("coucou");
-  iterable_istream iss(s);
-  write(sout, iss);
+  N_TEST_SUITE(list_tests);
+
+  N_TEST_RUN(test_list_constructors_assignments);
+  N_TEST_RUN(test_list_properties);
+  N_TEST_RUN(test_list_clear);
+  N_TEST_RUN(test_list_at);
+  N_TEST_RUN(test_list_modifications);
+
+  N_TEST_RESULTS;
 }
 
 #include <string>
