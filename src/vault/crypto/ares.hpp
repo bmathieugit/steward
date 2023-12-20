@@ -38,11 +38,23 @@ class ares {
       crypted.modify(c_crypt, i);
     }
 
+    auto middle = crypted.len() / 2;
+
+    for (size_t i = 0; i < middle; ++i) {
+      crypted.exchange(i, crypted.len() - i - 1);
+    }
+
     return crypted;
   }
 
   constexpr string decrypt(string_view mess) const {
     string crypted(mess);
+
+    auto middle = crypted.len() / 2;
+
+    for (size_t i = 0; i < middle; ++i) {
+      crypted.exchange(i, crypted.len() - i - 1);
+    }
 
     for (size_t i = 0; i < crypted.len(); ++i) {
       auto c_crypt = crypted.at(i);
