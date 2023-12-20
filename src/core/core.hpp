@@ -11,13 +11,13 @@ template <typename T>
 concept non_const = __non_const<T>;
 
 template <typename T>
-constexpr bool __is_reference = false;
+constexpr bool _is_reference = false;
 
 template <typename T>
-constexpr bool __is_reference<T&> = true;
+constexpr bool _is_reference<T&> = true;
 
 template <typename T>
-concept is_reference = __is_reference<T>;
+concept is_reference = _is_reference<T>;
 
 template <typename T>
 constexpr bool __is_const_reference = false;

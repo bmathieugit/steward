@@ -9,22 +9,17 @@ template <typename T>
 class list {
  public:
   using type = T;
-  using reference = T&;
-  using const_reference = const T&;
-  using move_reference = T&&;
-  using pointer = T*;
-  using const_pointer = const T*;
 
  private:
-  vector<T> _data;
   vector<size_t> _index;
+  vector<T> _data;
 
  public:
   constexpr ~list() = default;
 
   constexpr list() = default;
 
-  constexpr list(size_t max) : _data(max), _index(max) {}
+  constexpr list(size_t max) : _index(max), _data(max) {}
 
   constexpr list(const list&) = default;
 
@@ -49,9 +44,9 @@ class list {
     _index.clear();
   }
 
-  constexpr reference at(size_t p) { return _data.at(_index.at(p)); }
+  constexpr T& at(size_t p) { return _data.at(_index.at(p)); }
 
-  constexpr const_reference at(size_t p) const {
+  constexpr const T& at(size_t p) const {
     return _data.at(_index.at(p));
   }
 
@@ -79,5 +74,94 @@ class list {
   }
 };
 
+template <typename T>
+class list_iterator {
+ public:
+  using type = T;
+
+ private:
+  list<T>& _l;
+  size_t _index;
+
+ public:
+  constexpr list_iterator(list<T>& l, size_t index = 0)
+      : _l(l), _index(index) {}
+
+  constexpr bool operator==(const list_iterator& l) {
+    return &_l == &l._l and _index == l._index;
+  }
+
+  constexpr bool operator!=(const list_iterator& l) {
+    return not operator==(l);
+  }
+
+  constexpr list_iterator& operator++() {
+    ++_index;
+    return *this;
+  }
+
+  constexpr list_iterator operator++(int) {
+    auto old = *this;
+    operator++();
+    return old;
+  }
+
+  constexpr auto operator*() -> decltype(auto) { return _l.at(_index); }
+};
+
+template <typename T>
+class const_list_iterator {
+ public:
+  using type = T;
+
+ private:
+  const list<T>& _l;
+  size_t _index;
+
+ public:
+  constexpr const_list_iterator(const list<T>& l, size_t index = 0)
+      : _l(l), _index(index) {}
+
+  constexpr bool operator==(const const_list_iterator& l) {
+    return &_l == &l._l and _index == l._index;
+  }
+
+  constexpr bool operator!=(const const_list_iterator& l) {
+    return not operator==(l);
+  }
+
+  constexpr const_list_iterator& operator++() {
+    ++_index;
+    return *this;
+  }
+
+  constexpr const_list_iterator operator++(int) {
+    auto old = *this;
+    operator++();
+    return old;
+  }
+
+  constexpr auto operator*() -> decltype(auto) { return _l.at(_index); }
+};
+
+template <typename T>
+constexpr auto begin(const list<T>& l) {
+  return const_list_iterator<T>(l, 0);
+}
+
+template <typename T>
+constexpr auto end(const list<T>& l) {
+  return const_list_iterator<T>(l, l.len());
+}
+
+template <typename T>
+constexpr auto begin(list<T>& l) {
+  return list_iterator<T>(l, 0);
+}
+
+template <typename T>
+constexpr auto end(list<T>& l) {
+  return list_iterator<T>(l, l.len());
+}
 
 #endif

@@ -28,7 +28,7 @@ class basic_string {
  public:
   constexpr ~basic_string() {
     _alloc.destroy(_data, _len);
-    _alloc.deallocate(_data);
+    _alloc.deallocate(_data, _max);
   }
 
   constexpr basic_string() = default;
@@ -146,13 +146,15 @@ class basic_string {
     }
 
     if (full()) {
-      _max = _max * 2 + 10;
-      auto dtmp = _alloc.allocate(_max + 1);
+      auto nmax = _max * 2 + 10;
+      auto dtmp = _alloc.allocate(nmax);
 
       for (size_t i = 0; i < _len; ++i) {
         dtmp[i] = move(_data[i]);
       }
 
+      _alloc.deallocate(_data, _max);
+      _max = nmax;
       _data = dtmp;
     }
 

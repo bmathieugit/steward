@@ -3,15 +3,16 @@
 
 #include <string.h>
 #include <core/core.hpp>
+
 template <typename T>
 struct allocator {
   constexpr T* allocate(size_t n) const {
     return n == 0 ? nullptr : static_cast<T*>(::operator new(n * sizeof(T)));
   }
 
-  constexpr void deallocate(T* p) const noexcept {
+  constexpr void deallocate(T* p, size_t n) const noexcept {
     if (p != nullptr) {
-      delete p;
+      ::operator delete(p, n * sizeof(T));
     }
   }
 

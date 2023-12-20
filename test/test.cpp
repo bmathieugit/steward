@@ -678,6 +678,41 @@ void test_list_modifications() {
   N_TEST_ASSERT_EQUALS(l.len(), 1);
 }
 
+#include <core/map.hpp>
+
+void test_map_constructors_assignments() {
+  map<int, string> m1(10);
+  N_TEST_ASSERT_EQUALS(m1.len(), 0);
+
+  map<int, string> m2(m1);
+  N_TEST_ASSERT_EQUALS(m2.len(), 0);
+
+  map<int, string> m3;
+  m3 = m2;
+  N_TEST_ASSERT_EQUALS(m3.len(), 0);
+}
+
+void test_map_properties() {
+  map<int, string> m;
+  N_TEST_ASSERT_TRUE(m.empty());
+  N_TEST_ASSERT_EQUALS(m.len(), 0);
+  N_TEST_ASSERT_FALSE(m.has(1));
+}
+
+void test_map_modifications() {
+  map<int, string> m;
+  m.add(string_view("Hello"), 1);
+
+  N_TEST_ASSERT_TRUE(m.has(1));
+  N_TEST_ASSERT_EQUALS(m.at(1), "Hello");
+
+  m.modify(string_view("World"), 1);
+  N_TEST_ASSERT_EQUALS(m.at(1), "World");
+
+  m.remove(1);
+  N_TEST_ASSERT_FALSE(m.has(1));
+}
+
 int main() {
   N_TEST_SUITE(vector test suite);
 
@@ -803,6 +838,14 @@ int main() {
   N_TEST_RUN(test_list_clear);
   N_TEST_RUN(test_list_at);
   N_TEST_RUN(test_list_modifications);
+
+  N_TEST_RESULTS;
+
+  N_TEST_SUITE(map_tests);
+
+  N_TEST_RUN(test_map_constructors_assignments);
+  N_TEST_RUN(test_map_properties);
+  N_TEST_RUN(test_map_modifications);
 
   N_TEST_RESULTS;
 }

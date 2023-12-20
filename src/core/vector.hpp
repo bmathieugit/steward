@@ -9,22 +9,18 @@ template <typename T>
 class vector {
  public:
   using type = T;
-  using reference = T&;
-  using const_reference = const T&;
-  using move_reference = T&&;
-  using pointer = T*;
-  using const_pointer = const T*;
 
  private:
   allocator<T> _alloc;
   size_t _max = 0;
   size_t _len = 0;
-  pointer _data = nullptr;
+  T* _data = nullptr;
 
  public:
   constexpr ~vector() {
     _alloc.destroy(_data, _len);
-    _alloc.deallocate(_data);
+    _alloc.deallocate(_data, _max);
+    _data = nullptr;
   }
 
   constexpr vector() = default;
@@ -87,11 +83,11 @@ class vector {
     _len = 0;
   }
 
-  constexpr pointer data() { return _data; }
+  constexpr T* data() { return _data; }
 
-  constexpr const_pointer data() const { return _data; }
+  constexpr const T* data() const { return _data; }
 
-  constexpr reference at(size_t p) {
+  constexpr T& at(size_t p) {
     if (p < _len) {
       return _data[p];
     } else {
@@ -99,7 +95,7 @@ class vector {
     }
   }
 
-  constexpr const_reference at(size_t p) const {
+  constexpr const T& at(size_t p) const {
     if (p < _len) {
       return _data[p];
     } else {
@@ -114,13 +110,15 @@ class vector {
     }
 
     if (full()) {
-      _max = _max * 2 + 10;
-      auto dtmp = _alloc.allocate(_max);
+      auto nmax = _max * 2 + 10;
+      auto dtmp = _alloc.allocate(nmax);
 
       for (size_t i = 0; i < _len; ++i) {
         dtmp[i] = move(_data[i]);
       }
 
+      _alloc.deallocate(_data, _max);
+      _max = nmax;
       _data = dtmp;
     }
 
