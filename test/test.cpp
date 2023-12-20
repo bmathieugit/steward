@@ -855,11 +855,9 @@ int main() {
   auto dig = m.digest("coucou");
   write(sout, string_view(begin(dig), end(dig)), '\n');
 
-  // vault::crypto::ares crypto("a password");
-  // auto crypted = crypto.crypt("a secured password");
-  // write(sout, crypted, '\n');
-  // // auto decrypted = crypto.decrypt(crypted);
-  // write(sout, decrypted, '\n');
+  vault::crypto::ares crypto("a password");
+  auto crypted = crypto.crypt("a secured password");
+  write(sout, "crypted : '", crypted, "'\n");
+  auto decrypted = crypto.decrypt(crypted);
+  write(sout, "decrypted : '", decrypted, "'\n");
 }
-
-#include <string>

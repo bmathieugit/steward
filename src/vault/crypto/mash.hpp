@@ -10,7 +10,7 @@ namespace vault::crypto {
 
 class mash {
  public:
-    constexpr auto digest(string_view mess) const {
+  constexpr auto digest(string_view mess) const {
     constexpr array<char, 64> k = {
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
         'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -26,18 +26,16 @@ class mash {
         'z', 'h', 'T', '7', 'A', 'E', 'u', 'c', 'L', 'e', 'd', 'M'};
 
     size_t seed = 0;
-    auto bg = begin(mess);
-    auto ed = end(mess);
 
-    while (bg != ed) {
-      const auto c = *(bg++);
+    for (size_t i = 0; i < mess.len(); ++i) {
+      const auto c = mess.at(i);
       seed += c;
 
       const size_t a = 1103515245 + c;
       const size_t b = 12345 + c;
 
-      for (size_t i = 0; i < res.len(); ++i) {
-        res.modify(k.at((seed = (prand(a, b, seed) + res.at(i))) % k.len()), i);
+      for (size_t j = 0; j < res.len(); ++j) {
+        res.modify(k.at((seed = (prand(a, b, seed) + res.at(j))) % k.len()), j);
       }
     }
 

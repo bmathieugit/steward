@@ -16,27 +16,26 @@ class ares {
     _keys.modify(mash{}.digest(key), 0);
 
     for (size_t i = 1; i < 64; ++i) {
-      _keys.modify(mash{}.digest(begin(_keys.at(i - 1)), end(_keys.at(i - 1))),
-                   i);
+      const auto& ikey = _keys.at(i - 1);
+      auto b = begin(ikey);
+      auto e = end(ikey);
+      _keys.modify(mash{}.digest(b, e), i);
     }
   }
 
  public:
   constexpr string crypt(string_view mess) const {
     string crypted(mess);
-    auto bg = begin(_keys);
-    auto ed = end(_keys);
 
-    while (bg != ed) {
-      auto&& krow = *(bg++);
-      auto bgcrypted = begin(crypted);
-      auto edcrypted = end(crypted);
+    printf("Length of mess %lu\n", mess.len());
 
-      while (bgcrypted != edcrypted) {
-        auto i = *(bgcrypted++);
-        auto c = crypted.at(i);
-        auto ckey = krow.at(i % krow.len());
-        crypted.modify(c ^ ckey, i);
+    for (size_t i = 0; i < _keys.len(); ++i) {
+      auto&& krow = _keys.at(i);
+
+      for (size_t j = 0; j < crypted.len(); ++j) {
+        auto c = crypted.at(j);
+        auto ckey = krow.at(c % krow.len());
+        crypted.modify(c ^ ckey, j);
       }
     }
 
@@ -45,21 +44,16 @@ class ares {
 
   constexpr string decrypt(string_view mess) const {
     string crypted(mess);
-    auto bg = begin(_keys);
-    auto ed = end(_keys);
-    bg--;
-    ed--;
 
-    while (ed != bg) {
-      auto&& krow = *(ed--);
-      auto bgcrypted = begin(crypted);
-      auto edcrypted = end(crypted);
+    printf("Length of mess %lu\n", mess.len());
 
-      while (bgcrypted != edcrypted) {
-        auto i = *(bgcrypted++);
-        auto c = crypted.at(i);
-        auto ckey = krow.at(i % krow.len());
-        crypted.modify(c ^ ckey, i);
+    for (size_t i = _keys.len(); i-- > 0;) {
+      auto&& krow = _keys.at(i);
+
+      for (size_t j = 0; j < crypted.len(); ++j) {
+        auto c = crypted.at(j);
+        auto ckey = krow.at(c % krow.len());
+        crypted.modify(c ^ ckey, j);
       }
     }
 
