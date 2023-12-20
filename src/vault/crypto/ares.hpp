@@ -27,16 +27,15 @@ class ares {
   constexpr string crypt(string_view mess) const {
     string crypted(mess);
 
-    printf("Length of mess %lu\n", mess.len());
+    for (size_t i = 0; i < crypted.len(); ++i) {
+      auto c_crypt = crypted.at(i);
 
-    for (size_t i = 0; i < _keys.len(); ++i) {
-      auto&& krow = _keys.at(i);
-
-      for (size_t j = 0; j < crypted.len(); ++j) {
-        auto c = crypted.at(j);
-        auto ckey = krow.at(c % krow.len());
-        crypted.modify(c ^ ckey, j);
+      for (size_t j = 0; j < _keys.len(); ++j) {
+        auto c_key = _keys.at(j).at(i % 64);
+        c_crypt = c_crypt ^ c_key;
       }
+
+      crypted.modify(c_crypt, i);
     }
 
     return crypted;
@@ -45,16 +44,15 @@ class ares {
   constexpr string decrypt(string_view mess) const {
     string crypted(mess);
 
-    printf("Length of mess %lu\n", mess.len());
+    for (size_t i = 0; i < crypted.len(); ++i) {
+      auto c_crypt = crypted.at(i);
 
-    for (size_t i = _keys.len(); i-- > 0;) {
-      auto&& krow = _keys.at(i);
-
-      for (size_t j = 0; j < crypted.len(); ++j) {
-        auto c = crypted.at(j);
-        auto ckey = krow.at(c % krow.len());
-        crypted.modify(c ^ ckey, j);
+      for (size_t j = _keys.len(); j-- > 0;) {
+        auto c_key = _keys.at(j).at(i % 64);
+        c_crypt = c_crypt ^ c_key;
       }
+
+      crypted.modify(c_crypt, i);
     }
 
     return crypted;

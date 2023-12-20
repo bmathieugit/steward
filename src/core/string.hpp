@@ -127,6 +127,7 @@ class basic_string {
     if (p < _len) {
       return _data[p];
     } else {
+      printf("p == %lu\n", p);
       throw out_of_range();
     }
   }
@@ -135,6 +136,7 @@ class basic_string {
     if (p < _len) {
       return _data[p];
     } else {
+      printf("p == %lu\n", p);
       throw out_of_range();
     }
   }
