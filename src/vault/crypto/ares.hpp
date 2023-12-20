@@ -35,7 +35,7 @@ class ares {
       while (bgcrypted != edcrypted) {
         auto i = *(bgcrypted++);
         auto c = crypted.at(i);
-        auto ckey = krow.at(i % 64);
+        auto ckey = krow.at(i % krow.len());
         crypted.modify(c ^ ckey, i);
       }
     }
@@ -58,7 +58,7 @@ class ares {
       while (bgcrypted != edcrypted) {
         auto i = *(bgcrypted++);
         auto c = crypted.at(i);
-        auto ckey = krow.at(i % 64);
+        auto ckey = krow.at(i % krow.len());
         crypted.modify(c ^ ckey, i);
       }
     }
