@@ -5,14 +5,14 @@
 #include <core/string.hpp>
 
 namespace text {
-auto base64(const char_collection auto& s) {
+auto base64(string_view s) {
   constexpr char k[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   const size_t len = s.len();
   size_t i = 0;
 
-  fixed_string encoded(((len + 2) / 3 * 4) + 1);
+  string encoded(((len + 2) / 3 * 4) + 1);
 
   for (i = 0; i < len - 2; i += 3) {
     const auto c0 = s.at(i);

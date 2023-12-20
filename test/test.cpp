@@ -713,6 +713,8 @@ void test_map_modifications() {
   N_TEST_ASSERT_FALSE(m.has(1));
 }
 
+#include <vault/crypto/ares.hpp>
+
 int main() {
   N_TEST_SUITE(vector test suite);
 
@@ -848,6 +850,12 @@ int main() {
   N_TEST_RUN(test_map_modifications);
 
   N_TEST_RESULTS;
+
+  vault::crypto::ares crypto("a password");
+  auto crypted = crypto.crypt("a secured password");
+  write(sout, crypted, '\n');
+  auto decrypted = crypto.decrypt(crypted);
+  write(sout, decrypted, '\n');
 }
 
 #include <string>

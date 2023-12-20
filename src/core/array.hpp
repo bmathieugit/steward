@@ -8,13 +8,7 @@ template <typename T, size_t N>
 struct array {
  public:
   using type = T;
-  using reference = T&;
-  using const_reference = const T&;
-  using move_reference = T&&;
-  using pointer = T*;
-  using const_pointer = const T*;
-
- private:
+  
   T _data[N];
 
  public:
@@ -24,11 +18,11 @@ struct array {
 
   constexpr bool has(size_t p) const { return p < N; }
 
-  constexpr pointer data() { return _data; }
+  constexpr T* data() { return _data; }
 
-  constexpr const_pointer data() const { return _data; }
+  constexpr const T* data() const { return _data; }
 
-  constexpr reference at(size_t p) {
+  constexpr T& at(size_t p) {
     if (p < N) {
       return _data[p];
     } else {
@@ -36,7 +30,7 @@ struct array {
     }
   }
 
-  constexpr const_reference at(size_t p) const {
+  constexpr const T& at(size_t p) const {
     if (p < N) {
       return _data[p];
     } else {
