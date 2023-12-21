@@ -28,7 +28,7 @@ class basic_string {
  public:
   constexpr ~basic_string() {
     _alloc.destroy(_data, _len);
-    _alloc.deallocate(_data, _max);
+    _alloc.deallocate(_data);
   }
 
   constexpr basic_string() = default;
@@ -127,7 +127,6 @@ class basic_string {
     if (p < _len) {
       return _data[p];
     } else {
-      printf("p == %lu\n", p);
       throw out_of_range();
     }
   }
@@ -136,7 +135,6 @@ class basic_string {
     if (p < _len) {
       return _data[p];
     } else {
-      printf("p == %lu\n", p);
       throw out_of_range();
     }
   }
@@ -155,7 +153,7 @@ class basic_string {
         dtmp[i] = move(_data[i]);
       }
 
-      _alloc.deallocate(_data, _max);
+      _alloc.deallocate(_data);
       _max = nmax;
       _data = dtmp;
     }

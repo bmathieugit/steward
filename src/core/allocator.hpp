@@ -1,18 +1,33 @@
 #ifndef __stew_core_allocator_hpp__
 #define __stew_core_allocator_hpp__
 
-#include <string.h>
 #include <core/core.hpp>
+#include <core/exception.hpp>
+#include <new>
 
 template <typename T>
 struct allocator {
   constexpr T* allocate(size_t n) const {
-    return n == 0 ? nullptr : static_cast<T*>(::operator new(n * sizeof(T)));
+    if (n == 0) {
+      throw bad_alloc();
+    }
+
+    else {
+      T* p = static_cast<T*>(::operator new(n * sizeof(T)));
+
+      if (p == nullptr) {
+        throw bad_alloc();
+      }
+
+      else {
+        return p;
+      }
+    }
   }
 
-  constexpr void deallocate(T* p, size_t n) const noexcept {
+  constexpr void deallocate(T* p) const noexcept {
     if (p != nullptr) {
-      ::operator delete(p, n * sizeof(T));
+      ::operator delete(p);
     }
   }
 

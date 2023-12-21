@@ -19,7 +19,7 @@ class vector {
  public:
   constexpr ~vector() {
     _alloc.destroy(_data, _len);
-    _alloc.deallocate(_data, _max);
+    _alloc.deallocate(_data);
     _data = nullptr;
   }
 
@@ -117,7 +117,7 @@ class vector {
         dtmp[i] = move(_data[i]);
       }
 
-      _alloc.deallocate(_data, _max);
+      _alloc.deallocate(_data);
       _max = nmax;
       _data = dtmp;
     }

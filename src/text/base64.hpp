@@ -1,11 +1,12 @@
 #ifndef __stew_vault_crypto_base64_hpp__
 #define __stew_vault_crypto_base64_hpp__
 
+#include <core/array.hpp>
 #include <core/core.hpp>
 #include <core/string.hpp>
 
-namespace text {
-auto base64(string_view s) {
+namespace text::base64 {
+constexpr auto encode(string_view s) {
   constexpr char k[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -46,6 +47,59 @@ auto base64(string_view s) {
 
   return encoded;
 }
-}  // namespace text
+
+constexpr auto __decode_table() {
+  array<int, 256> table = {};
+
+  for (int i = 0; i < 64; i++) {
+    table.modify(
+        i,
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i]);
+  }
+
+  return table;
+}
+
+constexpr string decode(string_view encoded) {
+  // Tableau pour le mappage inverse des caractères de Base64
+  constexpr auto table = __decode_table();
+  // Vérifier la longueur de la chaîne encodée
+  if (encoded.len() % 4 != 0) {
+    throw "";
+  }
+
+  // Calcul de la taille de la chaîne décodée
+  size_t outputLength = encoded.len() / 4 * 3;
+
+  if (encoded.at(encoded.len() - 1) == '=') {
+    outputLength--;
+    if (encoded.at(encoded.len() - 2) == '=') {
+      outputLength--;
+    }
+  }
+
+  string decoded(outputLength);
+
+  // Processus de décodage
+  for (size_t i = 0; i < encoded.len();) {
+    int a = table.at(encoded.at(i++));
+    int b = table.at(encoded.at(i++));
+    int c = table.at(encoded.at(i++));
+    int d = table.at(encoded.at(i++));
+
+    decoded.add((a << 2) | (b >> 4));
+
+    if (c != 0) {
+      decoded.add(((b & 15) << 4) | (c >> 2));
+
+      if (d != 0) {
+        decoded.add(((c & 3) << 6) | d);
+      }
+    }
+  }
+
+  return decoded;
+}
+}  // namespace text::base64
 
 #endif

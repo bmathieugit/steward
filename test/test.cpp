@@ -1,5 +1,4 @@
 #include <string.h>
-
 #include <core/algorithm.hpp>
 #include <core/array.hpp>
 #include <core/exception.hpp>
@@ -713,6 +712,7 @@ void test_map_modifications() {
   N_TEST_ASSERT_FALSE(m.has(1));
 }
 
+#include <text/base64.hpp>
 #include <vault/crypto/ares.hpp>
 
 int main() {
@@ -855,9 +855,5 @@ int main() {
   auto dig = m.digest("coucou");
   write(sout, string_view(begin(dig), end(dig)), '\n');
 
-  vault::crypto::ares crypto("a password");
-  auto crypted = crypto.crypt("a secured password");
-  write(sout, "crypted : '", crypted, "'\n");
-  auto decrypted = crypto.decrypt(crypted);
-  write(sout, "decrypted : '", decrypted, "'\n");
+  write(sout, text::base64::decode(text::base64::encode("coucou")), '\n');
 }

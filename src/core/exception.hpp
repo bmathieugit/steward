@@ -13,4 +13,8 @@ class out_of_range {
   const char* message() { return "out_of_range exception"; }
 };
 
+class bad_alloc {
+ public:
+  const char* message() { return "bad_alloc exception"; }
+};
 #endif
