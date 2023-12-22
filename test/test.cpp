@@ -8,9 +8,12 @@
 #include <core/span.hpp>
 #include <core/stream.hpp>
 #include <core/string.hpp>
+#include <core/tuple.hpp>
 #include <core/vector.hpp>
 #include <initializer_list>
 #include <tests.hpp>
+
+#include <core/data.hpp>
 
 constexpr void test_vector_default_constructor() {
   vector<int> v;
@@ -851,9 +854,14 @@ int main() {
 
   N_TEST_RESULTS;
 
-  vault::crypto::mash m;
-  auto dig = m.digest("coucou");
-  write(sout, string_view(begin(dig), end(dig)), '\n');
+  array<int, 4> a = {1, 2, 3, 4};
 
-  write(sout, text::base64::decode(text::base64::encode("coucou")), '\n');
+  auto q = query()
+               .then(map_provider([](int i) { return i + 1; }))
+               .then(map_provider([](int i) { return i * 2; }))
+               .then(filter_provider([](int i) { return i > 2; }));
+  // .then([](auto&& i) { write(sout, i, '\n'); });
+
+  q.execute(begin(a), end(a));
+  // q.prepare(begin(a), end(a));
 }
