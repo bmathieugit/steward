@@ -6,51 +6,56 @@
 #include <core/tuple.hpp>
 
 template <typename I, typename M>
-class map_iterator {
+class transform_iterator {
  private:
   I _it;
-  M _mapper;
+  M _transformper;
 
  public:
   using type = iterator_type<I>;
 
-  constexpr map_iterator(I it, M mapper) : _it(it), _mapper(mapper) {}
+  constexpr transform_iterator(I it, M transformper) : _it(it), _transformper(transformper) {}
 
-  constexpr map_iterator& operator++() {
+  constexpr transform_iterator& operator++() {
     ++_it;
     return *this;
   }
 
-  constexpr map_iterator operator++(int) {
+  constexpr transform_iterator operator++(int) {
     auto tmp = *this;
     ++(*this);
     return tmp;
   }
 
-  constexpr bool operator==(const map_iterator& other) const {
+  constexpr bool operator==(const transform_iterator& other) const {
     return _it == other._it;
   }
 
-  constexpr bool operator!=(const map_iterator& other) const {
+  constexpr bool operator!=(const transform_iterator& other) const {
     return _it != other._it;
   }
 
-  constexpr auto operator*() const -> decltype(auto) { return _mapper(*_it); }
+  constexpr auto operator*() const -> decltype(auto) { return _transformper(*_it); }
 };
 
 template <typename M>
-class map_provider {
+class transform_provider {
  private:
-  M _mapper;
+  M _transformper;
 
  public:
-  constexpr map_provider(const M& mapper) : _mapper(mapper) {}
+  constexpr transform_provider(const M& transformper) : _transformper(transformper) {}
 
   template <iterator I>
   constexpr auto provide(I i, I) {
-    return map_iterator<I, M>(i, _mapper);
+    return transform_iterator<I, M>(i, _transformper);
   }
 };
+
+template <typename M>
+constexpr auto transform(const M& transformper) {
+  return transform_provider(transformper);
+}
 
 template <typename I, typename Pred>
 class filter_iterator {
@@ -64,7 +69,6 @@ class filter_iterator {
     }
   }
 
-  // Opérateur d'incrément
   filter_iterator& operator++() {
     do {
       ++current_;
@@ -78,17 +82,14 @@ class filter_iterator {
     return tmp;
   }
 
-  // Opérateur d'égalité
   bool operator==(const filter_iterator& other) const {
     return current_ == other.current_;
   }
 
-  // Opérateur de non-égalité
   bool operator!=(const filter_iterator& other) const {
     return current_ != other.current_;
   }
 
-  // Opérateur de déréférencement
   auto operator*() const -> decltype(auto) { return *current_; }
 
  private:
@@ -97,19 +98,79 @@ class filter_iterator {
   Pred pred_;
 };
 
-template <typename M>
+template <typename Pred>
 class filter_provider {
  private:
-  M _mapper;
+  Pred _transformper;
 
  public:
-  constexpr filter_provider(const M& mapper) : _mapper(mapper) {}
+  constexpr filter_provider(const Pred& transformper) : _transformper(transformper) {}
 
   template <iterator I>
   constexpr auto provide(I i, I sentinel) {
-    return filter_iterator<I, M>(i, sentinel, _mapper);
+    return filter_iterator<I, Pred>(i, sentinel, _transformper);
   }
 };
+
+template <typename P>
+constexpr auto filter(const P& transformper) {
+  return filter_provider(transformper);
+}
+
+template <iterator I, typename O>
+class collector_oterator {
+ private:
+  I _it;
+  O& _ot;
+
+ public:
+  using type = collector_oterator;
+
+  constexpr collector_oterator(I it, O& ot) : _it(it), _ot(ot) {}
+
+  constexpr collector_oterator& operator++() {
+    ++_it;
+    return *this;
+  }
+
+  constexpr collector_oterator operator++(int) {
+    auto tmp = *this;
+    ++(*this);
+    return tmp;
+  }
+
+  constexpr bool operator==(const collector_oterator& other) const {
+    return _it == other._it;
+  }
+
+  constexpr bool operator!=(const collector_oterator& other) const {
+    return _it != other._it;
+  }
+
+  constexpr auto operator*() const -> decltype(auto) {
+    _ot.add(*_it);
+    return *this;
+  }
+};
+
+template <typename O>
+class collector_provider {
+ private:
+  O& _out;
+
+ public:
+  constexpr collector_provider(O& out) : _out(out) {}
+
+  template <iterator I>
+  constexpr auto provide(I i, I) {
+    return collector_oterator<I, O>(i, _out);
+  }
+};
+
+template <typename O>
+constexpr auto collect(O& transformper) {
+  return collector_provider(transformper);
+}
 
 template <typename... PROVIDER>
 class query {
@@ -147,8 +208,7 @@ class query {
   template <iterator I>
   void execute(I b, I e) {
     if constexpr (sizeof...(PROVIDER) > 0) {
-      for_each(provide<0>(b, e), provide<0>(e, e),
-               [](auto&& i) { write(sout, i, '\n'); });
+      for_each(provide<0>(b, e), provide<0>(e, e), [](auto&& i) {});
     }
   }
 };

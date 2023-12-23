@@ -856,12 +856,15 @@ int main() {
 
   array<int, 4> a = {1, 2, 3, 4};
 
+  vector<int> out;
+
   auto q = query()
-               .then(map_provider([](int i) { return i + 1; }))
-               .then(map_provider([](int i) { return i * 2; }))
-               .then(filter_provider([](int i) { return i > 2; }));
-  // .then([](auto&& i) { write(sout, i, '\n'); });
+               .then(transform([](int i) { return i + 1; }))
+               .then(transform([](int i) { return i * 2; }))
+               .then(filter([](int i) { return i > 4; }))
+               .then(collect(out));
 
   q.execute(begin(a), end(a));
-  // q.prepare(begin(a), end(a));
+
+  for_each(begin(out), end(out), [](auto&& i) { write(sout, i, '\n'); });
 }
