@@ -735,7 +735,7 @@ int main() {
   N_TEST_RUN(test_to_hash_byte_array);
   N_TEST_RUN(test_to_hash_wchar_t);
   N_TEST_RUN(test_to_hash_integral);
-  // N_TEST_RUN(test_to_hash_istream);
+  N_TEST_RUN(test_to_hash_istream);
 
   N_TEST_RESULTS
 
