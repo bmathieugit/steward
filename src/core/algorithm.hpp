@@ -99,7 +99,9 @@ constexpr auto count(const T& t) {
 
 template <typename P>
 constexpr auto count_if(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
+  return [pred = relay<P>(pred)]<iterator I>
+    requires predicate<P, typename I::type>
+  (I it) constexpr mutable {
     size_t cnt = 0;
 
     while (it.has_next()) {
@@ -129,7 +131,9 @@ constexpr auto find(const T& t) {
 
 template <typename P>
 constexpr auto find_if(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
+  return [pred = relay<P>(pred)]<iterator I>
+    requires predicate<P, typename I::type>
+  (I it) constexpr mutable {
     while (it.has_next()) {
       auto tmp = it;
 
@@ -144,7 +148,9 @@ constexpr auto find_if(P&& pred) {
 
 template <typename P>
 constexpr auto find_if_not(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
+  return [pred = relay<P>(pred)]<iterator I>
+    requires predicate<P, typename I::type>
+  (I it) constexpr mutable {
     while (it.has_next()) {
       auto tmp = it;
 
@@ -159,23 +165,23 @@ constexpr auto find_if_not(P&& pred) {
 
 template <typename P>
 constexpr auto all_of(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
-    return not find_if_not(pred)(it).has_next();
-  };
+  return [pred = relay<P>(pred)]<iterator I>
+    requires predicate<P, typename I::type>
+  (I it) constexpr mutable { return not find_if_not(pred)(it).has_next(); };
 }
 
 template <typename P>
 constexpr auto none_of(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
-    return not find_if(pred)(it).has_next();
-  };
+  return [pred = relay<P>(pred)]<iterator I>
+    requires predicate<P, typename I::type>
+  (I it) constexpr mutable { return not find_if(pred)(it).has_next(); };
 }
 
 template <typename P>
 constexpr auto any_of(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
-    return find_if(pred)(it).has_next();
-  };
+  return [pred = relay<P>(pred)]<iterator I>
+    requires predicate<P, typename I::type>
+  (I it) constexpr mutable { return find_if(pred)(it).has_next(); };
 }
 
 template <iterator I1>
