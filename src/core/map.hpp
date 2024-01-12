@@ -33,12 +33,15 @@ class map {
     auto hash = to_hash<sizeof(size_t) * 8>(k);
     size_t pos = 0;
 
-    auto b = begin(_data);
-    auto e = end(_data);
+    auto i = iter(_data);
 
-    while (b != e) {
-      if ((*(b++)).hash == hash) {
+    while (i.has_next()) {
+      if (i.next().hash == hash) {
         return pos;
+      }
+
+      else {
+        ++pos;
       }
     }
 

@@ -172,16 +172,56 @@ class vector {
   }
 };
 
-template <typename V>
-concept vector_parameter =
-    contains<V, const vector<typename V::type>, vector<typename V::type>>;
+template <typename T>
+class vector_iterator {
+ public:
+  using type = T;
 
-constexpr auto begin(vector_parameter auto& v) {
-  return v.data();
+ private:
+  T* _begin;
+  T* _sentinel;
+
+ public:
+  constexpr vector_iterator(vector<T>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr T& next() { return *(_begin++); }
+
+  constexpr size_t distance() const { return _sentinel - _begin; }
+};
+
+template <typename T>
+constexpr auto iter(vector<T>& a) {
+  return vector_iterator(a);
 }
 
-constexpr auto end(vector_parameter auto& v) {
-  return v.data() + v.len();
+template <typename T>
+class vector_const_iterator {
+ public:
+  using type = const T;
+
+ private:
+  const T* _begin;
+  const T* _sentinel;
+
+ public:
+  constexpr vector_const_iterator(const vector<T>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr const T& next() { return *(_begin++); }
+
+  constexpr size_t distance() const { return _sentinel - _begin; }
+};
+
+template <typename T>
+constexpr auto iter(const vector<T>& a) {
+  return vector_const_iterator(a);
 }
 
 #endif

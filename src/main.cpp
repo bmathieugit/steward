@@ -7,11 +7,9 @@ int main(int argc, char** argv) {
   v.add(1);
   v.add(2);
   v.add(3);
-  auto b = begin(v);
-  auto e = end(v);
-
-  while (b != e) {
-    printf("%i\n", *(b++));
+  auto it = iter(v);
+  while (it.has_next()) {
+    printf("%i\n", it.next());
   }
 
   return 0;

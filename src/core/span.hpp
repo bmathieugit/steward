@@ -6,16 +6,8 @@
 
 template <typename T>
 class span {
- public:
-  using type = T;
-  using reference = T&;
-  using const_reference = const T&;
-  using move_reference = T&&;
-  using pointer = T*;
-  using const_pointer = const T*;
-
  private:
-  pointer _begin;
+  T* _begin;
   size_t _len;
 
  public:
@@ -23,10 +15,9 @@ class span {
 
   constexpr span() = default;
 
-  constexpr span(pointer begin, pointer end)
-      : _begin(begin), _len(end - begin) {}
+  constexpr span(T* begin, T* end) : _begin(begin), _len(end - begin) {}
 
-  constexpr span(pointer begin, size_t len) : _begin(begin), _len(len) {}
+  constexpr span(T* begin, size_t len) : _begin(begin), _len(len) {}
 
   constexpr span(const span&) = default;
 
@@ -42,15 +33,15 @@ class span {
 
   constexpr bool has(size_t p) const { return p < _len; }
 
-  constexpr pointer data()
+  constexpr T* data()
     requires non_const<T>
   {
     return _begin;
   }
 
-  constexpr const_pointer data() const { return _begin; }
+  constexpr const T* data() const { return _begin; }
 
-  constexpr reference at(size_t p)
+  constexpr T& at(size_t p)
     requires non_const<T>
   {
     if (p < _len) {
@@ -60,7 +51,7 @@ class span {
     }
   }
 
-  constexpr const_reference at(size_t p) const {
+  constexpr const T& at(size_t p) const {
     if (p < _len) {
       return _begin[p];
     } else {
@@ -95,23 +86,51 @@ class span {
 };
 
 template <typename T>
-constexpr auto begin(const span<T>& s) {
-  return s.data();
+class span_iterator {
+ public:
+  using type = T;
+
+ private:
+  T* _begin;
+  T* _sentinel;
+
+ public:
+  constexpr span_iterator(span<T>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr T& next() { return *(_begin++); }
+};
+
+template <typename T>
+constexpr auto iter(span<T>& a) {
+  return span_iterator(a);
 }
 
 template <typename T>
-constexpr auto end(const span<T>& s) {
-  return s.data() + s.len();
-}
+class span_const_iterator {
+ public:
+  using type = const T;
+
+ private:
+  const T* _begin;
+  const T* _sentinel;
+
+ public:
+  constexpr span_const_iterator(const span<T>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr const T& next() { return *(_begin++); }
+};
 
 template <typename T>
-constexpr auto begin(span<T>& s) {
-  return s.data();
-}
-
-template <typename T>
-constexpr auto end(span<T>& s) {
-  return s.data() + s.len();
+constexpr auto iter(const span<T>& a) {
+  return span_const_iterator(a);
 }
 
 #endif

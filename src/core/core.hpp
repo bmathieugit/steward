@@ -295,12 +295,6 @@ using u128 = uof<128>;
 using byte_t = u8;
 using size_t = decltype(sizeof(int));
 
-template <typename T, typename U>
-concept has_equals_operator = requires(const T& t, const U& u) { t == u; };
-
-template <typename T, typename U>
-concept has_diffs_operator = requires(const T& t, const U& u) { t != u; };
-
 template <typename U, typename T, typename O>
 concept unary = requires(U u, T t) {
   { u(t) } -> same_as<O>;
@@ -310,110 +304,35 @@ template <typename P, typename T>
 concept predicate = unary<P, T, bool>;
 
 template <typename I>
-concept __iterator_has_bool_equals_operator = requires(I i) {
-  { i == i } -> same_as<bool>;
+concept __iterator_has_type_using = requires { typename I ::type; };
+
+template <typename I>
+concept __iterator_has_next_function = requires(I i) {
+  { i.next() } -> same_as_declined<typename I::type>;
 };
 
 template <typename I>
-concept __iterator_has_bool_diffs_operator = requires(I i) {
-  { i != i } -> same_as<bool>;
+concept __iterator_has_has_next_function = requires(const I i) {
+  { i.has_next() } -> same_as<bool>;
 };
 
 template <typename I>
-constexpr bool ___iterator_is_pointer_type = false;
-
-template <typename I>
-constexpr bool ___iterator_is_pointer_type<I*> = true;
-
-template <typename I>
-concept __iterator_is_pointer_type = ___iterator_is_pointer_type<I>;
-
-template <typename I>
-struct __iterator_type {
-  using type = typename I::type;
-};
-
-template <typename I>
-struct __iterator_type<I*> {
-  using type = I;
-};
-
-template <typename I>
-using iterator_type = typename __iterator_type<I>::type;
-
-template <typename I>
-concept __iterator_has_preincrement_operator = requires(I i) {
-  { ++i } -> same_as<I&>;
-};
-
-template <typename I>
-concept __iterator_has_postincrement_operator = requires(I i) {
-  { i++ } -> same_as<I>;
-};
-
-template <typename I, typename T>
-concept __iterator_has_dereference_operator = requires(I i) {
-  { *i } -> same_as_declined<T>;
-};
-
-template <typename I>
-concept iterator = __iterator_has_bool_diffs_operator<I> and
-                   __iterator_has_bool_equals_operator<I> and
-                   __iterator_has_preincrement_operator<I> and
-                   __iterator_has_postincrement_operator<I> and
-                   __iterator_has_dereference_operator<I, iterator_type<I>>;
-
-template <typename I, typename T>
-concept __iterator_can_assign_operator = requires(I i, T t) {
-  { *i = t };
-};
-
-template <typename O>
-struct __oterator_type {
-  using type = typename O::type;
-};
-
-template <typename O>
-struct __oterator_type<O*> {
-  using type = O;
-};
-
-template <typename O>
-using oterator_type = typename __oterator_type<O>::type;
-
-template <typename O>
-concept oterator = __iterator_has_bool_diffs_operator<O> and
-                   __iterator_has_bool_equals_operator<O> and
-                   __iterator_has_preincrement_operator<O> and
-                   __iterator_has_postincrement_operator<O> and
-                   __iterator_can_assign_operator<O, iterator_type<O>>;
+concept iterator =
+    __iterator_has_type_using<I> and __iterator_has_has_next_function<I> and
+    __iterator_has_next_function<I>;
 
 template <typename T>
-concept distanciable = requires(T t) {
-  { t - t } -> same_as<size_t>;
+concept distanciable = requires(const T t) {
+  { t.distance() } -> same_as<size_t>;
 };
+
+template <typename O>
+concept oterator = requires(O o, typename O::type t) { o.sext(t); };
 
 template <typename T>
 concept iterable = requires(T t) {
-  { begin(t) } -> iterator;
-  { end(t) } -> iterator;
+  { iter(t) } -> iterator;
 };
-
-template <typename T>
-concept oterable = requires(T t) {
-  { begin(t) } -> oterator;
-  { end(t) } -> oterator;
-};
-
-template <typename I>
-concept istream = requires(I i) {
-  typename I::type;
-  { i.next() } -> same_as_declined<typename I::type>;
-  { i.has() } -> same_as<bool>;
-};
-
-template <typename O>
-concept ostream = requires(O o, typename O::type t) { o.add(t); };
 
 template <typename T>
 constexpr rm_ref<T>&& move(T&& t) {
@@ -436,6 +355,8 @@ void* operator new(size_t, T* ptr) {
 }
 
 template <typename T>
-constexpr T fake();
+constexpr T fake() {
+  static_assert("fake function: never use definition !");
+}
 
 #endif

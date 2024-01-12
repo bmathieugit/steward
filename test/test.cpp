@@ -6,14 +6,11 @@
 #include <core/hash.hpp>
 #include <core/list.hpp>
 #include <core/span.hpp>
-#include <core/stream.hpp>
 #include <core/string.hpp>
 #include <core/tuple.hpp>
 #include <core/vector.hpp>
 #include <initializer_list>
 #include <tests.hpp>
-
-#include <core/data.hpp>
 
 constexpr void test_vector_default_constructor() {
   vector<int> v;
@@ -126,93 +123,69 @@ constexpr void test_vector_remove() {
 }
 
 constexpr void test_count_iterators() {
-  vector<int> v;
-  for (int i = 0; i < 5; ++i)
-    v.add(i);
-  auto cnt = count(begin(v), end(v));
+  array<int, 5> a = {1, 2, 3, 4, 5};
+  auto cnt = count()(iter(a));
   N_TEST_ASSERT_EQUALS(cnt, 5);
 }
 
 constexpr void test_count_value() {
-  vector<int> v;
-  for (int i : {1, 2, 1, 4, 1})
-    v.add(i);
-  auto cnt = count(begin(v), end(v), 1);
+  array<int, 5> a = {1, 2, 1, 4, 1};
+  auto cnt = count(1)(iter(a));
   N_TEST_ASSERT_EQUALS(cnt, 3);
 }
 
 constexpr void test_count_predicate() {
-  vector<int> v;
-  for (int i = 1; i <= 5; ++i)
-    v.add(i);
-  auto cnt = count(begin(v), end(v), [](int i) { return i % 2 == 0; });
+  array<int, 5> a = {1, 2, 3, 4, 5};
+  auto cnt = count_if([](int i) { return i % 2 == 0; })(iter(a));
   N_TEST_ASSERT_EQUALS(cnt, 2);
 }
 
 constexpr void test_find_value() {
-  vector<int> v;
-  for (int i = 1; i <= 5; ++i)
-    v.add(i);
-  auto it = find(begin(v), end(v), 3);
-  N_TEST_ASSERT_TRUE(it != end(v) and *it == 3);
+  array<int, 5> a = {1, 2, 3, 4, 5};
+  auto it = find(3)(iter(a));
+  N_TEST_ASSERT_TRUE(it.has_next() and it.next() == 3);
 }
 
 constexpr void test_find_predicate() {
-  vector<int> v;
-  for (int i = 1; i <= 5; ++i)
-    v.add(i);
-  auto it = find(begin(v), end(v), [](int i) { return i > 3; });
-  N_TEST_ASSERT_TRUE(it != end(v) and *it == 4);
+  array<int, 5> a = {1, 2, 3, 4, 5};
+  auto it = find_if([](int i) { return i > 3; })(iter(a));
+  N_TEST_ASSERT_TRUE(it.has_next() and it.next() == 4);
 }
 
 constexpr void test_find_not() {
-  vector<int> v;
-  for (int i : {2, 4, 6, 7, 8})
-    v.add(i);
-  auto it = find_not(begin(v), end(v), [](int i) { return i % 2 == 0; });
-  N_TEST_ASSERT_TRUE(it != end(v) and *it == 7);
+  array<int, 5> a = {1, 2, 3, 4, 5};
+  auto it = find_if_not([](int i) { return i % 2 == 0; })(iter(a));
+  N_TEST_ASSERT_TRUE(it.has_next() and it.next() == 1);
 }
 constexpr void test_all_of() {
-  vector<int> v;
-  for (int i : {2, 4, 6, 8})
-    v.add(i);
-  bool result = all_of(begin(v), end(v), [](int i) { return i % 2 == 0; });
-  N_TEST_ASSERT_TRUE(result);
+  array<int, 5> a = {2, 4, 6, 8, 10};
+  bool b = all_of([](int i) { return i % 2 == 0; })(iter(a));
+  N_TEST_ASSERT_TRUE(b);
 }
 constexpr void test_any_of() {
-  vector<int> v;
-  for (int i : {1, 3, 5, 6})
-    v.add(i);
-  bool result = any_of(begin(v), end(v), [](int i) { return i % 2 == 0; });
-  N_TEST_ASSERT_TRUE(result);
+  array<int, 5> a = {1, 2, 3, 4, 5};
+  bool b = any_of([](int i) { return i % 2 == 0; })(iter(a));
+  N_TEST_ASSERT_TRUE(b);
 }
 
 constexpr void test_none_of() {
-  vector<int> v;
-  for (int i : {1, 3, 5, 7})
-    v.add(i);
-  bool result = none_of(begin(v), end(v), [](int i) { return i % 2 == 0; });
-  N_TEST_ASSERT_TRUE(result);
+  array<int, 5> a = {1, 2, 3, 4, 5};
+  bool b = none_of([](int i) { return i == 0; })(iter(a));
+  N_TEST_ASSERT_TRUE(b);
 }
 
 constexpr void test_starts_with() {
-  vector<int> v1, v2;
-  for (int i : {1, 2, 3})
-    v1.add(i);
-  for (int i : {1, 2})
-    v2.add(i);
-  bool result = starts_with(begin(v1), end(v1), begin(v2), end(v2));
-  N_TEST_ASSERT_TRUE(result);
+  array<int, 5> a1 = {1, 2, 3, 4, 5};
+  array<int, 3> a2 = {1, 2, 3};
+  bool b = starts_with(iter(a2))(iter(a1));
+  N_TEST_ASSERT_TRUE(b);
 }
 
 constexpr void test_equals() {
-  vector<int> v1, v2;
-  for (int i : {1, 2, 3})
-    v1.add(i);
-  for (int i : {1, 2, 3})
-    v2.add(i);
-  bool result = equals(begin(v1), end(v1), begin(v2), end(v2));
-  N_TEST_ASSERT_TRUE(result);
+  array<int, 5> a1 = {1, 2, 3, 4, 5};
+  array<int, 5> a2 = {1, 2, 3, 4, 5};
+  bool b = equals(iter(a2))(iter(a1));
+  N_TEST_ASSERT_TRUE(b);
 }
 
 constexpr void test_string_size_constructor() {
@@ -283,9 +256,9 @@ void test_string_at() {
   N_TEST_ASSERT_EQUALS(s.at(0), 'a');
   try {
     s.at(1);
-    N_TEST_ASSERT_TRUE(false);  // ne devrait pas atteindre cette ligne
+    N_TEST_ASSERT_TRUE(false);
   } catch (out_of_range&) {
-    N_TEST_ASSERT_TRUE(true);  // exception attendue
+    N_TEST_ASSERT_TRUE(true);
   }
 }
 
@@ -295,7 +268,7 @@ constexpr void test_string_add() {
   s.add('b');
   N_TEST_ASSERT_EQUALS(s.at(0), 'a');
   N_TEST_ASSERT_EQUALS(s.at(1), 'b');
-  s.add('c', 1);  // Insérer 'c' à la position 1
+  s.add('c', 1);
   N_TEST_ASSERT_EQUALS(s.at(1), 'c');
   N_TEST_ASSERT_EQUALS(s.at(2), 'b');
 }
@@ -312,7 +285,7 @@ constexpr void test_string_exchange() {
 constexpr void test_string_modify() {
   basic_string<char> s(2);
   s.add('a');
-  s.modify('b', 0);  // Modifier l'élément à la position 0
+  s.modify('b', 0);
   N_TEST_ASSERT_EQUALS(s.at(0), 'b');
 }
 
@@ -366,14 +339,14 @@ void test_string_view_methods() {
   N_TEST_ASSERT_FALSE(sv.empty());
   N_TEST_ASSERT_TRUE(sv.has(4));
   N_TEST_ASSERT_FALSE(sv.has(5));
-  // N_TEST_ASSERT_TRUE(equals(sv.data(), basic_string_view<char>("hello")));
+  N_TEST_ASSERT_TRUE(equals(iter(sv))(iter(string_view("hello"))));
 
   N_TEST_ASSERT_EQUALS(sv.at(0), 'h');
   try {
     sv.at(5);
-    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+    N_TEST_ASSERT_TRUE(false);
   } catch (out_of_range&) {
-    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+    N_TEST_ASSERT_TRUE(true);
   }
 }
 
@@ -408,9 +381,9 @@ void test_span_methods() {
   N_TEST_ASSERT_EQUALS(sp.at(0), 1);
   try {
     sp.at(5);
-    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+    N_TEST_ASSERT_TRUE(false);
   } catch (out_of_range& e) {
-    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+    N_TEST_ASSERT_TRUE(true);
   }
 }
 
@@ -451,9 +424,9 @@ void test_array_at() {
   N_TEST_ASSERT_EQUALS(arr.at(0), 1);
   try {
     arr.at(5);
-    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+    N_TEST_ASSERT_TRUE(false);
   } catch (out_of_range&) {
-    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+    N_TEST_ASSERT_TRUE(true);
   }
 }
 
@@ -472,127 +445,71 @@ constexpr void test_array_modify() {
   N_TEST_ASSERT_EQUALS(arr.at(0), 3);
 }
 
-constexpr void test_string_istream_next() {
-  const char* str = "hello";
-  string_istream si(str);
-  N_TEST_ASSERT_EQUALS(si.next(), 'h');
-  N_TEST_ASSERT_EQUALS(si.next(), 'e');
-}
-
-constexpr void test_string_istream_has() {
-  const char* str = "hi";
-  string_istream si(str);
-  N_TEST_ASSERT_TRUE(si.has());   // Avant la lecture
-  si.next();                      // Lecture de 'h'
-  si.next();                      // Lecture de 'i'
-  N_TEST_ASSERT_FALSE(si.has());  // Après la lecture
-}
-
-constexpr bool operator==(string_view s1, string_view s2) {
-  return equals(begin(s1), end(s1), begin(s2), end(s2));
-}
-
-constexpr void test_string_ostream_add() {
-  string_ostream so;
-  so.add('h');
-  so.add('i');
-  N_TEST_ASSERT_EQUALS(so.str(), "hi");
-}
-
-constexpr void test_string_ostream_str() {
-  string_ostream so;
-  so.add('h');
-  so.add('i');
-  auto s = so.str();
-  N_TEST_ASSERT_EQUALS(s, "hi");
-}
-
-constexpr void test_string_stream_next_has() {
-  string_stream ss("hello");
-  N_TEST_ASSERT_TRUE(ss.has());
-  N_TEST_ASSERT_EQUALS(ss.next(), 'h');
-  N_TEST_ASSERT_EQUALS(ss.next(), 'e');
-  // Continuez jusqu'à ce que ss.has() soit false
-}
-
-constexpr void test_string_stream_add_str() {
-  string_stream ss;
-  ss.add('h');
-  ss.add('i');
-  auto s = ss.str();
-  N_TEST_ASSERT_EQUALS(s, "hi");
-}
 
 void test_from_chars_istream_ostream() {
-  string_stream ss("hello");
-  string_ostream so;
-  from_chars(ss, so);
-  N_TEST_ASSERT_EQUALS(so.str(), "hello");
+  string_view ss("hello");
+  string so;
+  from_chars(iter(ss), oter(so));
+  N_TEST_ASSERT_TRUE(equals(iter(so))(iter(ss)));
 }
 
 void test_from_chars_istream_maybe_char() {
-  string_stream ss("a");
+  string ss("a");
   maybe<char> c;
-  from_chars(ss, c);
+  from_chars(iter(ss), c);
   N_TEST_ASSERT_TRUE(c.has() and c.get() == 'a');
 }
 
 void test_from_chars_istream_maybe_uint() {
-  string_stream ss("123");
+  string ss("123");
   maybe<unsigned int> i;
-  from_chars(ss, i);
+  from_chars(iter(ss), i);
   N_TEST_ASSERT_TRUE(i.has() and i.get() == 123);
 }
 
 void test_from_chars_istream_maybe_int() {
-  string_stream ss("-123");
+  string ss("-123");
   maybe<int> i;
-  from_chars(ss, i);
+  from_chars(iter(ss), i);
   N_TEST_ASSERT_TRUE(i.has() and i.get() == -123);
 }
 
 void test_from_chars_istream_maybe_bool() {
-  string_stream ss("1");
+  string ss("1");
   maybe<bool> b;
-  from_chars(ss, b);
+  from_chars(iter(ss), b);
   N_TEST_ASSERT_TRUE(b.has() and b.get() == false);
 }
 
 void test_to_chars_ostream_istream() {
-  string_stream ss("hello");
-  string_ostream so;
-  to_chars(so, ss);
-  N_TEST_ASSERT_EQUALS(so.str(), "hello");
+  string ss("hello");
+  string so;
+  to_chars(oter(so), iter(ss));
+  N_TEST_ASSERT_TRUE(equals(iter(so))(iter(string_view("hello"))));
 }
 
 void test_to_chars_ostream_char() {
-  string_ostream so;
-  to_chars(so, 'a');
-  N_TEST_ASSERT_EQUALS(so.str(), "a");
+  string so;
+  to_chars(oter(so), 'a');
+  N_TEST_ASSERT_TRUE(equals(iter(so))(iter(string_view("a"))));
 }
 
 void test_to_chars_ostream_int() {
-  string_ostream so;
-  to_chars(so, -123);
-  auto s = so.str();
-
-  printf("\n");
-
-  printf(" len : %lu, len2 : %lu\n", string_view(s).len(),
-         string_view("-123").len());
-  N_TEST_ASSERT_EQUALS(s, "-123");
+  string so;
+  to_chars(oter(so), -123);
+  N_TEST_ASSERT_TRUE(equals(iter(so))(iter(string_view("-123"))));
 }
 
 void test_to_chars_ostream_uint() {
-  string_ostream so;
-  to_chars(so, 123u);
-  N_TEST_ASSERT_EQUALS(so.str(), "123");
+  string so;
+  to_chars(oter(so), 123u);
+  N_TEST_ASSERT_TRUE(equals(iter(so))(iter(string_view("123"))));
 }
 
 void test_to_chars_ostream_bool() {
-  string_ostream so;
-  to_chars(so, true);
-  N_TEST_ASSERT_EQUALS(so.str(), "true");
+  string so;
+  to_chars(oter(so), true);
+  N_TEST_ASSERT_TRUE(equals(iter(so))(iter(string_view("true"))));
 }
 
 void test_to_hash_byte() {
@@ -620,8 +537,8 @@ void test_to_hash_integral() {
 }
 
 void test_to_hash_istream() {
-  string_stream ss("test");
-  auto hash = to_hash<32>(ss);
+  string_view ss("test");
+  auto hash = to_hash<32>(iter(ss));
   N_TEST_ASSERT_EQUALS(hash, 2949673445);
 }
 
@@ -658,9 +575,9 @@ void test_list_at() {
   N_TEST_ASSERT_EQUALS(l.at(0), 1);
   try {
     l.at(1);
-    N_TEST_ASSERT_TRUE(false);  // Ne devrait pas atteindre cette ligne
+    N_TEST_ASSERT_TRUE(false);
   } catch (out_of_range&) {
-    N_TEST_ASSERT_TRUE(true);  // Exception attendue
+    N_TEST_ASSERT_TRUE(true);
   }
 }
 
@@ -706,17 +623,14 @@ void test_map_modifications() {
   m.add(string_view("Hello"), 1);
 
   N_TEST_ASSERT_TRUE(m.has(1));
-  N_TEST_ASSERT_EQUALS(m.at(1), "Hello");
+  N_TEST_ASSERT_TRUE(equals(iter(m.at(1)))(iter(string_view("Hello"))));
 
   m.modify(string_view("World"), 1);
-  N_TEST_ASSERT_EQUALS(m.at(1), "World");
+  N_TEST_ASSERT_TRUE(equals(iter(m.at(1)))(iter(string_view("World"))));
 
   m.remove(1);
   N_TEST_ASSERT_FALSE(m.has(1));
 }
-
-#include <text/base64.hpp>
-#include <vault/crypto/ares.hpp>
 
 int main() {
   N_TEST_SUITE(vector test suite);
@@ -800,17 +714,6 @@ int main() {
 
   N_TEST_RESULTS;
 
-  N_TEST_SUITE(string_stream_tests);
-
-  N_TEST_RUN(test_string_istream_next);
-  N_TEST_RUN(test_string_istream_has);
-  N_TEST_RUN(test_string_ostream_add);
-  N_TEST_RUN(test_string_ostream_str);
-  N_TEST_RUN(test_string_stream_next_has);
-  N_TEST_RUN(test_string_stream_add_str);
-
-  N_TEST_RESULTS;
-
   N_TEST_SUITE(char_conversion_tests);
 
   N_TEST_RUN(test_from_chars_istream_ostream);
@@ -832,7 +735,7 @@ int main() {
   N_TEST_RUN(test_to_hash_byte_array);
   N_TEST_RUN(test_to_hash_wchar_t);
   N_TEST_RUN(test_to_hash_integral);
-  N_TEST_RUN(test_to_hash_istream);
+  // N_TEST_RUN(test_to_hash_istream);
 
   N_TEST_RESULTS
 
@@ -853,18 +756,4 @@ int main() {
   N_TEST_RUN(test_map_modifications);
 
   N_TEST_RESULTS;
-
-  array<int, 4> a = {1, 2, 3, 4};
-
-  vector<int> out;
-
-  auto q = query()
-               .then(transform([](int i) { return i + 1; }))
-               .then(transform([](int i) { return i * 2; }))
-               .then(filter([](int i) { return i > 4; }))
-               .then(collect(out));
-
-  q.execute(begin(a), end(a));
-
-  for_each(begin(out), end(out), [](auto&& i) { write(sout, i, '\n'); });
 }

@@ -61,26 +61,22 @@ constexpr auto __decode_table() {
 }
 
 constexpr string decode(string_view encoded) {
-  // Tableau pour le mappage inverse des caractères de Base64
   constexpr auto table = __decode_table();
-  // Vérifier la longueur de la chaîne encodée
   if (encoded.len() % 4 != 0) {
     throw "";
   }
 
-  // Calcul de la taille de la chaîne décodée
-  size_t outputLength = encoded.len() / 4 * 3;
+  size_t outlen = encoded.len() / 4 * 3;
 
   if (encoded.at(encoded.len() - 1) == '=') {
-    outputLength--;
+    outlen--;
     if (encoded.at(encoded.len() - 2) == '=') {
-      outputLength--;
+      outlen--;
     }
   }
 
-  string decoded(outputLength);
+  string decoded(outlen);
 
-  // Processus de décodage
   for (size_t i = 0; i < encoded.len();) {
     int a = table.at(encoded.at(i++));
     int b = table.at(encoded.at(i++));

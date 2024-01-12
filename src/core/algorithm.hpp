@@ -1,154 +1,210 @@
-#ifndef __n_algorithm_hpp__
-#define __n_algorithm_hpp__
+#ifndef __n_algorithm_v2_hpp__
+#define __n_algorithm_v2_hpp__
 
 #include <core/core.hpp>
+#include <core/tuple.hpp>
 
-template <iterator I>
-constexpr size_t count(I b, I e) {
-  if constexpr (distanciable<I>) {
-    return e - b;
+template <typename... A>
+class prepared {
+ private:
+  tuple<A...> _algorithms;
+
+ public:
+  constexpr prepared(A&&... algorithms)
+      : _algorithms(relay<A>(algorithms)...) {}
+
+ private:
+  template <size_t RANK, typename IT>
+  constexpr auto __eval(IT it) {
+    if constexpr (RANK < (sizeof...(A) - 1)) {
+      return __eval<RANK + 1>(get<RANK>(_algorithms)(it));
+    }
+
+    else {
+      return get<RANK>(_algorithms)(it);
+    }
   }
 
-  else {
+ public:
+  template <typename IT>
+  constexpr auto eval(IT it) -> decltype(auto) {
+    if constexpr (sizeof...(A) > 0) {
+      return __eval<0>(it);
+    }
+  }
+};
+
+template <typename... A>
+constexpr auto prepare(A&&... a) {
+  return prepared(relay<A>(a)...);
+}
+
+template <typename I, typename T>
+class transform_iterator {
+ private:
+  I _it;
+  T _transformer;
+
+ public:
+  using type = typename I::type;
+
+  constexpr transform_iterator(I it, T transformer)
+      : _it(it), _transformer(transformer) {}
+
+  constexpr bool has_next() { return _it.has_next(); }
+
+  constexpr auto next() -> decltype(auto) { return _transformer(_it.next()); }
+};
+
+template <typename T>
+constexpr auto transform(T transformer) -> decltype(auto) {
+  return [=]<iterator I>(I it) mutable {
+    return transform_iterator<I, T>(it, transformer);
+  };
+}
+
+constexpr auto count() {
+  return []<iterator I>(I it) mutable {
+    if constexpr (distanciable<I>) {
+      return it.distance();
+    }
+
+    else {
+      size_t cnt = 0;
+
+      while (it.has_next()) {
+        it.next();
+        ++cnt;
+      }
+
+      return cnt;
+    }
+  };
+}
+
+template <typename T>
+constexpr auto count(const T& t) {
+  return [&]<iterator I>(I it) mutable {
     size_t cnt = 0;
 
-    while (b != e) {
-      ++b;
-      ++cnt;
+    while (it.has_next()) {
+      if (it.next() == t) {
+        ++cnt;
+      }
     }
 
     return cnt;
-  }
+  };
 }
 
-template <iterator I>
-constexpr size_t count(I b, I e, const iterator_type<I>& t) {
-  size_t cnt = 0;
+template <typename P>
+constexpr auto count_if(P&& pred) {
+  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+    size_t cnt = 0;
 
-  while (b != e) {
-    if (t == *b) {
-      ++cnt;
+    while (it.has_next()) {
+      if (pred(it.next())) {
+        ++cnt;
+      }
     }
 
-    ++b;
-  }
-
-  return cnt;
+    return cnt;
+  };
 }
 
-template <iterator I>
-constexpr size_t count(I b, I e, predicate<iterator_type<I>> auto&& pred) {
-  size_t cnt = 0;
+template <typename T>
+constexpr auto find(const T& t) {
+  return [&]<iterator I>(I it) mutable {
+    while (it.has_next()) {
+      auto tmp = it;
 
-  while (b != e) {
-    if (pred(*b)) {
-      ++cnt;
+      if (it.next() == t) {
+        return tmp;
+      }
     }
 
-    ++b;
-  }
-
-  return cnt;
+    return it;
+  };
 }
 
-template <iterator I>
-constexpr I find(I b, I e, const iterator_type<I>& t) {
-  while (b != e and *b != t) {
-    ++b;
-  }
+template <typename P>
+constexpr auto find_if(P&& pred) {
+  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+    while (it.has_next()) {
+      auto tmp = it;
 
-  return b;
+      if (pred(it.next())) {
+        return tmp;
+      }
+    }
+
+    return it;
+  };
 }
 
-template <iterator I>
-constexpr I find(I b, I e, predicate<iterator_type<I>> auto&& pred) {
-  while (b != e and not pred(*b)) {
-    ++b;
-  }
+template <typename P>
+constexpr auto find_if_not(P&& pred) {
+  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+    while (it.has_next()) {
+      auto tmp = it;
 
-  return b;
+      if (not pred(it.next())) {
+        return tmp;
+      }
+    }
+
+    return it;
+  };
 }
 
-template <iterator I>
-constexpr I find_not(I b, I e, predicate<iterator_type<I>> auto&& pred) {
-  while (b != e and pred(*b)) {
-    ++b;
-  }
-
-  return b;
+template <typename P>
+constexpr auto all_of(P&& pred) {
+  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+    return not find_if_not(pred)(it).has_next();
+  };
 }
 
-template <iterator I>
-constexpr bool all_of(I b, I e, predicate<iterator_type<I>> auto&& pred) {
-  return find_not(b, e, pred) == e;
+template <typename P>
+constexpr auto none_of(P&& pred) {
+  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+    return not find_if(pred)(it).has_next();
+  };
 }
 
-template <iterator I>
-constexpr bool any_of(I b, I e, predicate<iterator_type<I>> auto&& pred) {
-  return find(b, e, pred) != e;
+template <typename P>
+constexpr auto any_of(P&& pred) {
+  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+    return find_if(pred)(it).has_next();
+  };
 }
 
-template <iterator I>
-constexpr bool none_of(I b, I e, predicate<iterator_type<I>> auto&& pred) {
-  return find(b, e, pred) == e;
+template <iterator I1>
+constexpr auto starts_with(I1 i1) {
+  return [=]<iterator I2>(I2 i2) mutable {
+    while (i1.has_next() and i2.has_next() and i1.next() == i2.next()) {
+    }
+
+    return not i1.has_next();
+  };
 }
 
-template <iterator I1, iterator I2>
-constexpr bool starts_with(I1 b1, I1 e1, I2 b2, I2 e2) {
-  while (b1 != e1 and b2 != e2 and *b1 == *b2) {
-    ++b1;
-    ++b2;
-  }
+template <iterator I1>
+constexpr auto equals(I1 i1) {
+  return [=]<iterator I2>(I2 i2) mutable {
+    while (i1.has_next() and i2.has_next() and i1.next() == i2.next()) {
+    }
 
-  return b2 == e2;
+    return not i1.has_next() and not i2.has_next();
+  };
 }
 
-template <iterator I1, iterator I2>
-constexpr bool equals(I1 b1, I1 e1, I2 b2, I2 e2) {
-  while (b1 != e1 and b2 != e2 and *b1 == *b2) {
-    ++b1;
-    ++b2;
-  }
-
-  return b1 == e1 and b2 == e2;
-}
-
-template <iterator I, oterator O>
-constexpr O transform(I b,
-                      I e,
-                      O o,
-                      unary<iterator_type<I>, iterator_type<O>> auto&& un) {
-  while (b != e) {
-    *(o++) = un(*(b++));
-  }
-
-  return o;
-}
-
-template <iterator I, oterator O>
-constexpr O copy(I b, I e, O o) {
-  while (b != e) {
-    *(o++) = *(b++);
-  }
-
-  return o;
-}
-
-template <iterator I, oterator O>
-constexpr O move(I b, I e, O o) {
-  while (b != e) {
-    *(o++) = move(*(b++));
-  }
-
-  return o;
-}
-
-template <iterator I>
-constexpr void for_each(I b, I e, unary<iterator_type<I>, void> auto&& u) {
-  while (b != e) {
-    u(*b);
-    ++b;
-  }
+template <typename F>
+constexpr auto for_each(F&& func) {
+  return [func = relay<F>(func)](auto it) mutable {
+    while (it.has_next()) {
+      func(it.next());
+    }
+  };
 }
 
 #endif

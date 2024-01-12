@@ -11,19 +11,11 @@ class basic_string_view;
 
 template <character C>
 class basic_string {
- public:
-  using type = C;
-  using reference = C&;
-  using const_reference = const C&;
-  using move_reference = C&&;
-  using pointer = C*;
-  using const_pointer = const C*;
-
  private:
   allocator<C> _alloc;
   size_t _max = 0;
   size_t _len = 0;
-  pointer _data = nullptr;
+  C* _data = nullptr;
 
  public:
   constexpr ~basic_string() {
@@ -37,25 +29,23 @@ class basic_string {
       : _max(max), _len(0), _data(_alloc.allocate(max + 1)) {
     _data[_len] = 0;
   }
-
   template <iterator I>
     requires distanciable<I>
-  constexpr basic_string(I b, I e) : basic_string(e - b) {
-    while (b != e) {
-      this->add(*(b++));
+  constexpr basic_string(I it) : basic_string(it.distance()) {
+    while (it.has_next()) {
+      this->add(it.next());
     }
   }
 
   template <iterator I>
     requires(not distanciable<I>)
-  constexpr basic_string(I b, I e) {
-    while (b != e) {
-      this->add(*(b++));
+  constexpr basic_string(I it) {
+    while (it.has_next()) {
+      this->add(it.next());
     }
   }
 
-  constexpr basic_string(basic_string_view<C> s)
-      : basic_string(begin(s), end(s)) {}
+  constexpr basic_string(basic_string_view<C> s) : basic_string(iter(s)) {}
 
   constexpr basic_string(const basic_string& v)
       : _max(v._max), _len(v._len), _data(_alloc.allocate(v._max + 1)) {
@@ -110,9 +100,9 @@ class basic_string {
 
   constexpr bool has(size_t p) const { return p < _len; }
 
-  constexpr pointer data() { return _data; }
+  constexpr C* data() { return _data; }
 
-  constexpr const_pointer data() const { return _data; }
+  constexpr const C* data() const { return _data; }
 
   constexpr void clear() {
     _alloc.destroy(_data, _len);
@@ -123,7 +113,7 @@ class basic_string {
     }
   }
 
-  constexpr reference at(size_t p) {
+  constexpr C& at(size_t p) {
     if (p < _len) {
       return _data[p];
     } else {
@@ -131,7 +121,7 @@ class basic_string {
     }
   }
 
-  constexpr const_reference at(size_t p) const {
+  constexpr const C& at(size_t p) const {
     if (p < _len) {
       return _data[p];
     } else {
@@ -219,44 +209,89 @@ using string = basic_string<char>;
 using wstring = basic_string<wchar_t>;
 
 template <character C>
-constexpr auto begin(const basic_string<C>& s) {
-  return s.data();
+class basic_string_oterator {
+ public:
+  using type = C;
+
+ private:
+  basic_string<C>& _str;
+
+ public:
+  constexpr basic_string_oterator(basic_string<C>& s) : _str(s) {}
+
+ public:
+  constexpr void sext(const C& c) { _str.add(c); }
+  constexpr void sext(C&& c) { _str.add(move(c)); }
+};
+
+template <character C>
+constexpr auto oter(basic_string<C>& str) {
+  return basic_string_oterator<C>(str);
 }
 
 template <character C>
-constexpr auto end(const basic_string<C>& s) {
-  return s.data() + s.len();
+class basic_string_iterator {
+ public:
+  using type = C;
+
+ private:
+  C* _begin;
+  C* _sentinel;
+
+ public:
+  constexpr basic_string_iterator(basic_string<C>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr C& next() { return *(_begin++); }
+
+  constexpr size_t distance() const { return _sentinel - _begin; }
+};
+
+template <character C>
+constexpr auto iter(basic_string<C>& a) {
+  return basic_string_iterator(a);
 }
 
 template <character C>
-constexpr auto begin(basic_string<C>& s) {
-  return s.data();
-}
+class basic_string_const_iterator {
+ public:
+  using type = const C;
+
+ private:
+  const C* _begin;
+  const C* _sentinel;
+
+ public:
+  constexpr basic_string_const_iterator(const basic_string<C>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr const C& next() { return *(_begin++); }
+
+  constexpr size_t distance() const { return _sentinel - _begin; }
+};
 
 template <character C>
-constexpr auto end(basic_string<C>& s) {
-  return s.data() + s.len();
+constexpr auto iter(const basic_string<C>& a) {
+  return basic_string_const_iterator(a);
 }
 
 template <character C>
 class basic_string_view : public span<const C> {
  public:
-  using type = C;
-  using reference = C&;
-  using const_reference = const C&;
-  using move_reference = C&&;
-  using pointer = C*;
-  using const_pointer = const C*;
-
- public:
   constexpr basic_string_view() = default;
-  constexpr basic_string_view(const_pointer begin, const_pointer end)
+  constexpr basic_string_view(const C* begin, const C* end)
       : span<const C>(begin, end) {}
 
-  constexpr basic_string_view(const_pointer begin, size_t len)
+  constexpr basic_string_view(const C* begin, size_t len)
       : span<const C>(begin, len) {}
 
-  constexpr basic_string_view(const_pointer begin)
+  constexpr basic_string_view(const C* begin)
       : span<const C>(begin, strlen(begin)) {}
 
   constexpr basic_string_view(const basic_string<C>& s)
@@ -266,12 +301,12 @@ class basic_string_view : public span<const C> {
 
   constexpr basic_string_view(basic_string_view&&) = default;
 
-  constexpr basic_string_view& operator=(const_pointer begin) {
+  constexpr basic_string_view& operator=(const C* begin) {
     return (*this = basic_string_view(begin, strlen(begin)));
   }
 
   constexpr basic_string_view& operator=(const basic_string<C>& s) {
-    return (*this = basic_string_view(begin(s), s.len()));
+    return (*this = basic_string_view(s.data(), s.len()));
   }
 
   constexpr basic_string_view& operator=(const basic_string_view&) = default;
@@ -279,162 +314,70 @@ class basic_string_view : public span<const C> {
   constexpr basic_string_view& operator=(basic_string_view&&) = default;
 };
 
-template <character C>
-constexpr auto begin(basic_string_view<C> s) {
-  return s.data();
-}
-
-template <character C>
-constexpr auto end(const basic_string_view<C> s) {
-  return s.data() + s.len();
-}
-
 using string_view = basic_string_view<char>;
 using wstring_view = basic_string_view<wchar_t>;
 
-template <character C>
-class basic_string_istream {
- public:
-  using type = C;
-
- private:
-  const C* _b = nullptr;
-  const C* _e = nullptr;
-
- public:
-  constexpr basic_string_istream(basic_string_view<C> s)
-      : _b(begin(s)), _e(end(s)) {}
-
-  constexpr basic_string_istream(const basic_string<C>& s)
-      : basic_string_istream(basic_string_view<C>(s)) {}
-
-  constexpr basic_string_istream(const C* s)
-      : basic_string_istream(basic_string_view<C>(s)) {}
-
- public:
-  constexpr C next() { return *(_b++); }
-
-  constexpr bool has() { return _b != _e; }
-};
-
-using string_istream = basic_string_istream<char>;
-using wstring_istream = basic_string_istream<wchar_t>;
-
-template <character C>
-class basic_string_ostream {
- public:
-  using type = C;
-
- private:
-  basic_string<C> _str;
-
- public:
-  constexpr void add(C c) { _str.add(c); }
-
-  constexpr basic_string<C> str() {
-    auto tmp = move(_str);
-    return tmp;
-  }
-};
-
-using string_ostream = basic_string_ostream<char>;
-using wstring_ostream = basic_string_ostream<wchar_t>;
-
-template <character C>
-class basic_string_stream {
- public:
-  using type = C;
-
- private:
-  basic_string<C> _data;
-  size_t _idx = 0;
-
- public:
-  constexpr basic_string_stream() = default;
-  constexpr basic_string_stream(basic_string_view<C> s)
-      : _data(begin(s), end(s)) {}
-
-  constexpr basic_string_stream(const basic_string<C>& s)
-      : basic_string_stream(basic_string_view<C>(s)) {}
-
-  constexpr basic_string_stream(const C* s)
-      : basic_string_stream(basic_string_view<C>(s)) {}
-
- public:
-  constexpr C next() { return _data.at(_idx++); }
-
-  constexpr bool has() { return _data.has(_idx); }
-
-  constexpr void add(C c) { _data.add(c); }
-
-  constexpr basic_string<C> str() {
-    auto tmp = move(_data);
-    return tmp;
-  }
-};
-
-using string_stream = basic_string_stream<char>;
-using wstring_stream = basic_string_stream<wchar_t>;
-
-template <istream I, ostream O>
-constexpr I& from_chars(I& s, O& o) {
-  while (s.has()) {
-    o.add(s.next());
+template <iterator I, oterator O>
+constexpr I from_chars(I i, O o) {
+  while (i.has_next()) {
+    o.sext(i.next());
   }
 
-  return s;
+  return i;
 }
 
-template <istream I, character C>
-constexpr I& from_chars(I& s, maybe<C>& c) {
-  if (s.has()) {
-    c = s.next();
+template <iterator I, character C>
+constexpr I from_chars(I i, maybe<C>& c) {
+  if (i.has_next()) {
+    c = i.next();
   }
 
-  return s;
+  return i;
 }
 
-template <istream I, unsigned_integral UI>
-constexpr I& from_chars(I& s, maybe<UI>& i) {
-  if (s.has()) {
-    auto c = s.next();
+template <iterator I, unsigned_integral UI>
+constexpr I from_chars(I i, maybe<UI>& mi) {
+  if (i.has_next()) {
+    auto c = i.next();
 
     if ('0' <= c and c <= '9') {
       UI tmp = 0;
 
       tmp = static_cast<UI>(c - '0');
 
-      while (s.has()) {
-        c = s.next();
+      while (i.has_next()) {
+        c = i.next();
 
         if ('0' <= c and c <= '9') {
           tmp = tmp * 10 + c - '0';
-        } else {
+        }
+
+        else {
           break;
         }
       }
 
-      i = tmp;
+      mi = tmp;
     }
   }
 
-  return s;
+  return i;
 }
 
-template <istream I, signed_integral SI>
-constexpr I& from_chars(I& s, maybe<SI>& i) {
+template <iterator I, signed_integral SI>
+constexpr I from_chars(I i, maybe<SI>& mi) {
   maybe<bool> neg;
 
-  if (s.has()) {
-    auto c = s.next();
+  if (i.has_next()) {
+    auto c = i.next();
 
     switch (c) {
       case '-':
         neg = true;
-        c = s.next();
+        c = i.next();
         break;
       case '+':
-        c = s.next();
+        c = i.next();
         break;
     }
 
@@ -443,12 +386,14 @@ constexpr I& from_chars(I& s, maybe<SI>& i) {
 
       tmp = static_cast<SI>(c - '0');
 
-      while (s.has()) {
-        c = s.next();
+      while (i.has_next()) {
+        c = i.next();
 
         if ('0' <= c and c <= '9') {
           tmp = tmp * 10 + c - '0';
-        } else {
+        }
+
+        else {
           break;
         }
       }
@@ -457,17 +402,17 @@ constexpr I& from_chars(I& s, maybe<SI>& i) {
         tmp = -tmp;
       }
 
-      i = tmp;
+      mi = tmp;
     }
   }
 
-  return s;
+  return i;
 }
 
-template <istream I>
-constexpr I& from_chars(I& s, maybe<bool>& b) {
-  if (s.has()) {
-    auto c = s.next();
+template <iterator I>
+constexpr I from_chars(I i, maybe<bool>& b) {
+  if (i.has_next()) {
+    auto c = i.next();
 
     if (c == '0') {
       b = true;
@@ -478,50 +423,49 @@ constexpr I& from_chars(I& s, maybe<bool>& b) {
     }
   }
 
-  return s;
+  return i;
 }
 
-template <ostream O, istream I>
+template <oterator O, iterator I>
   requires convertible_to<typename I::type, typename O::type>
-constexpr O& to_chars(O& o, I& i) {
-  while (i.has()) {
-    o.add(i.next());
+constexpr O to_chars(O o, I i) {
+  while (i.has_next()) {
+    o.sext(i.next());
   }
 
   return o;
 }
 
-template <ostream O, character C>
-constexpr O& to_chars(O& o, C c) {
-  o.add(c);
+template <oterator O, character C>
+constexpr O to_chars(O o, C c) {
+  o.sext(c);
   return o;
 }
 
-template <ostream O, character C>
-constexpr O& to_chars(O& o, basic_string_view<C> s) {
-  for_each(begin(s), end(s), [&o](C c) { o.add(c); });
-  return o;
+template <oterator O, character C>
+constexpr O to_chars(O o, basic_string_view<C> s) {
+  return to_chars(o, iter(s));
 }
 
-template <ostream O, character C>
-constexpr O& to_chars(O& o, const basic_string<C>& s) {
+template <oterator O, character C>
+constexpr O to_chars(O o, const basic_string<C>& s) {
+  return to_chars(o, iter(s));
+}
+
+template <oterator O, character C, size_t N>
+constexpr O to_chars(O& o, const C(s)[N]) {
   return to_chars(o, basic_string_view<C>(s));
 }
 
-template <ostream O, character C, size_t N>
-constexpr O& to_chars(O& o, const C(s)[N]) {
+template <oterator O, character C>
+constexpr O to_chars(O& o, const C* s) {
   return to_chars(o, basic_string_view<C>(s));
 }
 
-template <ostream O, character C>
-constexpr O& to_chars(O& o, const C* s) {
-  return to_chars(o, basic_string_view<C>(s));
-}
-
-template <ostream O, signed_integral I>
-constexpr O& to_chars(O& o, I i) {
+template <oterator O, signed_integral I>
+constexpr O to_chars(O o, I i) {
   array<typename O::type, 20> tbuff;
-  auto b = begin(tbuff);
+  auto b = tbuff.data();
 
   if (i == 0) {
     *(b++) = '0';
@@ -538,20 +482,20 @@ constexpr O& to_chars(O& o, I i) {
     }
   }
 
-  auto b2 = begin(tbuff);
+  auto b2 = tbuff.data();
 
   while (b > b2) {
     auto c = *(--b);
-    o.add(c);
+    o.sext(c);
   }
 
   return o;
 }
 
-template <ostream O, unsigned_integral I>
-constexpr O& to_chars(O& o, I i) {
+template <oterator O, unsigned_integral I>
+constexpr O to_chars(O o, I i) {
   array<typename O::type, 20> tbuff;
-  auto b = begin(tbuff);
+  auto b = tbuff.data();
 
   if (i == 0) {
     *(b++) = '0';
@@ -562,29 +506,47 @@ constexpr O& to_chars(O& o, I i) {
     }
   }
 
-  auto b2 = begin(tbuff);
+  auto b2 = tbuff.data();
 
   while (b > b2) {
     auto c = *(--b);
-    o.add(c);
+    o.sext(c);
   }
 
   return o;
 }
 
-template <ostream O>
-constexpr O& to_chars(O& o, bool b) {
+template <oterator O>
+constexpr O to_chars(O o, bool b) {
   return to_chars(o, (b ? "true" : "false"));
 }
 
-template <istream I, typename... C>
-constexpr void read(I i, maybe<C>&... mt) {
-  (from_chars(i, mt), ...);
+template <iterator I>
+constexpr void read(I i) {}
+
+template <iterator I, typename T0, typename... TN>
+constexpr auto read(I i, maybe<T0>& m0, maybe<TN>&... mn) {
+  if constexpr (sizeof...(TN) == 0) {
+    return from_chars(i, m0);
+  }
+
+  else {
+    return read(from_chars(i, m0), mn...);
+  }
 }
 
-template <ostream O, typename... C>
-constexpr void write(O o, C&&... t) {
-  (to_chars(o, relay<C>(t)), ...);
+template <oterator I>
+constexpr void write(I i) {}
+
+template <oterator O, typename T0, typename... TN>
+constexpr auto write(O o, T0&& t0, TN&&... tn) {
+  if constexpr (sizeof...(TN) == 0) {
+    return to_chars(o, relay<T0>(t0));
+  }
+
+  else {
+    return write(to_chars(o, relay<T0>(t0)), relay<TN>(tn)...);
+  }
 }
 
 #endif

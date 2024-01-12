@@ -17,9 +17,8 @@ class ares {
 
     for (size_t i = 1; i < 64; ++i) {
       const auto& ikey = _keys.at(i - 1);
-      auto b = begin(ikey);
-      auto e = end(ikey);
-      _keys.modify(mash{}.digest(b, e), i);
+      auto it = iter(ikey);
+      _keys.modify(mash{}.digest(it), i);
     }
   }
 

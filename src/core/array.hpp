@@ -8,7 +8,7 @@ template <typename T, size_t N>
 struct array {
  public:
   using type = T;
-  
+
   T _data[N];
 
  public:
@@ -60,24 +60,58 @@ struct array {
   }
 };
 
-template <typename T, size_t N>
-constexpr auto begin(array<T, N>& a) {
-  return a.data();
-}
+template <typename T>
+class array_iterator {
+ public:
+  using type = T;
+
+ private:
+  T* _begin;
+  T* _sentinel;
+
+ public:
+  template <size_t N>
+  constexpr array_iterator(array<T, N>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr T& next() { return *(_begin++); }
+
+  constexpr size_t distance() const { return _sentinel - _begin; }
+};
 
 template <typename T, size_t N>
-constexpr auto end(array<T, N>& a) {
-  return a.data() + a.len();
+constexpr auto iter(array<T, N>& a) {
+  return array_iterator(a);
 }
 
-template <typename T, size_t N>
-constexpr auto begin(const array<T, N>& a) {
-  return a.data();
-}
+template <typename T>
+class array_const_iterator {
+ public:
+  using type = const T;
+
+ private:
+  const T* _begin;
+  const T* _sentinel;
+
+ public:
+  template <size_t N>
+  constexpr array_const_iterator(const array<T, N>& a)
+      : _begin(a.data()), _sentinel(a.data() + a.len()) {}
+
+ public:
+  constexpr bool has_next() const { return _begin != _sentinel; }
+
+  constexpr const T& next() { return *(_begin++); }
+
+  constexpr size_t distance() const { return _sentinel - _begin; }
+};
 
 template <typename T, size_t N>
-constexpr auto end(const array<T, N>& a) {
-  return a.data() + a.len();
+constexpr auto iter(const array<T, N>& a) {
+  return array_const_iterator(a);
 }
 
 #endif

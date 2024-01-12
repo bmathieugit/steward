@@ -42,9 +42,7 @@ class mash {
     return res;
   }
 
-  constexpr auto digest(iterator auto b, iterator auto e) {
-    return digest(string_view(b, e));
-  }
+  constexpr auto digest(iterator auto b) { return digest(string_view(b)); }
 };
 }  // namespace vault::crypto
 

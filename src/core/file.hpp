@@ -106,7 +106,7 @@ class raw_file {
     return opened() and fread(&t, sizeof(T), 1, _fd) == 1;
   }
 
-  bool readall(ostream auto& os)
+  bool readall(oterator auto os)
     requires read_mode<m>
   {
     using T = typename decltype(os)::type;
@@ -118,7 +118,7 @@ class raw_file {
       isread &= read(buff);
 
       if (isread) {
-        if (not os.add(buff)) {
+        if (not os.sext(buff)) {
           break;
         }
       }
@@ -134,14 +134,14 @@ class raw_file {
     return opened() and fwrite(&t, sizeof(T), 1, _fd) == 1;
   }
 
-  bool writeall(istream auto& is)
+  bool writeall(iterator auto it)
     requires write_mode<m>
   {
-    using T = typename decltype(is)::type;
+    using T = typename decltype(it)::type;
     bool res = true;
 
-    while (is.has() and res) {
-      res &= write<T>(is.next());
+    while (it.has_next() and res) {
+      res &= write<T>(it.next());
     }
 
     return res;
@@ -180,7 +180,7 @@ class file : public raw_file<m> {
 
 template <typename T, mode m>
   requires read_mode<m> and not_console_mode<m>
-class file_istream {
+class file_iterator {
  public:
   using type = T;
 
@@ -190,10 +190,10 @@ class file_istream {
   size_t _len;
 
  public:
-  constexpr file_istream(file<T, m>& f) : _f(f), _pos(0), _len(f.len()) {}
+  constexpr file_iterator(file<T, m>& f) : _f(f), _pos(0), _len(f.len()) {}
 
  public:
-  constexpr bool has() const { return _f.opened() and _pos != _len; }
+  constexpr bool has_next() const { return _f.opened() and _pos != _len; }
   constexpr type next() {
     _pos += 1;
     type tmp;
@@ -204,7 +204,7 @@ class file_istream {
 
 template <character C, mode m>
   requires(m == mode::cin)
-class cin_istream {
+class cin_iterator {
  public:
   using type = C;
 
@@ -213,10 +213,10 @@ class cin_istream {
   mutable C _c;
 
  public:
-  constexpr cin_istream(file<C, m>& f) : _f(f) {}
+  constexpr cin_iterator(file<C, m>& f) : _f(f) {}
 
  public:
-  constexpr bool has() const {
+  constexpr bool has_next() const {
     return _f.opened() and _f.read(_c) and _c != '\n';
   }
 
@@ -225,7 +225,7 @@ class cin_istream {
 
 template <typename T, mode m>
   requires write_mode<m>
-class file_ostream {
+class file_oterator {
  public:
   using type = T;
 
@@ -233,25 +233,26 @@ class file_ostream {
   file<T, m>& _f;
 
  public:
-  file_ostream(file<T, m>& f) : _f(f) {}
+  file_oterator(file<T, m>& f) : _f(f) {}
 
  public:
-  bool add(const type& t) { return _f.write(t); }
+  bool sext(const type& t) { return _f.write(t); }
+  bool sext(type&& t) { return _f.write(move(t)); }
 };
 
 template <character C>
 static auto __ferr = file<C, mode::cerr>(stderr);
-static auto serr = file_ostream(__ferr<char>);
-static auto wserr = file_ostream(__ferr<wchar_t>);
+static auto serr = file_oterator(__ferr<char>);
+static auto wserr = file_oterator(__ferr<wchar_t>);
 
 template <character C>
 static auto __fout = file<C, mode::cout>(stdout);
-static auto sout = file_ostream(__fout<char>);
-static auto wsout = file_ostream(__fout<wchar_t>);
+static auto sout = file_oterator(__fout<char>);
+static auto wsout = file_oterator(__fout<wchar_t>);
 
 template <character C>
 static auto __fin = file<C, mode::cin>(stdin);
-static auto sin = cin_istream(__fin<char>);
-static auto wsin = cin_istream(__fin<wchar_t>);
+static auto sin = cin_iterator(__fin<char>);
+static auto wsin = cin_iterator(__fin<wchar_t>);
 
 #endif
