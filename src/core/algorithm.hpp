@@ -58,13 +58,13 @@ class transform_iterator {
 
 template <typename T>
 constexpr auto transform(T transformer) -> decltype(auto) {
-  return [=]<iterator I>(I it) mutable {
+  return [=]<iterator I>(I it) constexpr mutable {
     return transform_iterator<I, T>(it, transformer);
   };
 }
 
 constexpr auto count() {
-  return []<iterator I>(I it) mutable {
+  return []<iterator I>(I it) constexpr mutable {
     if constexpr (distanciable<I>) {
       return it.distance();
     }
@@ -84,7 +84,7 @@ constexpr auto count() {
 
 template <typename T>
 constexpr auto count(const T& t) {
-  return [&]<iterator I>(I it) mutable {
+  return [&]<iterator I>(I it) constexpr mutable {
     size_t cnt = 0;
 
     while (it.has_next()) {
@@ -99,7 +99,7 @@ constexpr auto count(const T& t) {
 
 template <typename P>
 constexpr auto count_if(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
     size_t cnt = 0;
 
     while (it.has_next()) {
@@ -114,7 +114,7 @@ constexpr auto count_if(P&& pred) {
 
 template <typename T>
 constexpr auto find(const T& t) {
-  return [&]<iterator I>(I it) mutable {
+  return [&]<iterator I>(I it) constexpr mutable {
     while (it.has_next()) {
       auto tmp = it;
 
@@ -129,7 +129,7 @@ constexpr auto find(const T& t) {
 
 template <typename P>
 constexpr auto find_if(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
     while (it.has_next()) {
       auto tmp = it;
 
@@ -144,7 +144,7 @@ constexpr auto find_if(P&& pred) {
 
 template <typename P>
 constexpr auto find_if_not(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
     while (it.has_next()) {
       auto tmp = it;
 
@@ -159,28 +159,28 @@ constexpr auto find_if_not(P&& pred) {
 
 template <typename P>
 constexpr auto all_of(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
     return not find_if_not(pred)(it).has_next();
   };
 }
 
 template <typename P>
 constexpr auto none_of(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
     return not find_if(pred)(it).has_next();
   };
 }
 
 template <typename P>
 constexpr auto any_of(P&& pred) {
-  return [pred = relay<P>(pred)]<iterator I>(I it) mutable {
+  return [pred = relay<P>(pred)]<iterator I>(I it) constexpr mutable {
     return find_if(pred)(it).has_next();
   };
 }
 
 template <iterator I1>
 constexpr auto starts_with(I1 i1) {
-  return [=]<iterator I2>(I2 i2) mutable {
+  return [=]<iterator I2>(I2 i2) constexpr mutable {
     while (i1.has_next() and i2.has_next() and i1.next() == i2.next()) {
     }
 
@@ -190,7 +190,7 @@ constexpr auto starts_with(I1 i1) {
 
 template <iterator I1>
 constexpr auto equals(I1 i1) {
-  return [=]<iterator I2>(I2 i2) mutable {
+  return [=]<iterator I2>(I2 i2) constexpr mutable {
     while (i1.has_next() and i2.has_next() and i1.next() == i2.next()) {
     }
 
@@ -200,7 +200,7 @@ constexpr auto equals(I1 i1) {
 
 template <typename F>
 constexpr auto for_each(F&& func) {
-  return [func = relay<F>(func)](auto it) mutable {
+  return [func = relay<F>(func)](auto it) constexpr mutable {
     while (it.has_next()) {
       func(it.next());
     }
