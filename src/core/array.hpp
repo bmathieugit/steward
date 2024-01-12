@@ -3,6 +3,7 @@
 
 #include <core/core.hpp>
 #include <core/exception.hpp>
+#include <core/hash.hpp>
 
 template <typename T, size_t N>
 struct array {
@@ -112,6 +113,11 @@ class array_const_iterator {
 template <typename T, size_t N>
 constexpr auto iter(const array<T, N>& a) {
   return array_const_iterator(a);
+}
+
+template <size_t N, typename T, size_t L>
+constexpr uof<N> to_hash(const array<T, L>& s, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(s));
 }
 
 #endif

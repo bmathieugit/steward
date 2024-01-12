@@ -4,6 +4,7 @@
 #include <core/algorithm.hpp>
 #include <core/core.hpp>
 #include <core/vector.hpp>
+#include <core/hash.hpp>
 
 template <typename T>
 class list {
@@ -122,6 +123,11 @@ class list_const_iterator {
 template <typename T>
 constexpr auto iter(const list<T>& l) {
   return list_const_iterator<T>(l);
+}
+
+template <size_t N, typename T>
+constexpr uof<N> to_hash(const list<T>& s, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(s));
 }
 
 #endif

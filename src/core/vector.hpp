@@ -4,6 +4,7 @@
 #include <core/allocator.hpp>
 #include <core/core.hpp>
 #include <core/exception.hpp>
+#include <core/hash.hpp>
 
 template <typename T>
 class vector {
@@ -37,6 +38,22 @@ class vector {
     v._max = 0;
     v._len = 0;
     v._data = nullptr;
+  }
+
+  template <iterator I>
+    requires distanciable<I>
+  constexpr vector(I it) : vector(it.distance()) {
+    while (it.has_next()) {
+      this->add(it.next());
+    }
+  }
+
+  template <iterator I>
+    requires(not distanciable<I>)
+  constexpr vector(I it) {
+    while (it.has_next()) {
+      this->add(it.next());
+    }
   }
 
   constexpr vector& operator=(const vector& v) {
@@ -222,6 +239,11 @@ class vector_const_iterator {
 template <typename T>
 constexpr auto iter(const vector<T>& a) {
   return vector_const_iterator(a);
+}
+
+template <size_t N, typename T>
+constexpr uof<N> to_hash(const vector<T>& s, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(s));
 }
 
 #endif

@@ -1,8 +1,11 @@
 #ifndef __n_string_hpp__
 #define __n_string_hpp__
 
+#include <string.h>
 #include <core/allocator.hpp>
+#include <core/array.hpp>
 #include <core/core.hpp>
+#include <core/hash.hpp>
 #include <core/result.hpp>
 #include <core/span.hpp>
 
@@ -29,6 +32,7 @@ class basic_string {
       : _max(max), _len(0), _data(_alloc.allocate(max + 1)) {
     _data[_len] = 0;
   }
+
   template <iterator I>
     requires distanciable<I>
   constexpr basic_string(I it) : basic_string(it.distance()) {
@@ -281,6 +285,11 @@ constexpr auto iter(const basic_string<C>& a) {
   return basic_string_const_iterator(a);
 }
 
+template <size_t N, character C>
+constexpr uof<N> to_hash(const basic_string<C>& s, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(s));
+}
+
 template <character C>
 class basic_string_view : public span<const C> {
  public:
@@ -316,6 +325,11 @@ class basic_string_view : public span<const C> {
 
 using string_view = basic_string_view<char>;
 using wstring_view = basic_string_view<wchar_t>;
+
+template <size_t N, character C>
+constexpr uof<N> to_hash(basic_string_view<C> s, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(s));
+}
 
 template <iterator I, oterator O>
 constexpr I from_chars(I i, O o) {
@@ -430,7 +444,7 @@ template <oterator O, iterator I>
   requires convertible_to<typename I::type, typename O::type>
 constexpr O to_chars(O o, I i) {
   while (i.has_next()) {
-    o.sext(i.next());
+    to_chars(o, i.next());
   }
 
   return o;
@@ -486,7 +500,7 @@ constexpr O to_chars(O o, I i) {
 
   while (b > b2) {
     auto c = *(--b);
-    o.sext(c);
+    to_chars(o, c);
   }
 
   return o;
@@ -510,7 +524,7 @@ constexpr O to_chars(O o, I i) {
 
   while (b > b2) {
     auto c = *(--b);
-    o.sext(c);
+    to_chars(o, c);
   }
 
   return o;
@@ -519,6 +533,17 @@ constexpr O to_chars(O o, I i) {
 template <oterator O>
 constexpr O to_chars(O o, bool b) {
   return to_chars(o, (b ? "true" : "false"));
+}
+
+template <oterator O, typename T>
+constexpr O to_chars(O o, const maybe<T>& m) {
+  if (m.has()) {
+    return to_chars(o, m.get());
+  }
+
+  else {
+    return o;
+  }
 }
 
 template <iterator I>
@@ -535,18 +560,9 @@ constexpr auto read(I i, maybe<T0>& m0, maybe<TN>&... mn) {
   }
 }
 
-template <oterator I>
-constexpr void write(I i) {}
-
-template <oterator O, typename T0, typename... TN>
-constexpr auto write(O o, T0&& t0, TN&&... tn) {
-  if constexpr (sizeof...(TN) == 0) {
-    return to_chars(o, relay<T0>(t0));
-  }
-
-  else {
-    return write(to_chars(o, relay<T0>(t0)), relay<TN>(tn)...);
-  }
+template <oterator O, typename... T>
+constexpr auto write(O o, T&&... t) {
+  (to_chars(o, relay<T>(t)), ...);
 }
 
 #endif

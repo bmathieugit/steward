@@ -3,12 +3,13 @@
 
 #include <core/core.hpp>
 #include <core/exception.hpp>
+#include <core/hash.hpp>
 
 template <typename T>
 class span {
  private:
-  T* _begin;
-  size_t _len;
+  T* _begin = nullptr;
+  size_t _len = 0;
 
  public:
   constexpr ~span() = default;
@@ -131,6 +132,11 @@ class span_const_iterator {
 template <typename T>
 constexpr auto iter(const span<T>& a) {
   return span_const_iterator(a);
+}
+
+template <size_t N, typename T>
+constexpr uof<N> to_hash(const span<T>& s, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(s));
 }
 
 #endif

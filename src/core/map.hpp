@@ -94,6 +94,25 @@ class map {
   }
 
   constexpr void remove(const K& k) { _data.remove(to_data_position(k)); }
+
+  constexpr auto& data() { return _data; }
+
+  constexpr const auto& data() const { return _data; }
 };
+
+template <typename K, typename V>
+constexpr auto iter(map<K, V>& m) {
+  return iter(m.data());
+}
+
+template <typename K, typename V>
+constexpr auto iter(const map<K, V>& m) {
+  return iter(m.data());
+}
+
+template <size_t N, typename K, typename V>
+constexpr uof<N> to_hash(const map<K, V>& s, uof<N> h = fnvoffset<N>) {
+  return to_hash<N>(iter(s));
+}
 
 #endif

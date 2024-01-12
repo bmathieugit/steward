@@ -1,16 +1,16 @@
-#include <stdio.h>
-#include <core/core.hpp>
-#include <core/vector.hpp>
+#include <args/argsparse.hpp>
+#include <core/file.hpp>
 
 int main(int argc, char** argv) {
-  vector<int> v;
-  v.add(1);
-  v.add(2);
-  v.add(3);
-  auto it = iter(v);
-  while (it.has_next()) {
-    printf("%i\n", it.next());
-  }
-
+  args::program p("steward");
+  p.add_option(args::option("--help", 'h', args::option_type::flag));
+  p.add_option(args::option("--version", 'v', args::option_type::flag)
+                   .help("version of steward"));
+  p.add_option(args::option("--database", 'd', args::option_type::string)
+                   .help("file name of the database that store the properties")
+                   .required()
+                   .fallback("~/.steward.aresdb"));
+  write(sout, p.get_flag("--help"), '\n');
+  p.help(sout);
   return 0;
 }

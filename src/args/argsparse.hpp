@@ -8,23 +8,23 @@
 
 namespace args {
 
-constexpr auto false_fallback = iter("1");
-constexpr auto true_fallback = iter("1");
+constexpr auto false_fallback = string_view("1");
+constexpr auto true_fallback = string_view("1");
 
 enum class option_type { string, integer, flag, none };
 
 struct option {
-  string_iterator _name;
+  string_view _name;
   char _shortname;
   bool _required = false;
-  string_iterator _help;
+  string_view _help;
   option_type _type;
-  string_iterator _value;
+  string_view _value;
 
-  constexpr option(string_iterator name, option_type type)
+  constexpr option(string_view name, option_type type)
       : _name(name), _shortname('\0'), _type(type) {}
 
-  constexpr option(string_iterator name, char shortcut, option_type type)
+  constexpr option(string_view name, char shortcut, option_type type)
       : _name(name), _shortname(shortcut), _type(type) {}
 
   constexpr option& required() {
@@ -32,11 +32,11 @@ struct option {
     return *this;
   }
 
-  constexpr option& help(string_iterator h) {
+  constexpr option& help(string_view h) {
     _help = h;
     return *this;
   }
-  constexpr option& fallback(string_iterator val) {
+  constexpr option& fallback(string_view val) {
     _value = val;
     return *this;
   }
@@ -44,33 +44,33 @@ struct option {
 
 class program {
  private:
-  string_iterator _name;
-  string_iterator _location;
-  map<string_iterator, option> _options;
+  string_view _name;
+  string_view _location;
+  map<string_view, option> _options;
 
  public:
-  constexpr program(string_iterator name) : _name(name) {}
+  constexpr program(string_view name) : _name(name) {}
 
  private:
-  constexpr bool int_validator(string_iterator val) {
-    return all_of(val, [](auto c) { return '0' <= c and c <= '9'; });
+  constexpr bool int_validator(string_view val) {
+    return all_of([](auto c) { return '0' <= c and c <= '9'; })(iter(val));
   }
 
  public:
   constexpr bool parse(int argc, char** argv) {
-    _location = iter(argv[0]);
+    _location = iter(string_view(argv[0]));
 
     for (int i = 1; i < argc; ++i) {
-      if (_options.has(iter(argv[i]))) {
-        option& opt = _options.at(iter(argv[i]));
+      if (_options.has(string_view(argv[i]))) {
+        option& opt = _options.at(string_view(argv[i]));
 
         switch (opt._type) {
           case option_type::flag:
-            opt._value = iter("0");
+            opt._value = string_view("0");
             break;
           case option_type::integer:
             if (i < argc - 1) {
-              opt._value = iter(argv[++i]);
+              opt._value = string_view(argv[++i]);
             }
 
             else {
@@ -81,7 +81,7 @@ class program {
             break;
           case option_type::string:
             if (i < argc - 1) {
-              opt._value = iter(argv[++i]);
+              opt._value = string_view(argv[++i]);
             }
 
             else {
@@ -96,7 +96,7 @@ class program {
       }
 
       else {
-        write(sout, "error during parsing: argument '", iter(argv[i]),
+        write(sout, "error during parsing: argument '", string_view(argv[i]),
               "' does not exist !\n");
         return false;
       }
@@ -104,15 +104,15 @@ class program {
 
     auto iopt = iter(_options);
 
-    while (iopt.has()) {
+    while (iopt.has_next()) {
       auto&& opt = iopt.next();
 
-      if (opt._required) {
-        if (opt._value.has()) {
-          if (opt._type == option_type::integer) {
-            if (not int_validator(opt._value)) {
-              write(sout, "error during parsing '", opt._name,
-                    "': value not valid :'", opt._value, "'\n");
+      if (opt.value._required) {
+        if (not opt.value._value.empty()) {
+          if (opt.value._type == option_type::integer) {
+            if (not int_validator(opt.value._value)) {
+              write(sout, "error during parsing '", opt.value._name,
+                    "': value not valid :'", opt.value._value, "'\n");
               return false;
             }
           }
@@ -121,7 +121,7 @@ class program {
         }
 
         else {
-          write(sout, "error during parsing '", opt._name,
+          write(sout, "error during parsing '", opt.value._name,
                 "': missing value\n");
 
           return false;
@@ -132,28 +132,29 @@ class program {
     return true;
   }
 
-  constexpr void help(char_oterator auto& out) {
+  constexpr void help(oterator auto out) {
     write(out, "\033[1mSYNOPSIS\033[0m\n\t", _name, "\n\n");
     write(out, "\033[1mOPTIONS\033[0m\n");
 
     auto i = iter(_options);
 
-    while (i.has()) {
+    while (i.has_next()) {
       const auto& opt = i.next();
-      write(out, opt._required ? "\t-" : "\t[-", opt._shortname, ", ",
-            opt._name, opt._required ? "" : "]", '\t', opt._help, "\n\n");
+      write(out, (opt.value._required ? "\t-" : "\t[-"), opt.value._shortname,
+            ", ", opt.value._name, (opt.value._required ? "\t" : "]\t"),
+            opt.value._help, "\n\n");
     }
   }
 
-  constexpr bool add_option(option&& opt) {
+  constexpr void add_option(option&& opt) {
     return _options.add(move(opt), opt._name);
   }
 
-  constexpr bool add_option(const option& opt) {
+  constexpr void add_option(const option& opt) {
     return _options.add(opt, opt._name);
   }
 
-  constexpr string_iterator get_value(string_iterator name) {
+  constexpr string_view get_value(string_view name) {
     if (_options.has(name)) {
       return _options.at(name)._value;
     }
@@ -161,28 +162,28 @@ class program {
     return "";
   }
 
-  constexpr maybe<bool> get_flag(string_iterator name) {
+  constexpr maybe<bool> get_flag(string_view name) {
     maybe<bool> b;
 
     if (_options.has(name)) {
-      from_chars(_options.at(name)._value, b);
+      from_chars(iter(_options.at(name)._value), b);
     }
 
     return b;
   }
 
-  constexpr maybe<int> get_int(string_iterator name) {
+  constexpr maybe<int> get_int(string_view name) {
     maybe<int> i;
 
     if (_options.has(name)) {
-      from_chars(_options.at(name)._value, i);
+      from_chars(iter(_options.at(name)._value), i);
     }
 
     return i;
   }
 
-  constexpr maybe<string_iterator> get_str(string_iterator name) {
-    maybe<string_iterator> i;
+  constexpr maybe<string_view> get_str(string_view name) {
+    maybe<string_view> i;
 
     if (_options.has(name)) {
       i = _options.at(name)._value;
