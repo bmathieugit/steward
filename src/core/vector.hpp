@@ -29,6 +29,12 @@ class vector {
   constexpr vector(size_t max)
       : _max(max), _len(0), _data(_alloc.allocate(max)) {}
 
+  constexpr vector(size_t max, const T& eg) : vector(max) {
+    for (size_t i = 0; i < max; ++i) {
+      add(eg);
+    }
+  }
+
   constexpr vector(const vector& v)
       : _max(v._max), _len(v._len), _data(_alloc.allocate(v._max)) {
     _alloc.copy(_data, v._data, _len);

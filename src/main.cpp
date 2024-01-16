@@ -1,5 +1,6 @@
 #include <args/argsparse.hpp>
 #include <core/file.hpp>
+#include <ui/ui.hpp>
 
 int main(int argc, char** argv) {
   args::program p("steward");
@@ -12,5 +13,16 @@ int main(int argc, char** argv) {
                    .fallback("~/.steward.aresdb"));
   write(sout, p.get_flag("--help"), '\n');
   p.help(sout);
+
+  ui::screen scr(ui::dimensions{10, 10});
+
+  for (int y = 0; y < 10; ++y) {
+    for (int x = 0; x < 10; ++x) {
+      scr.at(x, y)._content = 'a';
+    }
+  }
+
+  ui::render(sout, scr);
+
   return 0;
 }

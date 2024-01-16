@@ -36,6 +36,7 @@ struct option {
     _help = h;
     return *this;
   }
+  
   constexpr option& fallback(string_view val) {
     _value = val;
     return *this;
